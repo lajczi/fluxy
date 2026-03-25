@@ -1,0 +1,10 @@
+node_modules/
+coverage/
+build/
+.env
+*.log
+.DS_Store
+logs/*
+!logs/.gitkeep
+data/*.json
+data/bg-cache/

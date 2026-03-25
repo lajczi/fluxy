@@ -1,0 +1,7 @@
+# Commands Directory
+# Place command files in subdirectories by category:
+# - moderation/ - ban, kick, mute, etc.
+# - admin/ - toggle-automod, setlog, etc.
+# - info/ - botinfo, serverinfo, etc.
+# - general/ - help, avatar, etc.
+# - owner/ - botstatus, eval, etc.

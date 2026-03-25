@@ -1,0 +1,8 @@
+build/
+node_modules/
+docs/
+dashboard/node_modules/
+dashboard/dist/
+logs/
+*.min.js
+*.min.css
