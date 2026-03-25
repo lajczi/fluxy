@@ -68,7 +68,7 @@
   "dependencies": {
     "@fluxerjs/core": "^1.2.4",
     "@napi-rs/canvas": "^0.1.97",
-    "@sentry/node": "^10.45.0",
+    "@sentry/node": "^10.46.0",
     "@types/compression": "^1.8.1",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
