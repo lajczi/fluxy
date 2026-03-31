@@ -2,6 +2,7 @@ import type { Command } from '../../types';
 import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'toggle-antispam',
@@ -14,10 +15,11 @@ const command: Command = {
   async execute(message, _args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.admin.toggleAntispam.serverOnly'));
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
+      const lang = normalizeLocale(settings?.language);
       const newState = !settings.automod.antiSpam;
       settings.automod.antiSpam = newState;
 
@@ -30,12 +32,12 @@ const command: Command = {
       settingsCache.invalidate(guild.id);
 
       const status = newState ? 'enabled' : 'disabled';
-      let reply = `Anti-spam filter has been **${status}**.`;
+      let reply = t(lang, 'commands.admin.toggleAntispam.base', { status });
       if (newState && settings.automod.level === 'minimal') {
-        reply += ' Automod level set to `minimal` to activate it.';
+        reply += t(lang, 'commands.admin.toggleAntispam.suffixLevelMinimal');
       }
       if (!newState && settings.automod.level === 'off') {
-        reply += ` (Automod is also off \u2014 use \`${prefix}toggle-automod\` to enable it.)`;
+        reply += t(lang, 'commands.admin.toggleAntispam.suffixAutomodAlsoOff', { prefix });
       }
       await message.reply(reply);
     } catch (error: any) {
@@ -43,7 +45,9 @@ const command: Command = {
         console.warn(`[${guild?.name || 'Unknown Server'}] Fluxer API unreachable during !toggle-antispam (ECONNRESET)`);
       } else {
         console.error(`[${guild?.name || 'Unknown Server'}] Error in !toggle-antispam: ${error.message || error}`);
-        message.reply('An error occurred while toggling anti-spam.').catch(() => {});
+        const cached: any = guild ? await settingsCache.get(guild.id).catch(() => null) : null;
+        const lang = normalizeLocale(cached?.language);
+        message.reply(t(lang, 'commands.admin.toggleAntispam.errors.generic')).catch(() => {});
       }
     }
   }

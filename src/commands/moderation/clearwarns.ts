@@ -3,6 +3,8 @@ import parseUserId from '../../utils/parseUserId';
 import { logModAction } from '../../utils/logger';
 import Warning from '../../models/Warning';
 import isNetworkError from '../../utils/isNetworkError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'clearwarns',
@@ -19,16 +21,19 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.moderation.clearwarns.serverOnly'));
     }
 
+    const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(guildSettings?.language);
+
     if (!args[0]) {
-      return void await message.reply(`Usage: \`${prefix}clearwarns <user>\``);
+      return void await message.reply(t(lang, 'commands.moderation.clearwarns.usage', { prefix }));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply('Please provide a valid user mention or ID.');
+      return void await message.reply(t(lang, 'commands.moderation.clearwarns.invalidUser'));
     }
 
     try {
@@ -36,7 +41,7 @@ const command: Command = {
       const currentCount = warningRecord.warnings?.length || 0;
 
       if (currentCount === 0) {
-        return void await message.reply('That user has no warnings to clear.');
+        return void await message.reply(t(lang, 'commands.moderation.clearwarns.noWarningsToClear'));
       }
 
       await Warning.clearWarnings(guild.id, userId);
@@ -48,7 +53,14 @@ const command: Command = {
         targetUser = { id: userId, username: 'Unknown User' };
       }
 
-      await message.reply(`Successfully cleared **${currentCount}** warning(s) for **${targetUser.username || targetUser.id}** (<@${targetUser.id}>).`);
+      const displayName = targetUser.username || targetUser.id;
+      await message.reply(
+        t(lang, 'commands.moderation.clearwarns.success', {
+          currentCount,
+          username: displayName,
+          userId: targetUser.id
+        })
+      );
 
       await logModAction(guild, (message as any).author, targetUser, 'clearwarns', `Cleared ${currentCount} warnings`, { client });
 
@@ -58,7 +70,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !clearwarns (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !clearwarns: ${error.message || error}`);
-        message.reply('An error occurred while clearing warnings.').catch(() => {});
+        message.reply(t(lang, 'commands.moderation.clearwarns.errors.generic')).catch(() => {});
       }
     }
   }

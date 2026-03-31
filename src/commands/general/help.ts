@@ -4,6 +4,7 @@ import config from '../../config';
 import isNetworkError from '../../utils/isNetworkError';
 import settingsCache from '../../utils/settingsCache';
 import { hasAnyPermission } from '../../utils/permissions';
+import { t, normalizeLocale } from '../../i18n';
 
 const CATEGORY_META: Record<string, { label: string; description: string }> = {
   moderation: { label: 'Moderation', description: 'Ban, kick, warn, timeout, mute, clear, slowmode' },
@@ -105,7 +106,7 @@ const command: Command = {
 
   async execute(message, args, client) {
     const commandHandler = (client as any).commandHandler;
-    if (!commandHandler) return void await message.reply('Command handler not available.');
+    if (!commandHandler) return void await message.reply(t('en', 'commands.help.handlerMissing'));
 
     const prefix = await getPrefix(message);
     const isOwner = Boolean(config.ownerId && (message as any).author.id === config.ownerId);
@@ -113,6 +114,7 @@ const command: Command = {
     const member = guildId ? await (commandHandler as any).getMember(message).catch(() => null) : null;
     const guildSettings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
     const disabledCommands = guildSettings?.disabledCommands ?? null;
+    const lang = normalizeLocale(guildSettings?.language);
 
     try {
       if (args[0]) {
@@ -121,7 +123,9 @@ const command: Command = {
 
         const visible = cmd && await canUserSeeCommand({ message, cmd, isOwner, member, disabledCommands, guildSettings });
         if (!cmd || !visible) {
-          return void await message.reply(`No command called \`${commandName}\` found. Use \`${prefix}help\` to see all commands.`).catch(() => {});
+          return void await message
+            .reply(t(lang, 'commands.help.errors.commandNotFound', { commandName, prefix }))
+            .catch(() => {});
         }
 
         const usageStr = `\`${prefix}${cmd.name}${cmd.usage ? ' ' + cmd.usage : ''}\``;
@@ -165,14 +169,10 @@ const command: Command = {
         .concat(Object.keys(categories).filter(c => !CATEGORY_ORDER.includes(c)));
 
       const embed = new EmbedBuilder()
-        .setTitle('Fluxy \u2014 Help Menu')
-        .setDescription(
-          `Prefix: **\`${prefix}\`**\n` +
-          `Use \`${prefix}help <command>\` for detailed info on any command.\n` +
-          `[Full Documentation](https://fluxy.dorcus.digital) \u2022 [Web Dashboard](https://bot.dorcus.digital)`
-        )
+        .setTitle(t(lang, 'commands.help.menuTitle'))
+        .setDescription(t(lang, 'commands.help.menuDescription', { prefix }))
         .setColor(0x6c72f8)
-        .setFooter({ text: `${prefix}help <command> for details \u2022 Dashboard: bot.dorcus.digital` })
+        .setFooter({ text: t(lang, 'commands.help.menuFooter', { prefix }) })
         .setTimestamp(new Date());
 
       for (const cat of sorted) {
@@ -192,7 +192,7 @@ const command: Command = {
       try {
         await message.reply({ embeds: [embed] });
       } catch {
-        const lines = [`**Fluxy \u2014 Command List** \u2022 Prefix: \`${prefix}\``, ''];
+        const lines = [t(lang, 'commands.help.commandListHeader', { prefix }), ''];
         for (const cat of sorted) {
           const cmds = categories[cat];
           if (!cmds) continue;
@@ -220,7 +220,7 @@ const command: Command = {
       ) {
       } else {
         console.error(`[${guildName}] Error in !help: ${error.message || error}`);
-        try { await message.reply('An error occurred while generating help information.'); } catch {}
+        try { await message.reply(t(lang, 'commands.help.errors.generic')); } catch {}
       }
     }
   }

@@ -1,5 +1,7 @@
 import type { Command } from '../../types';
 import isNetworkError from '../../utils/isNetworkError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const startTime = Date.now();
 
@@ -12,6 +14,9 @@ const command: Command = {
 
   async execute(message, _args, _client) {
     try {
+      const guildId = (message as any).guildId || (message as any).guild?.id;
+      const settings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
+      const lang = normalizeLocale(settings?.language);
       const uptime = Date.now() - startTime;
 
       const days = Math.floor(uptime / (24 * 60 * 60 * 1000));
@@ -20,15 +25,16 @@ const command: Command = {
       const seconds = Math.floor((uptime % (60 * 1000)) / 1000);
 
       const uptimeParts: string[] = [];
-      if (days > 0) uptimeParts.push(`${days} day${days !== 1 ? 's' : ''}`);
-      if (hours > 0) uptimeParts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
-      if (minutes > 0) uptimeParts.push(`${minutes} minute${minutes !== 1 ? 's' : ''}`);
-      if (seconds > 0 || uptimeParts.length === 0) uptimeParts.push(`${seconds} second${seconds !== 1 ? 's' : ''}`);
+      if (days > 0) uptimeParts.push(`${days} ${t(lang, days === 1 ? 'commands.uptime.unitDaySingular' : 'commands.uptime.unitDayPlural')}`);
+      if (hours > 0) uptimeParts.push(`${hours} ${t(lang, hours === 1 ? 'commands.uptime.unitHourSingular' : 'commands.uptime.unitHourPlural')}`);
+      if (minutes > 0) uptimeParts.push(`${minutes} ${t(lang, minutes === 1 ? 'commands.uptime.unitMinuteSingular' : 'commands.uptime.unitMinutePlural')}`);
+      if (seconds > 0 || uptimeParts.length === 0) uptimeParts.push(`${seconds} ${t(lang, seconds === 1 ? 'commands.uptime.unitSecondSingular' : 'commands.uptime.unitSecondPlural')}`);
 
-      const uptimeString = uptimeParts.join(', ');
+      const uptimeString = uptimeParts.join(t(lang, 'commands.uptime.listSeparator'));
 
       const startDate = new Date(startTime);
-      const startString = startDate.toLocaleString('en-US', {
+      const localeForDate = lang === 'en' ? 'en-US' : lang;
+      const startString = startDate.toLocaleString(localeForDate, {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -37,7 +43,12 @@ const command: Command = {
         timeZoneName: 'short'
       });
 
-      await message.reply(`**Uptime:** ${uptimeString}\n**Started:** ${startString}`);
+      await message.reply(t(lang, 'commands.uptime.response', {
+        labelUptime: t(lang, 'commands.uptime.labelUptime'),
+        labelStarted: t(lang, 'commands.uptime.labelStarted'),
+        uptimeString,
+        startString
+      }));
 
     } catch (error: any) {
       if (isNetworkError(error)) {

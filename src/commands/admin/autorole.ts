@@ -3,6 +3,7 @@ import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import { canManageRole } from '../../utils/permissions';
 import isNetworkError from '../../utils/isNetworkError';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'autorole',
@@ -17,25 +18,21 @@ const command: Command = {
     if (!guild && (message as any).guildId) {
       guild = await client.guilds.fetch((message as any).guildId);
     }
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.admin.autorole.serverOnly'));
 
     const sub = args[0]?.toLowerCase();
 
     if (!sub || !['set', 'disable', 'status'].includes(sub)) {
-      return void await message.reply(
-        '**Usage:**\n' +
-        `\`${prefix}autorole set <@role>\` - set the role given to every new member\n` +
-        `\`${prefix}autorole disable\` - remove the auto-role\n` +
-        `\`${prefix}autorole status\` - show the current auto-role`
-      );
+      return void await message.reply(t('en', 'commands.admin.autorole.usage', { prefix }));
     }
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
+      const lang = normalizeLocale(settings?.language);
 
       if (sub === 'set') {
         const roleArg = args[1];
-        if (!roleArg) return void await message.reply(`Please provide a role. Usage: \`${prefix}autorole set <@role>\``);
+        if (!roleArg) return void await message.reply(t(lang, 'commands.admin.autorole.roleRequiredUsage', { prefix }));
 
         const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
         let roleId: string;
@@ -44,7 +41,7 @@ const command: Command = {
         } else if (/^\d{17,19}$/.test(roleArg)) {
           roleId = roleArg;
         } else {
-          return void await message.reply('Please provide a valid role mention or role ID.');
+          return void await message.reply(t(lang, 'commands.admin.autorole.invalidRole'));
         }
 
         let role = guild.roles?.get(roleId);
@@ -54,7 +51,7 @@ const command: Command = {
           } catch {
           }
         }
-        if (!role) return void await message.reply('That role does not exist in this server.');
+        if (!role) return void await message.reply(t(lang, 'commands.admin.autorole.roleDoesNotExist'));
 
         let commandMember = guild.members?.get(message.author.id);
         if (!commandMember) {
@@ -62,7 +59,7 @@ const command: Command = {
         }
         if (commandMember) {
           const check = canManageRole(commandMember, role, guild);
-          if (!check.allowed) return void await message.reply(check.reason || 'You cannot manage that role.');
+          if (!check.allowed) return void await message.reply(check.reason || t(lang, 'commands.admin.autorole.cannotManageRoleFallback'));
         }
 
         let hierarchyWarning = '';
@@ -77,7 +74,7 @@ const command: Command = {
             ? Math.max(0, ...botRoleIds.map((id: string) => guild.roles?.get(id)?.position || 0))
             : 0;
           if (role.position >= botHighestPos) {
-            hierarchyWarning = `\n\nMy role is currently below **${role.name}** - new members won't receive this role until you move my role above it in **Server Settings > Roles**.`;
+            hierarchyWarning = t(lang, 'commands.admin.autorole.hierarchyWarning', { roleName: role.name });
           }
         }
 
@@ -85,29 +82,29 @@ const command: Command = {
         await settings.save();
         settingsCache.invalidate(guild.id);
 
-        return void await message.reply(`Auto-role set to **${role.name}**. New members will automatically receive this role when they join.${hierarchyWarning}`);
+        return void await message.reply(t(lang, 'commands.admin.autorole.setDone', { roleName: role.name }) + hierarchyWarning);
       }
 
       if (sub === 'disable') {
-        if (!settings.autoroleId) return void await message.reply('Auto-role is not currently enabled.');
+        if (!settings.autoroleId) return void await message.reply(t(lang, 'commands.admin.autorole.disabledNotEnabled'));
 
         settings.autoroleId = null;
         await settings.save();
         settingsCache.invalidate(guild.id);
 
-        return void await message.reply('Auto-role has been disabled. New members will no longer receive a role automatically.');
+        return void await message.reply(t(lang, 'commands.admin.autorole.disabledDone'));
       }
 
       if (sub === 'status') {
         if (!settings.autoroleId) {
-          return void await message.reply(`Auto-role is currently **disabled**. Use \`${prefix}autorole set <@role>\` to enable it.`);
+          return void await message.reply(t(lang, 'commands.admin.autorole.statusDisabled', { prefix }));
         }
 
         let roleName = settings.autoroleId;
         const role = guild.roles?.get(settings.autoroleId);
         if (role) roleName = role.name;
 
-        return void await message.reply(`Auto-role is currently set to **${roleName}** (<@&${settings.autoroleId}>).`);
+        return void await message.reply(t(lang, 'commands.admin.autorole.statusEnabled', { roleName, roleId: settings.autoroleId }));
       }
 
     } catch (error: any) {
@@ -116,7 +113,9 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !autorole (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !autorole: ${error.message || error}`);
-        message.reply('An error occurred while updating the auto-role setting.').catch(() => {});
+        const cached: any = await settingsCache.get(guild.id).catch(() => null);
+        const lang = normalizeLocale(cached?.language);
+        message.reply(t(lang, 'commands.admin.autorole.errors.generic')).catch(() => {});
       }
     }
   }

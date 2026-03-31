@@ -1,6 +1,8 @@
 import type { Command } from '../../types';
 import { canManageRole } from '../../utils/permissions';
 import isNetworkError from '../../utils/isNetworkError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 import {
   beginBulkRoleUpdateSuppression,
   endBulkRoleUpdateSuppression,
@@ -18,22 +20,25 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.admin.roleall.serverOnly'));
+
+    const cached: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(cached?.language);
 
     const roleArg = args[0];
-    if (!roleArg) return void await message.reply(`Usage: \`${prefix}roleall <@role>\``);
+    if (!roleArg) return void await message.reply(t(lang, 'commands.admin.roleall.usage', { prefix }));
 
     const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
     let roleId: string;
     if (roleMention) roleId = roleMention[1];
     else if (/^\d{17,19}$/.test(roleArg)) roleId = roleArg;
-    else return void await message.reply('Please provide a valid role mention or role ID.');
+    else return void await message.reply(t(lang, 'commands.admin.roleall.invalidRole'));
 
     let role = guild.roles?.get(roleId);
     if (!role) {
       try { role = await guild.fetchRole(roleId); } catch {}
     }
-    if (!role) return void await message.reply('That role does not exist in this server.');
+    if (!role) return void await message.reply(t(lang, 'commands.admin.roleall.roleDoesNotExist'));
 
     let moderator = guild.members?.get(message.author.id);
     if (!moderator) {
@@ -41,10 +46,10 @@ const command: Command = {
     }
     if (moderator) {
       const check = canManageRole(moderator, role, guild);
-      if (!check.allowed) return void await message.reply(check.reason || 'You cannot manage that role.');
+      if (!check.allowed) return void await message.reply(check.reason || t(lang, 'commands.admin.roleall.cannotManageRoleFallback'));
     }
 
-    await message.reply(`Assigning **${role.name}** to all members... this may take a moment.`);
+    await message.reply(t(lang, 'commands.admin.roleall.assigning', { roleName: role.name }));
 
     let members: any[];
     try {
@@ -64,11 +69,11 @@ const command: Command = {
       } else {
         console.error(`[${guildName}] Error in !roleall: ${err.message || err}`);
       }
-      return void await message.reply('Failed to fetch server members.');
+      return void await message.reply(t(lang, 'commands.admin.roleall.failedFetchMembers'));
     }
 
     if (members.length === 0) {
-      return void await message.reply('No members found.');
+      return void await message.reply(t(lang, 'commands.admin.roleall.noMembersFound'));
     }
 
     const needsRole = members.filter((m: any) => {
@@ -104,9 +109,9 @@ const command: Command = {
       endBulkRoleUpdateSuppression(guild.id);
     }
 
-    let result = `Done! Assigned **${role.name}** to **${assigned}** member(s).`;
-    if (skipped > 0) result += ` ${skipped} already had it.`;
-    if (failed > 0) result += ` ${failed} failed (missing permissions or unknown error).`;
+    let result = t(lang, 'commands.admin.roleall.resultPrefix', { roleName: role.name, assigned });
+    if (skipped > 0) result += t(lang, 'commands.admin.roleall.skippedSuffix', { skipped });
+    if (failed > 0) result += t(lang, 'commands.admin.roleall.failedSuffix', { failed });
 
     await logServerEvent(
       guild,

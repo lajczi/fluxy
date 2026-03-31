@@ -7,6 +7,7 @@ import Warning from '../../models/Warning';
 import ModerationLog from '../../models/ModerationLog';
 import isNetworkError from '../../utils/isNetworkError';
 import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'warn',
@@ -23,20 +24,23 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.moderation.warn.serverOnly'));
     }
 
+    const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(guildSettings?.language);
+
     if (!args[0]) {
-      return void await message.reply(`Usage: \`${prefix}warn <user> <reason>\``);
+      return void await message.reply(t(lang, 'commands.moderation.warn.usage', { prefix }));
     }
 
     if (!args[1]) {
-      return void await message.reply('Please provide a reason for the warning.');
+      return void await message.reply(t(lang, 'commands.moderation.warn.missingReason'));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply('Please provide a valid user mention or ID.');
+      return void await message.reply(t(lang, 'commands.moderation.warn.invalidUser'));
     }
 
     const reason = args.slice(1).join(' ').trim();
@@ -75,11 +79,18 @@ const command: Command = {
         }
       }
 
-      await message.reply(`Successfully warned **${targetUser.username || targetUser.id}** (<@${targetUser.id}>).\n**Reason:** ${reason}\n**Total Warnings:** ${warningCount}`);
+      const displayName = targetUser.username || targetUser.id;
+      await message.reply(
+        t(lang, 'commands.moderation.warn.success', {
+          username: displayName,
+          userId: targetUser.id,
+          reason,
+          warningCount
+        })
+      );
 
       try {
-        const settings: any = await settingsCache.get(guild.id);
-        const moderation = settings?.moderation ?? {};
+        const moderation = guildSettings?.moderation ?? {};
         const autoMuteEnabled = moderation.autoMute === true;
         const muteMethod: 'auto' | 'timeout' | 'mute_role' = moderation.muteMethod || 'auto';
         const threshold = Number.isFinite(Number(moderation.autoMuteThreshold))
@@ -87,7 +98,7 @@ const command: Command = {
           : 3;
 
         if (autoMuteEnabled && warningCount >= threshold && targetMember) {
-          const muteRoleId = moderation.muteRoleId || settings?.muteRoleId || null;
+          const muteRoleId = moderation.muteRoleId || guildSettings?.muteRoleId || null;
           const alreadyTimedOut = targetMember.communicationDisabledUntil && targetMember.communicationDisabledUntil > new Date();
           const alreadyRoleMuted = muteRoleId && targetMember.roles?.roleIds?.includes?.(muteRoleId);
 
@@ -131,14 +142,21 @@ const command: Command = {
             }
 
             if (muted) {
-              await message.reply(`⚠️ Auto-mute applied to <@${targetMember.id}> after reaching **${warningCount}** warnings (threshold: **${threshold}**).`);
-              await logModAction(guild, (message as any).author, targetUser, 'mute', `Auto-mute threshold reached (${warningCount}/${threshold})`, { client });
+              const autoMuteReason = t(lang, 'commands.moderation.warn.autoMuteReason', { warningCount, threshold });
+              await message.reply(
+                t(lang, 'commands.moderation.warn.autoMuteApplied', {
+                  targetUserId: targetMember.id,
+                  warningCount,
+                  threshold
+                })
+              );
+              await logModAction(guild, (message as any).author, targetUser, 'mute', autoMuteReason, { client });
               await ModerationLog.logAction({
                 guildId: guild.id,
                 targetId: targetMember.id,
                 userId: (message as any).author.id,
                 action: 'mute',
-                reason: `Auto-mute threshold reached (${warningCount}/${threshold})`,
+                reason: autoMuteReason,
                 duration: 10 * 60 * 1000,
               });
             }
@@ -151,11 +169,11 @@ const command: Command = {
       try {
         if (targetUser && targetUser.id) {
           const dmEmbed = new EmbedBuilder()
-            .setTitle(`Warning in ${guild.name}`)
-            .setDescription(`You have received a warning in **${guild.name}**.`)
+            .setTitle(t(lang, 'commands.moderation.warn.dmTitle', { guildName: guild.name }))
+            .setDescription(t(lang, 'commands.moderation.warn.dmDescription', { guildName: guild.name }))
             .addFields(
-              { name: 'Reason', value: reason },
-              { name: 'Total Warnings', value: `${warningCount}` }
+              { name: t(lang, 'commands.moderation.warn.dmFieldReason'), value: reason },
+              { name: t(lang, 'commands.moderation.warn.dmFieldTotalWarnings'), value: `${warningCount}` }
             )
             .setColor(0xf39c12)
             .setTimestamp(new Date());
@@ -191,7 +209,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !warn (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !warn: ${error.message || error}`);
-        message.reply('An error occurred while trying to warn that user.').catch(() => {});
+        message.reply(t(lang, 'commands.moderation.warn.errors.generic')).catch(() => {});
       }
     }
   }

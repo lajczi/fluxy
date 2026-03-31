@@ -2,6 +2,7 @@ import type { Command } from '../../types';
 import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'slowmodeperms',
@@ -18,30 +19,24 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.admin.slowmodeperms.serverOnly'));
     }
 
     const subcommand = args[0]?.toLowerCase();
 
     if (!subcommand || !['add', 'remove', 'list', 'clear'].includes(subcommand)) {
-      return void await message.reply(
-        '**Slowmode Permissions**\n' +
-        `Allow specific roles to use \`${prefix}slowmode\` without needing Manage Channels permission.\n\n` +
-        `\`${prefix}slowmodeperms add <@role>\` - allow a role to use slowmode\n` +
-        `\`${prefix}slowmodeperms remove <@role>\` - remove a role from the allowlist\n` +
-        `\`${prefix}slowmodeperms list\` - show allowed roles\n` +
-        `\`${prefix}slowmodeperms clear\` - clear all (only Manage Channels users can use slowmode)`
-      );
+      return void await message.reply(t('en', 'commands.admin.slowmodeperms.usage', { prefix }));
     }
 
     try {
       const settings = await (GuildSettings as any).getOrCreate(guild.id);
+      const lang = normalizeLocale(settings?.language);
 
       switch (subcommand) {
         case 'add': {
           const roleArg = args[1];
           if (!roleArg) {
-            return void await message.reply(`Please specify a role. Usage: \`${prefix}slowmodeperms add <@role>\``);
+            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.roleRequiredUsageAdd', { prefix }));
           }
 
           const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
@@ -51,7 +46,7 @@ const command: Command = {
           } else if (/^\d{17,19}$/.test(roleArg)) {
             roleId = roleArg;
           } else {
-            return void await message.reply('Invalid role. Please use a role mention or role ID.');
+            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.invalidRole'));
           }
 
           let role = guild.roles?.get(roleId);
@@ -59,11 +54,11 @@ const command: Command = {
             try { role = await guild.fetchRole(roleId); } catch {}
           }
           if (!role) {
-            return void await message.reply('That role doesn\'t exist in this server.');
+            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.roleDoesNotExist'));
           }
 
           if (settings.slowmodeAllowedRoles?.includes(roleId)) {
-            return void await message.reply(`**${role.name}** is already in the slowmode allowlist.`);
+            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.alreadyAllowed', { roleName: role.name }));
           }
 
           if (!settings.slowmodeAllowedRoles) {
@@ -73,13 +68,13 @@ const command: Command = {
           await settings.save();
           settingsCache.invalidate(guild.id);
 
-          return void await message.reply(`Added **${role.name}** to the slowmode allowlist. Members with this role can use \`${prefix}slowmode\` without Manage Channels permission.`);
+          return void await message.reply(t(lang, 'commands.admin.slowmodeperms.added', { roleName: role.name, prefix }));
         }
 
         case 'remove': {
           const roleArg = args[1];
           if (!roleArg) {
-            return void await message.reply(`Please specify a role. Usage: \`${prefix}slowmodeperms remove <@role>\``);
+            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.roleRequiredUsageRemove', { prefix }));
           }
 
           const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
@@ -89,11 +84,11 @@ const command: Command = {
           } else if (/^\d{17,19}$/.test(roleArg)) {
             roleId = roleArg;
           } else {
-            return void await message.reply('Invalid role. Please use a role mention or role ID.');
+            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.invalidRole'));
           }
 
           if (!settings.slowmodeAllowedRoles?.includes(roleId)) {
-            return void await message.reply('That role is not in the slowmode allowlist.');
+            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.notInAllowlist'));
           }
 
           settings.slowmodeAllowedRoles = settings.slowmodeAllowedRoles.filter((id: string) => id !== roleId);
@@ -101,32 +96,32 @@ const command: Command = {
           settingsCache.invalidate(guild.id);
 
           const note = settings.slowmodeAllowedRoles.length === 0
-            ? ' The allowlist is now empty - only users with Manage Channels can use slowmode.'
+            ? t(lang, 'commands.admin.slowmodeperms.noteAllowlistEmpty')
             : '';
-          return void await message.reply(`Removed <@&${roleId}> from the slowmode allowlist.${note}`);
+          return void await message.reply(t(lang, 'commands.admin.slowmodeperms.removed', { roleId }) + note);
         }
 
         case 'list': {
           const roles: string[] = settings.slowmodeAllowedRoles || [];
 
           if (roles.length === 0) {
-            return void await message.reply(`No slowmode role overrides are set. Only users with Manage Channels permission can use \`${prefix}slowmode\`.`);
+            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.noAllowOverrides', { prefix }));
           }
 
           const roleList = roles.map((id: string) => `<@&${id}>`).join('\n');
-          return void await message.reply(`**Slowmode Allowed Roles:**\n${roleList}\n\nMembers with one of these roles can use \`${prefix}slowmode\` without Manage Channels permission.`);
+          return void await message.reply(t(lang, 'commands.admin.slowmodeperms.list', { roleList, prefix }));
         }
 
         case 'clear': {
           if (!settings.slowmodeAllowedRoles || settings.slowmodeAllowedRoles.length === 0) {
-            return void await message.reply('No slowmode role overrides to clear.');
+            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.noOverridesToClear'));
           }
 
           settings.slowmodeAllowedRoles = [];
           await settings.save();
           settingsCache.invalidate(guild.id);
 
-          return void await message.reply(`Cleared all slowmode role overrides. Only users with Manage Channels permission can use \`${prefix}slowmode\`.`);
+          return void await message.reply(t(lang, 'commands.admin.slowmodeperms.clearedAll', { prefix }));
         }
       }
 
@@ -136,7 +131,9 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !slowmodeperms (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !slowmodeperms: ${error.message || error}`);
-        message.reply('An error occurred while managing slowmode permissions.').catch(() => {});
+        const cached: any = await settingsCache.get(guild.id).catch(() => null);
+        const lang = normalizeLocale(cached?.language);
+        message.reply(t(lang, 'commands.admin.slowmodeperms.errors.generic')).catch(() => {});
       }
     }
   }

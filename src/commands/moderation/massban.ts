@@ -6,6 +6,8 @@ import ModerationLog from '../../models/ModerationLog';
 import isNetworkError from '../../utils/isNetworkError';
 import { isPermDenied, PERM_MESSAGES } from '../../utils/permError';
 import { EmbedBuilder } from '@fluxerjs/core';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'massban',
@@ -22,51 +24,54 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.moderation.massban.serverOnly'));
     }
 
+    const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(guildSettings?.language);
+
     if (args.length < 2) {
-      return void await message.reply(
-        `**Usage:** \`${prefix}massban <startMessageId> <endMessageId> [reason]\`\n` +
-        'Bans all unique authors of messages between the two boundary messages (inclusive) in the current channel.\n' +
-        '**Tip:** Right-click a message → Copy ID to get message IDs.'
-      );
+      return void await message.reply(t(lang, 'commands.moderation.massban.usage', { prefix }));
     }
 
     const startId = args[0];
     const endId = args[1];
-    const reason = args.slice(2).join(' ').trim() || 'Mass ban';
+    const reason = args.slice(2).join(' ').trim() || t(lang, 'commands.moderation.massban.noReasonProvided');
 
     if (!/^\d{17,22}$/.test(startId) || !/^\d{17,22}$/.test(endId)) {
-      return void await message.reply('Please provide valid message IDs (17-22 digit numbers).');
+      return void await message.reply(t(lang, 'commands.moderation.massban.invalidMessageIds'));
     }
 
     const channelId = (message as any).channelId || (message as any).channel?.id;
     if (!channelId) {
-      return void await message.reply('Could not determine the current channel.');
+      return void await message.reply(t(lang, 'commands.moderation.massban.couldNotDetermineChannel'));
     }
 
     const channel = guild.channels?.get(channelId)
       || await guild.fetchChannel?.(channelId).catch(() => null);
     if (!channel) {
-      return void await message.reply('Could not access this channel.');
+      return void await message.reply(t(lang, 'commands.moderation.massban.couldNotAccessChannel'));
     }
 
     let startMsg: any, endMsg: any;
     try {
       startMsg = await channel.messages.fetch(startId);
     } catch {
-      return void await message.reply(`Could not find start message with ID \`${startId}\` in this channel.`);
+      return void await message.reply(
+        t(lang, 'commands.moderation.massban.couldNotFindStartMessage', { startId })
+      );
     }
     try {
       endMsg = await channel.messages.fetch(endId);
     } catch {
-      return void await message.reply(`Could not find end message with ID \`${endId}\` in this channel.`);
+      return void await message.reply(
+        t(lang, 'commands.moderation.massban.couldNotFindEndMessage', { endId })
+      );
     }
 
     const [lowId, highId] = BigInt(startId) <= BigInt(endId) ? [startId, endId] : [endId, startId];
 
-    const statusMsg = await message.reply('⏳ Fetching messages between the two boundaries...');
+    const statusMsg = await message.reply(t(lang, 'commands.moderation.massban.statusFetching'));
 
     const allMessages: any[] = [];
     let lastFetchedId: string | undefined = undefined;
@@ -133,17 +138,18 @@ const command: Command = {
     }
 
     if (authorIds.size === 0) {
-      return void await statusMsg.edit({ content: 'No bannable users found between those messages (bots and yourself are excluded).' });
+      return void await statusMsg.edit({ content: t(lang, 'commands.moderation.massban.noBannableUsersFound') });
     }
 
     const confirmEmbed = new EmbedBuilder()
-      .setTitle('⚠️ Mass Ban Confirmation')
+      .setTitle(t(lang, 'commands.moderation.massban.confirmTitle'))
       .setColor(0xFF4444)
       .setDescription(
-        `Found **${authorIds.size}** unique user(s) across **${messageMap.size}** messages.\n\n` +
-        `**Reason:** ${reason}\n\n` +
-        `React with ✅ to confirm or ❌ to cancel.\n` +
-        `*This will expire in 30 seconds.*`
+        t(lang, 'commands.moderation.massban.confirmDescription', {
+          authorCount: authorIds.size,
+          messageCount: messageMap.size,
+          reason
+        })
       );
 
     const confirmMsg = await statusMsg.edit({ content: undefined, embeds: [confirmEmbed] });
@@ -153,7 +159,7 @@ const command: Command = {
       await confirmMsg.react('❌');
     } catch {
       return void await confirmMsg.edit({
-        content: 'Could not add confirmation reactions. Make sure I have **Add Reactions** permission.',
+        content: t(lang, 'commands.moderation.massban.confirmationReactionsFailed'),
         embeds: []
       });
     }
@@ -185,10 +191,13 @@ const command: Command = {
     });
 
     if (!confirmed) {
-      return void await confirmMsg.edit({ content: 'Mass ban cancelled.', embeds: [] });
+      return void await confirmMsg.edit({ content: t(lang, 'commands.moderation.massban.cancelled'), embeds: [] });
     }
 
-    await confirmMsg.edit({ content: `⏳ Banning ${authorIds.size} user(s)...`, embeds: [] });
+    await confirmMsg.edit({
+      content: t(lang, 'commands.moderation.massban.statusBanning', { authorCount: authorIds.size }),
+      embeds: []
+    });
 
     let moderator: any = guild.members?.get(invokerId);
     if (!moderator) {
@@ -244,24 +253,43 @@ const command: Command = {
       } catch (error: any) {
         failed++;
         if (isNetworkError(error)) {
-          failures.push(`<@${userId}>: Network error`);
+          failures.push(
+            `<@${userId}>: ${t(lang, 'commands.moderation.massban.failures.networkError')}`
+          );
         } else if (isPermDenied(error)) {
-          failures.push(`<@${userId}>: Missing permissions`);
+          failures.push(
+            `<@${userId}>: ${t(lang, 'commands.moderation.massban.failures.missingPermissions')}`
+          );
         } else {
-          failures.push(`<@${userId}>: ${error.message || 'Unknown error'}`);
+          failures.push(
+            `<@${userId}>: ${
+              error.message || t(lang, 'commands.moderation.massban.failures.unknownError')
+            }`
+          );
         }
       }
     }
 
+    const failuresBlock = failures.length > 0
+      ? t(lang, 'commands.moderation.massban.failuresBlock', {
+        failuresPreview: failures.slice(0, 10).join('\n'),
+        moreSuffix: failures.length > 10
+          ? t(lang, 'commands.moderation.massban.failuresMoreSuffix', { moreCount: failures.length - 10 })
+          : ''
+      })
+      : '';
+
     const resultEmbed = new EmbedBuilder()
-      .setTitle('Mass Ban Complete')
+      .setTitle(t(lang, 'commands.moderation.massban.resultTitle'))
       .setColor(banned > 0 ? 0x43B581 : 0xFF4444)
       .setDescription(
-        `**Banned:** ${banned}/${authorIds.size}\n` +
-        `**Failed:** ${failed}\n` +
-        `**Reason:** ${reason}` +
-        (failures.length > 0 ? `\n\n**Failures:**\n${failures.slice(0, 10).join('\n')}` +
-          (failures.length > 10 ? `\n...and ${failures.length - 10} more` : '') : '')
+        t(lang, 'commands.moderation.massban.resultDescription', {
+          banned,
+          total: authorIds.size,
+          failed,
+          reason,
+          failuresBlock
+        })
       );
 
     await confirmMsg.edit({ content: undefined, embeds: [resultEmbed] });

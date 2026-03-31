@@ -7,6 +7,8 @@ import { logModAction } from '../../utils/logger';
 import ModerationLog from '../../models/ModerationLog';
 import isNetworkError from '../../utils/isNetworkError';
 import { isPermDenied, PERM_MESSAGES } from '../../utils/permError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const MAX_TIMEOUT = 28 * 24 * 60 * 60 * 1000;
 
@@ -25,32 +27,35 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.moderation.timeout.serverOnly'));
     }
 
+    const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(guildSettings?.language);
+
     if (!args[0]) {
-      return void await message.reply(`Usage: \`${prefix}timeout <user> <duration> [reason]\`\nDuration format: 10s, 5m, 1h, 1d (max 28 days)`);
+      return void await message.reply(t(lang, 'commands.moderation.timeout.usage', { prefix }));
     }
 
     if (!args[1]) {
-      return void await message.reply('Please specify a duration. Format: 10s, 5m, 1h, 1d (max 28 days)');
+      return void await message.reply(t(lang, 'commands.moderation.timeout.missingDuration'));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply('Please provide a valid user mention or ID.');
+      return void await message.reply(t(lang, 'commands.moderation.timeout.invalidUser'));
     }
 
     const duration = parseDuration(args[1]);
     if (!duration) {
-      return void await message.reply('Invalid duration format. Use: 10s, 5m, 1h, 1d (max 28 days)');
+      return void await message.reply(t(lang, 'commands.moderation.timeout.invalidDurationFormat'));
     }
 
     if (duration > MAX_TIMEOUT) {
-      return void await message.reply('Timeout duration cannot exceed 28 days.');
+      return void await message.reply(t(lang, 'commands.moderation.timeout.durationTooLong'));
     }
 
-    const reason = args.slice(2).join(' ').trim() || 'No reason provided';
+    const reason = args.slice(2).join(' ').trim() || t(lang, 'commands.moderation.timeout.noReasonProvided');
 
     let moderator: any = guild.members?.get((message as any).author.id);
     if (!moderator) {
@@ -62,12 +67,12 @@ const command: Command = {
       try {
         targetMember = await guild.fetchMember(userId);
       } catch {
-        return void await message.reply('That user is not in this server.');
+        return void await message.reply(t(lang, 'commands.moderation.timeout.userNotInServer'));
       }
     }
 
     if (!targetMember) {
-      return void await message.reply('That user is not in this server.');
+      return void await message.reply(t(lang, 'commands.moderation.timeout.userNotInServer'));
     }
 
     const modCheck = canModerate(moderator, targetMember);
@@ -87,13 +92,15 @@ const command: Command = {
     if (botMember) {
       const botCheck = canModerate(botMember as any, targetMember);
       if (!botCheck.canModerate) {
-        return void await message.reply("I cannot timeout this user because their highest role is equal to or above mine. Ask a server admin to move my role higher in the role list.");
+        return void await message.reply(t(lang, 'commands.moderation.timeout.cannotTimeoutRoleHierarchy'));
       }
     }
 
     if (targetMember.communicationDisabledUntil && targetMember.communicationDisabledUntil > new Date()) {
       const remaining = new Date(targetMember.communicationDisabledUntil).getTime() - Date.now();
-      return void await message.reply(`That user is already timed out. Remaining: ${formatDuration(remaining)}`);
+      return void await message.reply(
+        t(lang, 'commands.moderation.timeout.alreadyTimedOutRemaining', { remaining: formatDuration(remaining) })
+      );
     }
 
     try {
@@ -103,7 +110,15 @@ const command: Command = {
         timeout_reason: `${(message as any).author.username}: ${reason}`
       });
 
-      await message.reply(`Successfully timed out **${targetMember.user?.username || targetMember.id}** (<@${targetMember.id}>) for **${formatDuration(duration)}**.\n**Reason:** ${reason}`);
+      const displayName = targetMember.user?.username || targetMember.id;
+      await message.reply(
+        t(lang, 'commands.moderation.timeout.successTimedOut', {
+          username: displayName,
+          userId: targetMember.id,
+          duration: formatDuration(duration),
+          reason
+        })
+      );
 
       await logModAction(guild, (message as any).author, targetMember.user || targetMember, 'timeout', reason, {
         fields: [
@@ -129,7 +144,7 @@ const command: Command = {
         message.reply(PERM_MESSAGES.timeout).catch(() => {});
       } else {
         console.error(`[${guildName}] Error in !timeout: ${error.message || error}`);
-        message.reply('An error occurred while trying to timeout that member.').catch(() => {});
+        message.reply(t(lang, 'commands.moderation.timeout.errors.generic')).catch(() => {});
       }
     }
   }

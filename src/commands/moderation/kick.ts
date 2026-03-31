@@ -5,6 +5,8 @@ import { logModAction } from '../../utils/logger';
 import ModerationLog from '../../models/ModerationLog';
 import isNetworkError from '../../utils/isNetworkError';
 import { isPermDenied, PERM_MESSAGES } from '../../utils/permError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'kick',
@@ -21,19 +23,22 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.moderation.kick.serverOnly'));
     }
 
+    const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(guildSettings?.language);
+
     if (!args[0]) {
-      return void await message.reply(`Usage: \`${prefix}kick <user> [reason]\``);
+      return void await message.reply(t(lang, 'commands.moderation.kick.usage', { prefix }));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply('Please provide a valid user mention or ID.');
+      return void await message.reply(t(lang, 'commands.moderation.kick.invalidUser'));
     }
 
-    const reason = args.slice(1).join(' ').trim() || 'No reason provided';
+    const reason = args.slice(1).join(' ').trim() || t(lang, 'commands.moderation.kick.noReasonProvided');
 
     let moderator: any = guild.members?.get((message as any).author.id);
     if (!moderator) {
@@ -45,12 +50,12 @@ const command: Command = {
       try {
         targetMember = await guild.fetchMember(userId);
       } catch {
-        return void await message.reply('That user is not in this server.');
+        return void await message.reply(t(lang, 'commands.moderation.kick.userNotInServer'));
       }
     }
 
     if (!targetMember) {
-      return void await message.reply('That user is not in this server.');
+      return void await message.reply(t(lang, 'commands.moderation.kick.userNotInServer'));
     }
 
     const modCheck = canModerate(moderator, targetMember);
@@ -70,14 +75,21 @@ const command: Command = {
     if (botMember) {
       const botCheck = canModerate(botMember as any, targetMember);
       if (!botCheck.canModerate) {
-        return void await message.reply("I cannot kick this user because their highest role is equal to or above mine. Ask a server admin to move my role higher in the role list.");
+        return void await message.reply(t(lang, 'commands.moderation.kick.cannotKickRoleHierarchy'));
       }
     }
 
     try {
       await guild.kick(targetMember.id);
 
-      await message.reply(`Successfully kicked **${targetMember.user?.username || targetMember.id}** (<@${targetMember.id}>).\n**Reason:** ${reason}`);
+      const displayName = targetMember.user?.username || targetMember.id;
+      await message.reply(
+        t(lang, 'commands.moderation.kick.success', {
+          username: displayName,
+          userId: targetMember.id,
+          reason
+        })
+      );
 
       await logModAction(guild, (message as any).author, targetMember.user || targetMember, 'kick', reason, { client });
 
@@ -97,7 +109,7 @@ const command: Command = {
         message.reply(PERM_MESSAGES.kick).catch(() => {});
       } else {
         console.error(`[${guildName}] Error in !kick: ${error.message || error}`);
-        message.reply('An error occurred while trying to kick that member.').catch(() => {});
+        message.reply(t(lang, 'commands.moderation.kick.errors.generic')).catch(() => {});
       }
     }
   }

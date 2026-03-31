@@ -70,6 +70,13 @@ interface ValidationResult {
 }
 
 const fieldValidators: Record<string, (value: unknown) => true | string> = {
+  language(v) {
+    if (typeof v !== 'string') return 'language must be a string';
+    const code = v.trim();
+    if (!/^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(code) || code.length > 20) return 'language must be a valid locale code';
+    return true;
+  },
+
   prefixes(v) {
     if (!Array.isArray(v)) return 'prefixes must be an array';
     if (v.length > 10) return 'Maximum 10 prefixes allowed';

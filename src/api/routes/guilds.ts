@@ -9,9 +9,11 @@ import settingsCache from '../../utils/settingsCache';
 import { broadcastSettingsUpdate } from '../ws/settingsWs';
 import { generateTranscriptHtml } from '../../utils/transcriptGenerator';
 import { validateSettingsUpdate } from '../middleware/settingsValidator';
+import { t, normalizeLocale } from '../../i18n';
 
 const ALLOWED_SETTINGS_FIELDS = new Set([
   'prefixes',
+  'language',
   'welcomeMessage',
   'reactionRoles',
   'moderation',
@@ -485,15 +487,12 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       }
       verification.panelChannelId = panelChannelId;
 
+      const lang = normalizeLocale((settings as any).language);
       const embed = new EmbedBuilder()
-        .setTitle('🔒 Server Verification')
-        .setDescription(
-          '**Welcome!** This server requires manual verification to help fight bot abuse.\n\n' +
-          'React with ✅ below to begin the verification process.\n\n' +
-          'You will be given a private channel with a captcha image - simply type the 6 letters shown to verify yourself.'
-        )
+        .setTitle(t(lang, 'verification.panel.title'))
+        .setDescription(t(lang, 'verification.panel.description'))
         .setColor(0x5865F2)
-        .setFooter({ text: 'Verification is quick and easy!' })
+        .setFooter({ text: t(lang, 'verification.panel.footer') })
         .setTimestamp(new Date());
 
       const msgRes = await client.rest.post(Routes.channelMessages(panelChannelId), {

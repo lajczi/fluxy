@@ -3,7 +3,8 @@ import GuildSettings from '../../models/GuildSettings';
 import StarboardMessage from '../../models/StarboardMessage';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder, PermissionFlags } from '@fluxerjs/core';
+import { t, normalizeLocale } from '../../i18n';
 
 function getStarEmoji(count: number): string {
   if (count >= 25) return '💫';
@@ -17,6 +18,18 @@ function getStarColor(count: number): number {
   return 0xf1c40f;
 }
 
+async function isStarboardAdmin(message: any, guild: any): Promise<boolean> {
+  let member = guild.members?.get(message.author.id);
+  if (!member) {
+    try { member = await guild.fetchMember(message.author.id); } catch {}
+  }
+  if (!member) return false;
+  return Boolean(
+    member.permissions?.has(PermissionFlags.ManageGuild) ||
+    member.permissions?.has(PermissionFlags.Administrator)
+  );
+}
+
 const command: Command = {
   name: 'starboard',
   description: [
@@ -24,40 +37,48 @@ const command: Command = {
     'Subcommands: setup, threshold, emoji, toggle, selfstar, ignorechannel, ignorerole, settings, leaderboard, top, stats, force, remove',
   ],
   usage: '<subcommand> [args]',
-  category: 'admin',
+  category: 'info',
   aliases: ['sb'],
-  permissions: ['ManageGuild'],
+  permissions: [],
   cooldown: 3,
 
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.admin.starboard.serverOnly'));
 
     const sub = args[0]?.toLowerCase();
 
     if (!sub || sub === 'help') {
+      const usageStr = `\`${prefix}starboard <subcommand> [args]\``;
+      const publicSubs = [
+        `\`${prefix}starboard leaderboard\``,
+        `\`${prefix}starboard top\``,
+        `\`${prefix}starboard stats\``,
+      ];
+      const adminSubs = [
+        `\`${prefix}starboard setup #channel\``,
+        `\`${prefix}starboard threshold <1-100>\``,
+        `\`${prefix}starboard emoji <emoji>\``,
+        `\`${prefix}starboard toggle\``,
+        `\`${prefix}starboard selfstar\``,
+        `\`${prefix}starboard ignorechannel #channel\``,
+        `\`${prefix}starboard ignorerole @role\``,
+        `\`${prefix}starboard settings\``,
+        `\`${prefix}starboard force <messageLink|messageId> [channelId]\``,
+        `\`${prefix}starboard remove <messageId>\``,
+      ];
+
       const embed = new EmbedBuilder()
-        .setTitle('⭐ Starboard Commands')
+        .setTitle(t('en', 'commands.admin.starboard.help.title'))
         .setColor(0xf1c40f)
-        .setDescription(
-          `Manage the starboard system that highlights popular messages.\n\n` +
-          `**Configuration**\n` +
-          `\`${prefix}starboard setup #channel\` - Set the starboard channel\n` +
-          `\`${prefix}starboard threshold <number>\` - Set required star count\n` +
-          `\`${prefix}starboard emoji <emoji>\` - Set the tracked emoji\n` +
-          `\`${prefix}starboard toggle\` - Enable or disable starboard\n` +
-          `\`${prefix}starboard selfstar\` - Toggle self-starring\n` +
-          `\`${prefix}starboard ignorechannel #channel\` - Add/remove ignored channel\n` +
-          `\`${prefix}starboard ignorerole @role\` - Add/remove ignored role\n` +
-          `\`${prefix}starboard settings\` - View current configuration\n\n` +
-          `**Stats & Leaderboard**\n` +
-          `\`${prefix}starboard leaderboard\` - Top 10 most-starred messages\n` +
-          `\`${prefix}starboard top\` - Top 10 users by total stars\n` +
-          `\`${prefix}starboard stats\` - Overall starboard statistics\n\n` +
-          `**Admin**\n` +
-          `\`${prefix}starboard force <messageLink|messageId>\` - Force-add a message\n` +
-          `\`${prefix}starboard remove <messageId>\` - Remove a message from starboard`
+        .setDescription(t('en', 'commands.admin.starboard.help.description'))
+        .addFields(
+          { name: t('en', 'commands.admin.starboard.help.fieldUsage'), value: usageStr, inline: false },
+          { name: t('en', 'commands.admin.starboard.help.fieldAliases'), value: '`sb`', inline: true },
+          { name: t('en', 'commands.admin.starboard.help.fieldCooldown'), value: '3s', inline: true },
+          { name: t('en', 'commands.admin.starboard.help.fieldPublic'), value: publicSubs.join('\n'), inline: false },
+          { name: t('en', 'commands.admin.starboard.help.fieldAdmin'), value: adminSubs.join('\n'), inline: false },
         )
         .setTimestamp(new Date());
       return void await message.reply({ embeds: [embed] });
@@ -65,26 +86,41 @@ const command: Command = {
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
+      const lang = normalizeLocale(settings?.language);
+      const needsAdmin = ![
+        'leaderboard',
+        'lb',
+        'top',
+        'topusers',
+        'stats',
+      ].includes(sub);
+
+      if (needsAdmin) {
+        const ok = await isStarboardAdmin(message, guild);
+        if (!ok) {
+          return void await message.reply(t(lang, 'commands.admin.starboard.adminRequired'));
+        }
+      }
 
       switch (sub) {
         case 'setup':
         case 'setchannel':
         case 'channel': {
-          if (!args[1]) return void await message.reply(`Usage: \`${prefix}starboard setup #channel\``);
+          if (!args[1]) return void await message.reply(t(lang, 'commands.admin.starboard.setup.usage', { prefix }));
 
           const channelMention = args[1].match(/^<#(\d{17,19})>$/);
           let channelId: string;
           if (channelMention) channelId = channelMention[1];
           else if (/^\d{17,19}$/.test(args[1])) channelId = args[1];
-          else return void await message.reply('Please provide a valid channel mention or ID.');
+          else return void await message.reply(t(lang, 'commands.admin.starboard.setup.invalidChannel'));
 
           let channel: any = guild.channels?.get(channelId);
           if (!channel) {
             try { channel = await client.channels.fetch(channelId); } catch {
-              return void await message.reply('That channel does not exist in this server.');
+              return void await message.reply(t(lang, 'commands.admin.starboard.setup.channelDoesNotExist'));
             }
           }
-          if (!channel) return void await message.reply('That channel does not exist in this server.');
+          if (!channel) return void await message.reply(t(lang, 'commands.admin.starboard.setup.channelDoesNotExist'));
 
           if (!settings.starboard) settings.starboard = {};
           settings.starboard.channelId = channelId;
@@ -94,12 +130,12 @@ const command: Command = {
           settingsCache.invalidate(guild.id);
 
           const embed = new EmbedBuilder()
-            .setTitle('⭐ Starboard Channel Set')
-            .setDescription(`Starboard channel has been set to <#${channelId}> and the starboard is now **enabled**.`)
+            .setTitle(t(lang, 'commands.admin.starboard.setup.title'))
+            .setDescription(t(lang, 'commands.admin.starboard.setup.description', { channelId }))
             .setColor(0xf1c40f)
             .addFields(
-              { name: 'Threshold', value: `${settings.starboard.threshold ?? 3} reactions`, inline: true },
-              { name: 'Emoji', value: settings.starboard.emoji ?? '⭐', inline: true },
+              { name: t(lang, 'commands.admin.starboard.setup.fieldThreshold'), value: t(lang, 'commands.admin.starboard.setup.thresholdReactions', { threshold: settings.starboard.threshold ?? 3 }), inline: true },
+              { name: t(lang, 'commands.admin.starboard.setup.fieldEmoji'), value: settings.starboard.emoji ?? '⭐', inline: true },
             )
             .setTimestamp(new Date());
           return void await message.reply({ embeds: [embed] });
@@ -108,19 +144,19 @@ const command: Command = {
         case 'threshold': {
           const num = parseInt(args[1], 10);
           if (!args[1] || isNaN(num) || num < 1 || num > 100) {
-            return void await message.reply(`Usage: \`${prefix}starboard threshold <1-100>\`\nCurrent: **${settings.starboard?.threshold ?? 3}**`);
+            return void await message.reply(t(lang, 'commands.admin.starboard.threshold.usage', { prefix, current: settings.starboard?.threshold ?? 3 }));
           }
           if (!settings.starboard) settings.starboard = {};
           settings.starboard.threshold = num;
           settings.markModified('starboard');
           await settings.save();
           settingsCache.invalidate(guild.id);
-          return void await message.reply(`⭐ Starboard threshold set to **${num}** reaction(s).`);
+          return void await message.reply(t(lang, 'commands.admin.starboard.threshold.setDone', { threshold: num }));
         }
 
         case 'emoji': {
           if (!args[1]) {
-            return void await message.reply(`Usage: \`${prefix}starboard emoji <emoji>\`\nCurrent: **${settings.starboard?.emoji ?? '⭐'}**`);
+            return void await message.reply(t(lang, 'commands.admin.starboard.emoji.usage', { prefix, currentEmoji: settings.starboard?.emoji ?? '⭐' }));
           }
           const rawEmoji = args[1].trim();
           if (!settings.starboard) settings.starboard = {};
@@ -128,7 +164,7 @@ const command: Command = {
           settings.markModified('starboard');
           await settings.save();
           settingsCache.invalidate(guild.id);
-          return void await message.reply(`⭐ Starboard emoji set to ${rawEmoji}`);
+          return void await message.reply(t(lang, 'commands.admin.starboard.emoji.setDone', { emoji: rawEmoji }));
         }
 
         case 'toggle':
@@ -145,7 +181,7 @@ const command: Command = {
           settings.markModified('starboard');
           await settings.save();
           settingsCache.invalidate(guild.id);
-          return void await message.reply(`⭐ Starboard is now **${settings.starboard.enabled ? 'enabled' : 'disabled'}**.`);
+          return void await message.reply(t(lang, 'commands.admin.starboard.toggle.setDone', { status: settings.starboard.enabled ? 'enabled' : 'disabled' }));
         }
 
         case 'selfstar': {
@@ -154,16 +190,16 @@ const command: Command = {
           settings.markModified('starboard');
           await settings.save();
           settingsCache.invalidate(guild.id);
-          return void await message.reply(`⭐ Self-starring is now **${settings.starboard.selfStarEnabled ? 'enabled' : 'disabled'}**.`);
+          return void await message.reply(t(lang, 'commands.admin.starboard.selfstar.setDone', { status: settings.starboard.selfStarEnabled ? 'enabled' : 'disabled' }));
         }
 
         case 'ignorechannel': {
-          if (!args[1]) return void await message.reply(`Usage: \`${prefix}starboard ignorechannel #channel\``);
+          if (!args[1]) return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.usage', { prefix }));
           const channelMention = args[1].match(/^<#(\d{17,19})>$/);
           let channelId: string;
           if (channelMention) channelId = channelMention[1];
           else if (/^\d{17,19}$/.test(args[1])) channelId = args[1];
-          else return void await message.reply('Please provide a valid channel mention or ID.');
+          else return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.invalidChannel'));
 
           if (!settings.starboard) settings.starboard = {};
           if (!settings.starboard.ignoredChannels) settings.starboard.ignoredChannels = [];
@@ -174,23 +210,23 @@ const command: Command = {
             settings.markModified('starboard');
             await settings.save();
             settingsCache.invalidate(guild.id);
-            return void await message.reply(`⭐ <#${channelId}> is now **ignored** by the starboard.`);
+            return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.nowIgnored', { channelId }));
           } else {
             settings.starboard.ignoredChannels.splice(idx, 1);
             settings.markModified('starboard');
             await settings.save();
             settingsCache.invalidate(guild.id);
-            return void await message.reply(`⭐ <#${channelId}> is no longer ignored by the starboard.`);
+            return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.noLongerIgnored', { channelId }));
           }
         }
 
         case 'ignorerole': {
-          if (!args[1]) return void await message.reply(`Usage: \`${prefix}starboard ignorerole @role\``);
+          if (!args[1]) return void await message.reply(t(lang, 'commands.admin.starboard.ignorerole.usage', { prefix }));
           const roleMention = args[1].match(/^<@&(\d{17,19})>$/);
           let roleId: string;
           if (roleMention) roleId = roleMention[1];
           else if (/^\d{17,19}$/.test(args[1])) roleId = args[1];
-          else return void await message.reply('Please provide a valid role mention or ID.');
+          else return void await message.reply(t(lang, 'commands.admin.starboard.ignorerole.invalidRole'));
 
           if (!settings.starboard) settings.starboard = {};
           if (!settings.starboard.ignoredRoles) settings.starboard.ignoredRoles = [];
@@ -201,13 +237,13 @@ const command: Command = {
             settings.markModified('starboard');
             await settings.save();
             settingsCache.invalidate(guild.id);
-            return void await message.reply(`⭐ <@&${roleId}> is now **excluded** from starring.`);
+            return void await message.reply(t(lang, 'commands.admin.starboard.ignorerole.nowExcluded', { roleId }));
           } else {
             settings.starboard.ignoredRoles.splice(idx, 1);
             settings.markModified('starboard');
             await settings.save();
             settingsCache.invalidate(guild.id);
-            return void await message.reply(`⭐ <@&${roleId}> can now star messages again.`);
+            return void await message.reply(t(lang, 'commands.admin.starboard.ignorerole.canStarAgain', { roleId }));
           }
         }
 
@@ -216,26 +252,26 @@ const command: Command = {
         case 'info': {
           const sb = settings.starboard || {};
           const embed = new EmbedBuilder()
-            .setTitle('⭐ Starboard Configuration')
+            .setTitle(t(lang, 'commands.admin.starboard.settings.title'))
             .setColor(0xf1c40f)
             .addFields(
-              { name: 'Status', value: sb.enabled ? '✅ Enabled' : '❌ Disabled', inline: true },
-              { name: 'Channel', value: sb.channelId ? `<#${sb.channelId}>` : 'Not set', inline: true },
-              { name: 'Threshold', value: `${sb.threshold ?? 3} reactions`, inline: true },
-              { name: 'Emoji', value: sb.emoji ?? '⭐', inline: true },
-              { name: 'Self-Star', value: sb.selfStarEnabled ? 'Allowed' : 'Not allowed', inline: true },
-              { name: 'Ignore Bots', value: sb.ignoreBots !== false ? 'Yes' : 'No', inline: true },
+              { name: t(lang, 'commands.admin.starboard.settings.status'), value: sb.enabled ? t(lang, 'commands.admin.starboard.settings.enabled') : t(lang, 'commands.admin.starboard.settings.disabled'), inline: true },
+              { name: t(lang, 'commands.admin.starboard.settings.channel'), value: sb.channelId ? `<#${sb.channelId}>` : t(lang, 'commands.admin.starboard.settings.notSet'), inline: true },
+              { name: t(lang, 'commands.admin.starboard.settings.threshold'), value: t(lang, 'commands.admin.starboard.settings.thresholdReactions', { threshold: sb.threshold ?? 3 }), inline: true },
+              { name: t(lang, 'commands.admin.starboard.settings.emoji'), value: sb.emoji ?? '⭐', inline: true },
+              { name: t(lang, 'commands.admin.starboard.settings.selfStar'), value: sb.selfStarEnabled ? t(lang, 'commands.admin.starboard.settings.allowed') : t(lang, 'commands.admin.starboard.settings.notAllowed'), inline: true },
+              { name: t(lang, 'commands.admin.starboard.settings.ignoreBots'), value: sb.ignoreBots !== false ? t(lang, 'commands.admin.starboard.settings.yes') : t(lang, 'commands.admin.starboard.settings.no'), inline: true },
               {
-                name: 'Ignored Channels',
+                name: t(lang, 'commands.admin.starboard.settings.ignoredChannels'),
                 value: sb.ignoredChannels?.length > 0
                   ? sb.ignoredChannels.map((id: string) => `<#${id}>`).join(', ')
-                  : 'None',
+                  : t(lang, 'commands.admin.starboard.settings.none'),
               },
               {
-                name: 'Ignored Roles',
+                name: t(lang, 'commands.admin.starboard.settings.ignoredRoles'),
                 value: sb.ignoredRoles?.length > 0
                   ? sb.ignoredRoles.map((id: string) => `<@&${id}>`).join(', ')
-                  : 'None',
+                  : t(lang, 'commands.admin.starboard.settings.none'),
               },
             )
             .setTimestamp(new Date());
@@ -250,7 +286,7 @@ const command: Command = {
             .lean();
 
           if (entries.length === 0) {
-            return void await message.reply('No starred messages yet!');
+            return void await message.reply(t(lang, 'commands.admin.starboard.leaderboard.none'));
           }
 
           const lines = entries.map((e: any, i: number) => {
@@ -259,10 +295,10 @@ const command: Command = {
           });
 
           const embed = new EmbedBuilder()
-            .setTitle('⭐ Starboard Leaderboard')
+            .setTitle(t(lang, 'commands.admin.starboard.leaderboard.title'))
             .setDescription(lines.join('\n\n'))
             .setColor(0xf1c40f)
-            .setFooter({ text: `Top ${entries.length} starred messages` })
+            .setFooter({ text: t(lang, 'commands.admin.starboard.leaderboard.footer', { count: entries.length }) })
             .setTimestamp(new Date());
           return void await message.reply({ embeds: [embed] });
         }
@@ -277,7 +313,7 @@ const command: Command = {
           ]);
 
           if (pipeline.length === 0) {
-            return void await message.reply('No starred messages yet!');
+            return void await message.reply(t(lang, 'commands.admin.starboard.topusers.none'));
           }
 
           const lines = pipeline.map((e: any, i: number) => {
@@ -286,10 +322,10 @@ const command: Command = {
           });
 
           const embed = new EmbedBuilder()
-            .setTitle('⭐ Top Starred Users')
+            .setTitle(t(lang, 'commands.admin.starboard.topusers.title'))
             .setDescription(lines.join('\n'))
             .setColor(0xf1c40f)
-            .setFooter({ text: `Top ${pipeline.length} users by total stars received` })
+            .setFooter({ text: t(lang, 'commands.admin.starboard.topusers.footer', { count: pipeline.length }) })
             .setTimestamp(new Date());
           return void await message.reply({ embeds: [embed] });
         }
@@ -304,22 +340,22 @@ const command: Command = {
           const postedCount = await StarboardMessage.countDocuments({ guildId: guild.id, starboardMessageId: { $ne: null } });
 
           const embed = new EmbedBuilder()
-            .setTitle('⭐ Starboard Statistics')
+            .setTitle(t(lang, 'commands.admin.starboard.stats.title'))
             .setColor(0xf1c40f)
             .addFields(
-              { name: 'Tracked Messages', value: `${totalEntries}`, inline: true },
-              { name: 'Total Stars', value: `${totalStars}`, inline: true },
-              { name: 'Posted to Starboard', value: `${postedCount}`, inline: true },
+              { name: t(lang, 'commands.admin.starboard.stats.trackedMessages'), value: `${totalEntries}`, inline: true },
+              { name: t(lang, 'commands.admin.starboard.stats.totalStars'), value: `${totalStars}`, inline: true },
+              { name: t(lang, 'commands.admin.starboard.stats.postedToStarboard'), value: `${postedCount}`, inline: true },
             )
             .setTimestamp(new Date());
           return void await message.reply({ embeds: [embed] });
         }
 
         case 'force': {
-          if (!args[1]) return void await message.reply(`Usage: \`${prefix}starboard force <messageLink|messageId> [channelId]\``);
+          if (!args[1]) return void await message.reply(t(lang, 'commands.admin.starboard.force.usage', { prefix }));
 
           const sb = settings.starboard || {};
-          if (!sb.channelId) return void await message.reply('No starboard channel is set. Use `' + prefix + 'starboard setup #channel` first.');
+          if (!sb.channelId) return void await message.reply(t(lang, 'commands.admin.starboard.force.noStarboardChannel', { prefix }));
 
           let targetChannelId: string | null = null;
           let targetMessageId: string;
@@ -332,15 +368,15 @@ const command: Command = {
             targetMessageId = args[1];
             targetChannelId = args[2]?.match(/^<#(\d{17,19})>$/)?.[1] || args[2] || (message as any).channelId;
           } else {
-            return void await message.reply('Please provide a valid message link or message ID.');
+            return void await message.reply(t(lang, 'commands.admin.starboard.force.invalidMessageLinkOrId'));
           }
 
-          if (!targetChannelId) return void await message.reply('Could not determine the channel. Provide a message link or include the channel.');
+          if (!targetChannelId) return void await message.reply(t(lang, 'commands.admin.starboard.force.couldNotDetermineChannel'));
 
           try {
             const { Routes } = await import('@fluxerjs/types');
             const msgData = await client.rest.get(Routes.channelMessage(targetChannelId, targetMessageId)) as any;
-            if (!msgData?.id) return void await message.reply('Could not fetch that message.');
+            if (!msgData?.id) return void await message.reply(t(lang, 'commands.admin.starboard.force.couldNotFetchMessage'));
 
             const content = msgData.content?.length > 1024
               ? msgData.content.substring(0, 1021) + '...'
@@ -391,19 +427,19 @@ const command: Command = {
               { upsert: true, returnDocument: 'after' }
             );
 
-            return void await message.reply(`⭐ Message has been force-added to the starboard!`);
+            return void await message.reply(t(lang, 'commands.admin.starboard.force.forceAdded'));
           } catch (err: any) {
-            return void await message.reply(`Failed to force-add message: ${err.message || 'Unknown error'}`);
+            return void await message.reply(t(lang, 'commands.admin.starboard.force.failed', { error: err.message || t(lang, 'commands.admin.starboard.force.unknownError') }));
           }
         }
 
         case 'remove':
         case 'delete': {
-          if (!args[1]) return void await message.reply(`Usage: \`${prefix}starboard remove <messageId>\``);
-          if (!/^\d{17,19}$/.test(args[1])) return void await message.reply('Please provide a valid message ID.');
+          if (!args[1]) return void await message.reply(t(lang, 'commands.admin.starboard.remove.usage', { prefix }));
+          if (!/^\d{17,19}$/.test(args[1])) return void await message.reply(t(lang, 'commands.admin.starboard.remove.invalidMessageId'));
 
           const entry = await StarboardMessage.findOne({ guildId: guild.id, messageId: args[1] });
-          if (!entry) return void await message.reply('That message is not in the starboard.');
+          if (!entry) return void await message.reply(t(lang, 'commands.admin.starboard.remove.notInStarboard'));
 
           if (entry.starboardMessageId && settings.starboard?.channelId) {
             try {
@@ -413,11 +449,11 @@ const command: Command = {
           }
 
           await StarboardMessage.deleteOne({ _id: entry._id });
-          return void await message.reply('⭐ Message has been removed from the starboard.');
+          return void await message.reply(t(lang, 'commands.admin.starboard.remove.done'));
         }
 
         default:
-          return void await message.reply(`Unknown subcommand. Use \`${prefix}starboard help\` for a list of commands.`);
+          return void await message.reply(t(lang, 'commands.admin.starboard.unknownSubcommand', { prefix }));
       }
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
@@ -425,7 +461,9 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !starboard (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !starboard: ${error.message || error}`);
-        message.reply('An error occurred while executing the starboard command.').catch(() => { });
+        const cached: any = await settingsCache.get(guild.id).catch(() => null);
+        const lang = normalizeLocale(cached?.language);
+        message.reply(t(lang, 'commands.admin.starboard.errors.generic')).catch(() => { });
       }
     }
   }

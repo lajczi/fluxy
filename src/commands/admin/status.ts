@@ -2,6 +2,7 @@ import type { Command } from '../../types';
 import { EmbedBuilder } from '@fluxerjs/core';
 import GuildSettings from '../../models/GuildSettings';
 import isNetworkError from '../../utils/isNetworkError';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'status',
@@ -18,47 +19,50 @@ const command: Command = {
     }
     
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.admin.status.serverOnly'));
     }
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
+      const lang = normalizeLocale(settings?.language);
 
       const embed = new EmbedBuilder()
-        .setTitle(`Server Settings for ${guild.name}`)
+        .setTitle(t(lang, 'commands.admin.status.title', { guildName: guild.name }))
         .setColor(0x3498db)
         .setTimestamp(new Date());
 
       const am = settings.automod || {};
-      const automodStatus = am.level && am.level !== 'off' ? `Enabled (${am.level})` : 'Disabled';
-      const antiLinkStatus = am.antiLink ? 'Enabled' : 'Disabled';
-      const antiSpamStatus = am.antiSpam ? 'Enabled' : 'Disabled';
-      const antiReactionSpamStatus = am.antiReactionSpam ? 'Enabled' : 'Disabled';
-      const antiGhostPingStatus = am.ghostPing ? 'Enabled' : 'Disabled';
+      const automodStatus = am.level && am.level !== 'off'
+        ? t(lang, 'commands.admin.status.enabled', { value: am.level })
+        : t(lang, 'commands.admin.status.disabled');
+      const antiLinkStatus = am.antiLink ? t(lang, 'commands.admin.status.enabledSimple') : t(lang, 'commands.admin.status.disabledSimple');
+      const antiSpamStatus = am.antiSpam ? t(lang, 'commands.admin.status.enabledSimple') : t(lang, 'commands.admin.status.disabledSimple');
+      const antiReactionSpamStatus = am.antiReactionSpam ? t(lang, 'commands.admin.status.enabledSimple') : t(lang, 'commands.admin.status.disabledSimple');
+      const antiGhostPingStatus = am.ghostPing ? t(lang, 'commands.admin.status.enabledSimple') : t(lang, 'commands.admin.status.disabledSimple');
 
       embed.addFields(
         { 
-          name: 'Automod System', 
+          name: t(lang, 'commands.admin.status.automodSystemField'),
           value: `Status: ${automodStatus}`,
           inline: false 
         },
         { 
-          name: 'Anti-Link', 
+          name: t(lang, 'commands.admin.status.antiLinkField'),
           value: antiLinkStatus, 
           inline: true 
         },
         { 
-          name: 'Anti-Spam', 
+          name: t(lang, 'commands.admin.status.antiSpamField'),
           value: antiSpamStatus, 
           inline: true 
         },
         {
-          name: 'Anti-Reaction Spam',
+          name: t(lang, 'commands.admin.status.antiReactionSpamField'),
           value: antiReactionSpamStatus,
           inline: true
         },
         { 
-          name: 'Anti-Ghost Ping', 
+          name: t(lang, 'commands.admin.status.antiGhostPingField'),
           value: antiGhostPingStatus, 
           inline: true 
         }
@@ -67,11 +71,11 @@ const command: Command = {
       const modLogChannelId = settings.moderation?.logChannelId || settings.logChannelId;
       const logChannel = modLogChannelId 
         ? `<#${modLogChannelId}>` 
-        : 'Not set';
+        : t(lang, 'commands.admin.status.logNotSet');
 
       embed.addFields(
         { 
-          name: 'Log Channel', 
+          name: t(lang, 'commands.admin.status.logChannelField'),
           value: logChannel, 
           inline: true 
         }
@@ -79,29 +83,28 @@ const command: Command = {
 
       const muteRole = settings.muteRoleId 
         ? `<@&${settings.muteRoleId}>` 
-        : 'Not set';
+        : t(lang, 'commands.admin.status.muteNotSet');
 
       embed.addFields(
         { 
-          name: 'Mute Role', 
+          name: t(lang, 'commands.admin.status.muteRoleField'),
           value: muteRole, 
           inline: true 
         }
       );
 
       const prefix = settings.prefix || process.env.PREFIX || '!';
+      const defaultPrefix = process.env.PREFIX || '!';
 
       embed.addFields(
         { 
-          name: 'Custom Prefix', 
-          value: settings.prefix ? `\`${prefix}\`` : `Default (\`${process.env.PREFIX || '!'}\`)`, 
+          name: t(lang, 'commands.admin.status.customPrefixField'),
+          value: settings.prefix ? `\`${prefix}\`` : t(lang, 'commands.admin.status.customPrefixDefaultValue', { defaultPrefix }),
           inline: true 
         }
       );
 
-      embed.setFooter({ 
-        text: `Use !toggle-automod, !toggle-antilink, !toggle-antispam, !toggle-ghostping to change settings` 
-      });
+      embed.setFooter({ text: t(lang, 'commands.admin.status.footer') });
 
       await message.reply({ embeds: [embed] });
 
@@ -110,7 +113,7 @@ const command: Command = {
         console.warn(`[${(message as any).guild?.name || 'Unknown Server'}] Fluxer API unreachable during !status (ECONNRESET)`);
       } else {
         console.error(`[${(message as any).guild?.name || 'Unknown Server'}] Error in !status:`, error);
-        message.reply('An error occurred while fetching server settings.').catch(() => {});
+        message.reply(t('en', 'commands.admin.status.errors.generic')).catch(() => {});
       }
     }
   }

@@ -172,6 +172,7 @@ export interface IVerification {
 export interface IGuildSettings {
   guildId: string;
   prefixes: string[];
+  language: string;
   welcomeMessage: IWelcomeMessage;
   reactionRoles: IReactionRole[];
   moderation: IModeration;

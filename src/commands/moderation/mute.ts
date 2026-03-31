@@ -9,6 +9,7 @@ import settingsCache from '../../utils/settingsCache';
 import ModerationLog from '../../models/ModerationLog';
 import isNetworkError from '../../utils/isNetworkError';
 import { isPermDenied, PERM_MESSAGES } from '../../utils/permError';
+import { t, normalizeLocale } from '../../i18n';
 
 const DEFAULT_MUTE_DURATION = 10 * 60 * 1000; // default mute, change if you would like :)
 
@@ -27,19 +28,22 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.moderation.mute.serverOnly'));
     }
 
+    const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(guildSettings?.language);
+
     if (!args[0]) {
-      return void await message.reply(`Usage: \`${prefix}mute <user> [reason]\``);
+      return void await message.reply(t(lang, 'commands.moderation.mute.usage', { prefix }));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply('Please provide a valid user mention or ID.');
+      return void await message.reply(t(lang, 'commands.moderation.mute.invalidUser'));
     }
 
-    const reason = args.slice(1).join(' ').trim() || 'No reason provided';
+    const reason = args.slice(1).join(' ').trim() || t(lang, 'commands.moderation.mute.noReasonProvided');
 
     let moderator: any = guild.members?.get((message as any).author.id);
     if (!moderator) {
@@ -51,12 +55,12 @@ const command: Command = {
       try {
         targetMember = await guild.fetchMember(userId);
       } catch {
-        return void await message.reply('That user is not in this server.');
+        return void await message.reply(t(lang, 'commands.moderation.mute.userNotInServer'));
       }
     }
 
     if (!targetMember) {
-      return void await message.reply('That user is not in this server.');
+      return void await message.reply(t(lang, 'commands.moderation.mute.userNotInServer'));
     }
 
     const modCheck = canModerate(moderator, targetMember);
@@ -78,15 +82,15 @@ const command: Command = {
       if (!(targetMember as any).guild) (targetMember as any).guild = guild;
       const botCheck = canModerate(botMember as any, targetMember);
       if (!botCheck.canModerate) {
-        return void await message.reply("I cannot mute this user because their highest role is equal to or above mine. Ask a server admin to move my role higher in the role list.");
+        return void await message.reply(t(lang, 'commands.moderation.mute.cannotMuteRoleHierarchy'));
       }
     }
 
     if (targetMember.communicationDisabledUntil && targetMember.communicationDisabledUntil > new Date()) {
-      return void await message.reply('That user is already muted.');
+      return void await message.reply(t(lang, 'commands.moderation.mute.alreadyMuted'));
     }
 
-    const settings = await settingsCache.get(guild.id);
+    const settings = guildSettings;
     const muteRoleId = settings?.moderation?.muteRoleId || settings?.muteRoleId;
     const muteMethod: 'auto' | 'timeout' | 'mute_role' = settings?.moderation?.muteMethod || 'auto';
 
@@ -106,14 +110,21 @@ const command: Command = {
       }
 
       if (muteMethod === 'mute_role' && !useMuteRole) {
-          return void await message.reply('Mute method is set to **mute role only**, but I cannot apply the mute role (missing role, missing permission, or role hierarchy issue).');
+          return void await message.reply(t(lang, 'commands.moderation.mute.muteRoleOnlyCannotApply'));
       }
 
       const shouldUseRole = muteMethod === 'mute_role' || (muteMethod === 'auto' && useMuteRole);
       if (shouldUseRole && muteRoleId) {
           await targetMember.addRole(muteRoleId);
 
-          await message.reply(`Successfully muted **${targetMember.user?.username || targetMember.id}** (<@${targetMember.id}>).\n**Reason:** ${reason}`);
+          const displayName = targetMember.user?.username || targetMember.id;
+          await message.reply(
+            t(lang, 'commands.moderation.mute.successMutedRole', {
+              username: displayName,
+              userId: targetMember.id,
+              reason
+            })
+          );
 
           await logModAction(guild, (message as any).author, targetMember.user || targetMember, 'mute', reason, {
             fields: [
@@ -135,7 +146,7 @@ const command: Command = {
       }
 
       if (muteMethod === 'mute_role') {
-        return void await message.reply('Mute role method is enabled, but no mute role is configured.');
+        return void await message.reply(t(lang, 'commands.moderation.mute.muteRoleNotConfigured'));
       }
 
       await targetMember.edit({
@@ -143,7 +154,15 @@ const command: Command = {
         timeout_reason: `${(message as any).author.username}: ${reason}`
       });
 
-      await message.reply(`Successfully muted **${targetMember.user?.username || targetMember.id}** (<@${targetMember.id}>) for **${formatDuration(DEFAULT_MUTE_DURATION)}**.\n**Reason:** ${reason}`);
+      const displayName = targetMember.user?.username || targetMember.id;
+      await message.reply(
+        t(lang, 'commands.moderation.mute.successMutedDuration', {
+          username: displayName,
+          userId: targetMember.id,
+          duration: formatDuration(DEFAULT_MUTE_DURATION),
+          reason
+        })
+      );
 
       await logModAction(guild, (message as any).author, targetMember.user || targetMember, 'mute', reason, {
         fields: [
@@ -169,7 +188,7 @@ const command: Command = {
         message.reply(PERM_MESSAGES.mute).catch(() => {});
       } else {
         console.error(`[${guildName}] Error in !mute: ${error.message || error}`);
-        message.reply('An error occurred while trying to mute that member.').catch(() => {});
+        message.reply(t(lang, 'commands.moderation.mute.errors.generic')).catch(() => {});
       }
     }
   }

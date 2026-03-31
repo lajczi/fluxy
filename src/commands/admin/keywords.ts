@@ -1,6 +1,7 @@
 import type { Command } from '../../types';
 import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const MAX_KEYWORDS = 50;
 
@@ -15,15 +16,18 @@ async function invalidate(guildId: string): Promise<void> {
 
 async function showList(message: any, guild: any, prefix = '!') {
   const settings = await getSettings(guild.id);
+  const lang = normalizeLocale(settings?.language);
   const kw = settings.keywordWarnings;
   const keywords = kw?.keywords || [];
 
-  const statusLine = kw?.enabled ? '**Enabled**' : '**Disabled**';
-  const actionLine = `Action: \`${kw?.action || 'delete+warn'}\``;
+  const statusLine = kw?.enabled
+    ? t(lang, 'commands.admin.keywords.statusEnabled')
+    : t(lang, 'commands.admin.keywords.statusDisabled');
+  const actionLine = t(lang, 'commands.admin.keywords.actionLine', { action: kw?.action || 'delete+warn' });
 
   if (!keywords.length) {
     return message.reply(
-      `**Keyword System** - ${statusLine} | ${actionLine}\n\nNo keywords configured. Use \`${prefix}keywords add <word>\` to add one.`
+      t(lang, 'commands.admin.keywords.showListEmpty', { statusLine, actionLine, prefix })
     );
   }
 
@@ -34,26 +38,35 @@ async function showList(message: any, guild: any, prefix = '!') {
   }).join('\n');
 
   return message.reply(
-    `**Keyword System** - ${statusLine} | ${actionLine}\n\n${list}\n\n` +
-    `${keywords.length}/${MAX_KEYWORDS} keywords used.`
+    t(lang, 'commands.admin.keywords.showList', {
+      statusLine,
+      actionLine,
+      list,
+      usedCount: keywords.length,
+      max: MAX_KEYWORDS
+    })
   );
 }
 
 async function setEnabled(message: any, guild: any, enabled: boolean) {
   const settings = await getSettings(guild.id);
+  const lang = normalizeLocale(settings?.language);
   settings.keywordWarnings.enabled = enabled;
   await settings.save();
   await invalidate(guild.id);
-  return message.reply(`Keyword warning system **${enabled ? 'enabled' : 'disabled'}**.`);
+  return message.reply(
+    enabled
+      ? t(lang, 'commands.admin.keywords.setEnabledEnabled')
+      : t(lang, 'commands.admin.keywords.setEnabledDisabled')
+  );
 }
 
 async function addKeyword(message: any, guild: any, args: string[], prefix = '!') {
+  const settings = await getSettings(guild.id);
+  const lang = normalizeLocale(settings?.language);
+
   if (!args.length) {
-    return message.reply(
-      'Usage:\n' +
-      `\`${prefix}keywords add <word>\` - plain match\n` +
-      `\`${prefix}keywords add regex <pattern>\` - regex match`
-    );
+    return message.reply(t(lang, 'commands.admin.keywords.addUsage', { prefix }));
   }
 
   let isRegex = false;
@@ -62,50 +75,58 @@ async function addKeyword(message: any, guild: any, args: string[], prefix = '!'
   if (args[0]?.toLowerCase() === 'regex') {
     isRegex = true;
     pattern = args.slice(1).join(' ').trim();
-    if (!pattern) return message.reply('Please provide a regex pattern after `regex`.');
+    if (!pattern) return message.reply(t(lang, 'commands.admin.keywords.regexPatternRequired'));
 
     try {
       new RegExp(pattern, 'i');
     } catch (e: any) {
-      return message.reply(`Invalid regex pattern: \`${e.message}\``);
+      return message.reply(t(lang, 'commands.admin.keywords.invalidRegexPattern', { error: e.message }));
     }
 
     const { isSafeRegex } = await import('../../utils/safeRegex');
     const check = isSafeRegex(pattern);
     if (!check.safe) {
-      return message.reply(`Regex rejected: ${check.reason} Simplify it or use a plain keyword instead.`);
+      return message.reply(t(lang, 'commands.admin.keywords.regexRejected', { reason: check.reason }));
     }
   } else {
     pattern = args.join(' ').trim();
   }
 
-  const settings = await getSettings(guild.id);
   if (!settings.keywordWarnings) settings.keywordWarnings = {};
   if (!settings.keywordWarnings.keywords) settings.keywordWarnings.keywords = [];
 
   if (settings.keywordWarnings.keywords.length >= MAX_KEYWORDS) {
-    return message.reply(`Maximum of ${MAX_KEYWORDS} keywords reached. Remove one first.`);
+    return message.reply(t(lang, 'commands.admin.keywords.maxKeywordsReached', { max: MAX_KEYWORDS }));
   }
 
   const duplicate = settings.keywordWarnings.keywords.find((k: any) => k.pattern === pattern && k.isRegex === isRegex);
-  if (duplicate) return message.reply('That pattern is already in the list.');
+  if (duplicate) return message.reply(t(lang, 'commands.admin.keywords.duplicatePattern'));
 
   settings.keywordWarnings.keywords.push({ pattern, isRegex, addedBy: message.author.id });
   settings.markModified('keywordWarnings');
   await settings.save();
   await invalidate(guild.id);
 
-  const tag = isRegex ? 'regex pattern' : 'keyword';
-  return message.reply(`Added ${tag}: \`${pattern}\`\n\nDon't forget to \`${prefix}keywords enable\` if the system is off.`);
+  const tag = isRegex
+    ? t(lang, 'commands.admin.keywords.tagRegexPattern')
+    : t(lang, 'commands.admin.keywords.tagKeyword');
+  return message.reply(
+    t(lang, 'commands.admin.keywords.added', {
+      tag,
+      pattern,
+      prefix
+    })
+  );
 }
 
 async function removeKeyword(message: any, guild: any, numArg: string, prefix = '!') {
   const num = parseInt(numArg, 10);
   const settings = await getSettings(guild.id);
+  const lang = normalizeLocale(settings?.language);
   const keywords = settings.keywordWarnings?.keywords || [];
 
   if (isNaN(num) || num < 1 || num > keywords.length) {
-    return message.reply(`Please give a valid number (1–${keywords.length}). Use \`${prefix}keywords list\` to see numbers.`);
+    return message.reply(t(lang, 'commands.admin.keywords.removeInvalidNumber', { max: keywords.length, prefix }));
   }
 
   const removed = keywords.splice(num - 1, 1)[0];
@@ -113,36 +134,43 @@ async function removeKeyword(message: any, guild: any, numArg: string, prefix = 
   await settings.save();
   await invalidate(guild.id);
 
-  return message.reply(`Removed keyword #${num}: \`${removed.pattern}\``);
+  return message.reply(t(lang, 'commands.admin.keywords.removed', { num, pattern: removed.pattern }));
 }
 
 async function setAction(message: any, guild: any, action: string) {
   const valid = ['warn', 'delete', 'delete+warn'];
   if (!action || !valid.includes(action.toLowerCase())) {
-    return message.reply(`Valid actions: \`warn\`, \`delete\`, \`delete+warn\``);
+    return message.reply(t('en', 'commands.admin.keywords.validActions'));
   }
 
   const settings = await getSettings(guild.id);
-  settings.keywordWarnings.action = action.toLowerCase();
+  const lang = normalizeLocale(settings?.language);
+  const actionLower = action.toLowerCase();
+  settings.keywordWarnings.action = actionLower;
   settings.markModified('keywordWarnings');
   await settings.save();
   await invalidate(guild.id);
 
   const descriptions: Record<string, string> = {
-    'warn':        'Issue a warning but leave the message.',
-    'delete':      'Silently delete the message, no warning.',
-    'delete+warn': 'Delete the message and issue a warning.'
+    warn: t(lang, 'commands.admin.keywords.actionWarn'),
+    delete: t(lang, 'commands.admin.keywords.actionDelete'),
+    'delete+warn': t(lang, 'commands.admin.keywords.actionDeleteWarn')
   };
 
-  return message.reply(`Action set to \`${action}\` - ${descriptions[action.toLowerCase()]}`);
+  return message.reply(
+    t(lang, 'commands.admin.keywords.actionSetDone', {
+      action: actionLower,
+      description: descriptions[actionLower]
+    })
+  );
 }
 
 async function testKeywords(message: any, guild: any, text: string, prefix = '!') {
-  if (!text) return message.reply(`Provide some text to test: \`${prefix}keywords test <your text here>\``);
-
   const settings = await getSettings(guild.id);
+  const lang = normalizeLocale(settings?.language);
+  if (!text) return message.reply(t(lang, 'commands.admin.keywords.testMissingText', { prefix }));
   const keywords = settings.keywordWarnings?.keywords || [];
-  if (!keywords.length) return message.reply('No keywords configured yet.');
+  if (!keywords.length) return message.reply(t(lang, 'commands.admin.keywords.noKeywordsConfigured'));
 
   const hits = keywords
     .map((k: any, i: number) => {
@@ -157,9 +185,12 @@ async function testKeywords(message: any, guild: any, text: string, prefix = '!'
     .filter(Boolean);
 
   if (!hits.length) {
-    return message.reply(`No keywords matched: \`${text.slice(0, 100)}\``);
+    const preview = text.slice(0, 100);
+    return message.reply(t(lang, 'commands.admin.keywords.noKeywordsMatched', { preview }));
   }
-  return message.reply(`**Matched ${hits.length} keyword(s):**\n${hits.join('\n')}`);
+  return message.reply(
+    t(lang, 'commands.admin.keywords.testMatches', { hitsCount: hits.length, hits: hits.join('\n') })
+  );
 }
 
 const command: Command = {
@@ -183,7 +214,7 @@ const command: Command = {
 
   async execute(message, args, _client, prefix = '!') {
     const guild = (message as any).guild;
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.admin.keywords.serverOnly'));
 
     const sub = args[0]?.toLowerCase();
 
@@ -197,7 +228,7 @@ const command: Command = {
     if (sub === 'action') return setAction(message, guild, args[1]);
     if (sub === 'test')   return testKeywords(message, guild, args.slice(1).join(' '), prefix);
 
-    return void await message.reply(`Unknown subcommand. Use \`${prefix}keywords\` to see all options.`);
+    return void await message.reply(t('en', 'commands.admin.keywords.unknownSubcommand', { prefix }));
   }
 };
 

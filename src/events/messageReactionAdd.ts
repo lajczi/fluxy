@@ -10,6 +10,7 @@ import GlobalBanPrompt from '../models/GlobalBanPrompt';
 import StarboardMessage from '../models/StarboardMessage';
 import { PermissionFlags } from '@fluxerjs/core';
 import { EmbedBuilder } from '@fluxerjs/core';
+import { t, normalizeLocale } from '../i18n';
 
 const EMOJI_APPLY = '✅';
 const EMOJI_DECLINE = '❌';
@@ -165,6 +166,7 @@ const event: BotEvent = {
           const { generateCaptcha } = await import('../utils/captchaCard');
           const { verificationSessions } = await import('../commands/admin/verify');
 
+          const lang = normalizeLocale(settings.language);
           const botId = client.user?.id;
           const everyoneRoleId = guild.id;
 
@@ -194,13 +196,8 @@ const event: BotEvent = {
           const maxAttempts = verification.maxAttempts || 2;
 
           const captchaEmbed = new EmbedBuilder()
-            .setTitle('🔒 Verification Required')
-            .setDescription(
-              `Welcome, <@${user.id}>!\n\n` +
-              `Please type the **6 letters** shown in the image above to verify yourself.\n\n` +
-              `You have **${maxAttempts}** attempt(s). The code is **not** case-sensitive.\n` +
-              `This channel will expire in **60 seconds**.`
-            )
+            .setTitle(t(lang, 'verification.captcha.title'))
+            .setDescription(t(lang, 'verification.captcha.description', { userId: user.id, maxAttempts }))
             .setColor(0x5865F2)
                         .setTimestamp(new Date());
 
@@ -235,8 +232,8 @@ const event: BotEvent = {
               const logChannel = guild.channels?.get(verification.logChannelId) || await client.channels.fetch(verification.logChannelId).catch(() => null);
               if (logChannel) {
                 const logEmbed = new EmbedBuilder()
-                  .setTitle('Verification Started')
-                  .setDescription(`<@${user.id}> started a verification attempt.`)
+                  .setTitle(t(lang, 'verification.log.startedTitle'))
+                  .setDescription(t(lang, 'verification.log.startedDescription', { userId: user.id }))
                   .setColor(0xf39c12)
                   .setTimestamp(new Date());
                 const logMsg = await logChannel.send({ embeds: [logEmbed] });
@@ -267,6 +264,7 @@ const event: BotEvent = {
           );
         } catch { }
 
+        const lang = normalizeLocale(settings.language);
         const result = await createTicketForUser(guild, user.id, settings, client, undefined);
 
         if (result.success) {
@@ -277,7 +275,7 @@ const event: BotEvent = {
             }
             if (setupChannel) {
               const notice = await setupChannel.send({
-                content: `<@${user.id}> Your ticket has been created! Head over to <#${result.channelId}> (ticket #${result.ticketNumber}).`
+                content: `<@${user.id}> ${t(lang, 'commands.admin.ticket.user.createdNotice', { channelId: result.channelId, ticketNumber: result.ticketNumber })}`
               });
               setTimeout(() => notice.delete().catch(() => { }), 5000);
             }

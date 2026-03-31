@@ -5,6 +5,7 @@ import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
 import { EmbedBuilder, PermissionFlags } from '@fluxerjs/core';
 import { generateTranscriptHtml } from '../../utils/transcriptGenerator';
+import { t, normalizeLocale } from '../../i18n';
 
 const ticketCooldowns = new Map<string, number>();
 const TICKET_COOLDOWN_MS = 10 * 60 * 1000;
@@ -35,12 +36,13 @@ function getSupportRoleIds(settings: any): string[] {
 }
 
 async function getMemberWithTicketAccess(message: any, guild: any, settings: any): Promise<{ ok: boolean; reason?: string; member?: any }> {
+  const lang = normalizeLocale(settings?.language);
   let member = guild.members?.get(message.author.id);
   if (!member) {
     try { member = await guild.fetchMember(message.author.id); } catch {}
   }
   if (!member) {
-    return { ok: false, reason: 'Could not verify your permissions right now. Please try again.' };
+    return { ok: false, reason: t(lang, 'commands.admin.ticket.access.couldNotVerifyPermissionsRightNow') };
   }
 
   const supportRoleIds = getSupportRoleIds(settings);
@@ -49,7 +51,7 @@ async function getMemberWithTicketAccess(message: any, guild: any, settings: any
   const isAdmin = member.permissions?.has(PermissionFlags.ManageGuild) || member.permissions?.has(PermissionFlags.Administrator);
 
   if (!isSupport && !isAdmin) {
-    return { ok: false, reason: 'You need a **support role** or **Manage Server** permission to manage tickets.' };
+    return { ok: false, reason: t(lang, 'commands.admin.ticket.access.supportRoleOrManageServer') };
   }
 
   return { ok: true, member };
@@ -68,15 +70,22 @@ async function save(settings: any, guildId: string): Promise<void> {
 }
 
 export async function createTicketForUser(guild: any, userId: string, settings: any, client: any, subject?: string, prefix = '!'): Promise<{ success: boolean; reason?: string; ticketNumber?: number; channelId?: string }> {
+  const lang = normalizeLocale(settings?.language);
   const maxOpen = settings.ticketMaxOpen || 3;
   const openTickets = await Ticket.countDocuments({ guildId: guild.id, openedBy: userId, status: 'open' });
   if (openTickets >= maxOpen) {
-    return { success: false, reason: `You already have **${openTickets}** open ticket(s). Maximum is **${maxOpen}**. Please close an existing ticket first.` };
+    return {
+      success: false,
+      reason: t(lang, 'commands.admin.ticket.user.reasons.maxOpenTickets', { openTickets, maxOpen }),
+    };
   }
 
   const cooldown = checkTicketCooldown(guild.id, userId);
   if (!cooldown.allowed) {
-    return { success: false, reason: `Please wait **${cooldown.remaining}** before creating another ticket.` };
+    return {
+      success: false,
+      reason: t(lang, 'commands.admin.ticket.user.reasons.waitCooldown', { remaining: cooldown.remaining }),
+    };
   }
 
   const ticketNumber = await (Ticket as any).getNextNumber(guild.id);
@@ -108,7 +117,10 @@ export async function createTicketForUser(guild: any, userId: string, settings: 
       permission_overwrites: overwrites,
     });
   } catch (err: any) {
-    return { success: false, reason: `Failed to create ticket channel: ${err.message}` };
+    return {
+      success: false,
+      reason: t(lang, 'commands.admin.ticket.user.reasons.failedToCreateChannel', { error: err.message }),
+    };
   }
 
   await Ticket.create({
@@ -130,17 +142,17 @@ export async function createTicketForUser(guild: any, userId: string, settings: 
   if (settings.ticketOpenMessage) {
     openMsg = replaceVars(settings.ticketOpenMessage);
   } else {
-    openMsg = `Welcome <@${userId}>! A staff member will be with you shortly.\n\nUse \`${prefix}ticket close\` to close this ticket when your issue is resolved.`;
+    openMsg = t(lang, 'commands.admin.ticket.user.defaultOpenMessage', { userId, prefix });
   }
 
   const embed = new EmbedBuilder()
-    .setTitle(`Ticket #${ticketNumber}`)
+    .setTitle(t(lang, 'commands.admin.ticket.user.ticketEmbed.title', { ticketNumber }))
     .setDescription(openMsg)
     .setColor(0x5865F2)
     .setTimestamp(new Date());
 
   if (subject) {
-    embed.addFields({ name: 'Subject', value: subject, inline: false });
+    embed.addFields({ name: t(lang, 'commands.admin.ticket.user.ticketEmbed.subjectField'), value: subject, inline: false });
   }
 
   try {
@@ -159,17 +171,14 @@ export async function createTicketForUser(guild: any, userId: string, settings: 
 }
 
 async function postTicketPanel(targetChannel: any, guild: any, settings: any, _client: any): Promise<any> {
+  const lang = normalizeLocale(settings?.language);
   const emoji = settings.ticketEmoji || '\uD83C\uDFAB';
 
   const embed = new EmbedBuilder()
-    .setTitle('Support Tickets')
-    .setDescription(
-      `Need help? React with ${emoji} below to create a ticket!\n\n` +
-      'A private channel will be created for you and a staff member will assist you as soon as possible.\n\n' +
-      '*You can only create one ticket every 10 minutes.*'
-    )
+    .setTitle(t(lang, 'commands.admin.ticket.user.panelEmbed.title'))
+    .setDescription(t(lang, 'commands.admin.ticket.user.panelEmbed.description', { emoji }))
     .setColor(0x5865F2)
-    .setFooter({ text: 'React below to open a ticket' });
+    .setFooter({ text: t(lang, 'commands.admin.ticket.user.panelEmbed.footer') });
 
   const panelMsg = await targetChannel.send({ embeds: [embed] });
 
@@ -190,10 +199,11 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
   async setup(message, args, guild, settings, client, prefix) {
     const sub = args[0]?.toLowerCase();
+    const lang = normalizeLocale(settings?.language);
 
     if (sub === 'category') {
       const val = args[1];
-      if (!val) return message.reply(`Usage: \`${prefix}ticket setup category <categoryId>\`\nProvide the ID of an existing category channel, or \`create\` to make one.`);
+      if (!val) return message.reply(t(lang, 'commands.admin.ticket.setup.category.usage', { prefix }));
 
       if (val.toLowerCase() === 'create') {
         try {
@@ -203,22 +213,22 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
           });
           settings.ticketCategoryId = category.id;
           await save(settings, guild.id);
-          return message.reply(`Ticket category created: **Tickets** (<#${category.id}>)`);
+          return message.reply(t(lang, 'commands.admin.ticket.setup.category.created', { categoryId: category.id }));
         } catch (err: any) {
-          return message.reply(`Failed to create category: ${err.message}`);
+          return message.reply(t(lang, 'commands.admin.ticket.setup.category.failedToCreate', { error: err.message }));
         }
       }
 
       const categoryId = val.match(/^\d{17,19}$/)?.[0];
-      if (!categoryId) return message.reply('Please provide a valid category channel ID.');
+      if (!categoryId) return message.reply(t(lang, 'commands.admin.ticket.setup.category.invalidCategoryId'));
       settings.ticketCategoryId = categoryId;
       await save(settings, guild.id);
-      return message.reply(`Ticket category set to <#${categoryId}>.`);
+      return message.reply(t(lang, 'commands.admin.ticket.setup.category.setDone', { categoryId }));
     }
 
     if (sub === 'channel') {
       if (!settings.ticketCategoryId) {
-        return message.reply(`Set up a ticket category first: \`${prefix}ticket setup category <id|create>\``);
+        return message.reply(t(lang, 'commands.admin.ticket.setup.channel.setupFirst', { prefix }));
       }
 
       const val = args[1];
@@ -250,20 +260,20 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
           });
 
           await postTicketPanel(ticketChannel, guild, settings, client);
-          return message.reply(`Ticket channel created: <#${ticketChannel.id}> - users can now react to create tickets!`);
+          return message.reply(t(lang, 'commands.admin.ticket.setup.channel.created', { channelId: ticketChannel.id }));
         } catch (err: any) {
-          return message.reply(`Failed to create ticket channel: ${err.message}`);
+          return message.reply(t(lang, 'commands.admin.ticket.setup.channel.failedToCreate', { error: err.message }));
         }
       }
 
       const channelId = val.match(/^<#(\d{17,19})>$/)?.[1] ?? (val.match(/^\d{17,19}$/)?.[0] || null);
-      if (!channelId) return message.reply('Please mention a valid channel or provide a channel ID.');
+      if (!channelId) return message.reply(t(lang, 'commands.admin.ticket.setup.channel.invalidChannelId'));
 
       let targetChannel = guild.channels?.get(channelId);
       if (!targetChannel) {
         targetChannel = await client.channels.fetch(channelId).catch(() => null);
       }
-      if (!targetChannel) return message.reply('Could not find that channel.');
+      if (!targetChannel) return message.reply(t(lang, 'commands.admin.ticket.setup.channel.couldNotFind'));
 
       const botId = client.user?.id;
       if (botId) {
@@ -278,19 +288,15 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
             ),
           });
         } catch {
-          return message.reply(
-            `I couldn't update my permissions in <#${channelId}>. ` +
-            `Make sure I have **Manage Channels** or manually grant me ` +
-            `**Send Messages** and **Add Reactions** in that channel.`
-          );
+          return message.reply(t(lang, 'commands.admin.ticket.setup.channel.botPermissionUpdateFailed', { channelId }));
         }
       }
 
       try {
         await postTicketPanel(targetChannel, guild, settings, client);
-        return message.reply(`Ticket panel posted in <#${channelId}> - users can now react to create tickets!`);
+        return message.reply(t(lang, 'commands.admin.ticket.setup.channel.panelPosted', { channelId }));
       } catch (err: any) {
-        return message.reply(`Failed to post ticket panel: ${err.message}`);
+        return message.reply(t(lang, 'commands.admin.ticket.setup.channel.failedToPostPanel', { error: err.message }));
       }
     }
 
@@ -300,117 +306,129 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
       if (!action) {
         const roleIds = getSupportRoleIds(settings);
-        if (roleIds.length === 0) return message.reply(`No support roles configured.\n\n\`${prefix}ticket setup role add <@role>\` - add a support role\n\`${prefix}ticket setup role remove <@role>\` - remove a support role\n\`${prefix}ticket setup role clear\` - remove all support roles`);
-        return message.reply(`**Support Roles (${roleIds.length}):** ${roleIds.map((id: string) => `<@&${id}>`).join(', ')}`);
+        if (roleIds.length === 0) return message.reply(t(lang, 'commands.admin.ticket.setup.role.noSupportRoles', { prefix }));
+        return message.reply(
+          t(lang, 'commands.admin.ticket.setup.role.list', {
+            count: roleIds.length,
+            roleList: roleIds.map((id: string) => `<@&${id}>`).join(', '),
+          })
+        );
       }
 
       if (action === 'clear') {
         settings.ticketSupportRoleId = null;
         settings.ticketSupportRoleIds = [];
         await save(settings, guild.id);
-        return message.reply('All ticket support roles cleared.');
+        return message.reply(t(lang, 'commands.admin.ticket.setup.role.clearedAll'));
       }
 
       if (action === 'add') {
-        if (!val) return message.reply(`Usage: \`${prefix}ticket setup role add <@role>\``);
+        if (!val) return message.reply(t(lang, 'commands.admin.ticket.setup.role.addUsage', { prefix }));
         const roleId = val.match(/^<@&(\d{17,19})>$/)?.[1] ?? (val.match(/^\d{17,19}$/)?.[0] || null);
-        if (!roleId) return message.reply('Please mention a valid role or provide a role ID.');
+        if (!roleId) return message.reply(t(lang, 'commands.admin.ticket.setup.role.invalidRoleId'));
         const current = getSupportRoleIds(settings);
-        if (current.includes(roleId)) return message.reply(`<@&${roleId}> is already a support role.`);
-        if (current.length >= 10) return message.reply('Maximum of 10 support roles allowed.');
+        if (current.includes(roleId)) return message.reply(t(lang, 'commands.admin.ticket.setup.role.alreadySupportRole', { roleId }));
+        if (current.length >= 10) return message.reply(t(lang, 'commands.admin.ticket.setup.role.maxSupportRoles'));
         settings.ticketSupportRoleIds = [...new Set([...current, roleId])];
         settings.ticketSupportRoleId = settings.ticketSupportRoleIds[0];
         await save(settings, guild.id);
-        return message.reply(`<@&${roleId}> added as a ticket support role. (${settings.ticketSupportRoleIds.length} total)`);
+        return message.reply(
+          t(lang, 'commands.admin.ticket.setup.role.added', { roleId, total: settings.ticketSupportRoleIds.length })
+        );
       }
 
       if (action === 'remove') {
-        if (!val) return message.reply(`Usage: \`${prefix}ticket setup role remove <@role>\``);
+        if (!val) return message.reply(t(lang, 'commands.admin.ticket.setup.role.removeUsage', { prefix }));
         const roleId = val.match(/^<@&(\d{17,19})>$/)?.[1] ?? (val.match(/^\d{17,19}$/)?.[0] || null);
-        if (!roleId) return message.reply('Please mention a valid role or provide a role ID.');
+        if (!roleId) return message.reply(t(lang, 'commands.admin.ticket.setup.role.invalidRoleId'));
         const current = getSupportRoleIds(settings);
-        if (!current.includes(roleId)) return message.reply(`<@&${roleId}> is not a support role.`);
+        if (!current.includes(roleId)) return message.reply(t(lang, 'commands.admin.ticket.setup.role.notSupportRole', { roleId }));
         const updated = current.filter((id: string) => id !== roleId);
         settings.ticketSupportRoleIds = updated;
         settings.ticketSupportRoleId = updated[0] || null;
         await save(settings, guild.id);
-        return message.reply(`<@&${roleId}> removed from ticket support roles. (${updated.length} remaining)`);
+        return message.reply(
+          t(lang, 'commands.admin.ticket.setup.role.removed', { roleId, remaining: updated.length })
+        );
       }
 
       const roleId = action.match(/^<@&(\d{17,19})>$/)?.[1] ?? (action.match(/^\d{17,19}$/)?.[0] || null);
       if (roleId) {
         const current = getSupportRoleIds(settings);
-        if (current.length >= 10) return message.reply('Maximum of 10 support roles allowed.');
+        if (current.length >= 10) return message.reply(t(lang, 'commands.admin.ticket.setup.role.maxSupportRoles'));
         settings.ticketSupportRoleIds = [...new Set([...current, roleId])];
         settings.ticketSupportRoleId = settings.ticketSupportRoleIds[0];
         await save(settings, guild.id);
-        return message.reply(`<@&${roleId}> added as a ticket support role. (${settings.ticketSupportRoleIds.length} total)`);
+        return message.reply(
+          t(lang, 'commands.admin.ticket.setup.role.added', { roleId, total: settings.ticketSupportRoleIds.length })
+        );
       }
 
-      return message.reply(`Usage:\n\`${prefix}ticket setup role add <@role>\` - add a support role\n\`${prefix}ticket setup role remove <@role>\` - remove a support role\n\`${prefix}ticket setup role clear\` - remove all\n\`${prefix}ticket setup role\` - list current roles`);
+      return message.reply(t(lang, 'commands.admin.ticket.setup.role.generalListUsage', { prefix }));
     }
 
     if (sub === 'log') {
       const val = args[1];
-      if (!val) return message.reply(`Usage: \`${prefix}ticket setup log <#channel>\``);
+      if (!val) return message.reply(t(lang, 'commands.admin.ticket.setup.log.usage', { prefix }));
       if (val.toLowerCase() === 'clear') {
         settings.ticketLogChannelId = null;
         await save(settings, guild.id);
-        return message.reply('Ticket log channel cleared.');
+        return message.reply(t(lang, 'commands.admin.ticket.setup.log.cleared'));
       }
       const channelId = val.match(/^<#(\d{17,19})>$/)?.[1] ?? (val.match(/^\d{17,19}$/)?.[0] || null);
-      if (!channelId) return message.reply('Please mention a valid channel or provide a channel ID.');
+      if (!channelId) return message.reply(t(lang, 'commands.admin.ticket.setup.log.invalidChannelId'));
       settings.ticketLogChannelId = channelId;
       await save(settings, guild.id);
-      return message.reply(`Ticket log channel set to <#${channelId}>.`);
+      return message.reply(t(lang, 'commands.admin.ticket.setup.log.setDone', { channelId }));
     }
 
     if (sub === 'max') {
       const val = parseInt(args[1]);
-      if (isNaN(val) || val < 1 || val > 10) return message.reply(`Usage: \`${prefix}ticket setup max <1-10>\` - max open tickets per user.`);
+      if (isNaN(val) || val < 1 || val > 10) return message.reply(t(lang, 'commands.admin.ticket.setup.max.usage', { prefix }));
       settings.ticketMaxOpen = val;
       await save(settings, guild.id);
-      return message.reply(`Max open tickets per user set to **${val}**.`);
+      return message.reply(t(lang, 'commands.admin.ticket.setup.max.setDone', { maxOpen: val }));
     }
 
     if (sub === 'message') {
       const val = args.slice(1).join(' ').trim();
-      if (!val) return message.reply(`Usage: \`${prefix}ticket setup message <text>\` or \`${prefix}ticket setup message clear\`\nVariables: \`{user}\` \`{server}\` \`{ticket}\``);
+      if (!val) return message.reply(t(lang, 'commands.admin.ticket.setup.message.usage', { prefix }));
       if (val.toLowerCase() === 'clear') {
         settings.ticketOpenMessage = null;
         await save(settings, guild.id);
-        return message.reply('Custom ticket open message cleared.');
+        return message.reply(t(lang, 'commands.admin.ticket.setup.message.cleared'));
       }
-      if (val.length > 1000) return message.reply('Message too long (max 1000 characters).');
+      if (val.length > 1000) return message.reply(t(lang, 'commands.admin.ticket.setup.message.tooLong'));
       settings.ticketOpenMessage = val;
       await save(settings, guild.id);
-      return message.reply('Ticket open message set.');
+      return message.reply(t(lang, 'commands.admin.ticket.setup.message.setDone'));
     }
 
-    const cat = settings.ticketCategoryId ? `<#${settings.ticketCategoryId}>` : 'Not set';
+    const cat = settings.ticketCategoryId ? `<#${settings.ticketCategoryId}>` : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
     const roleIds = getSupportRoleIds(settings);
-    const role = roleIds.length > 0 ? roleIds.map((id: string) => `<@&${id}>`).join(', ') : 'Not set';
-    const log = settings.ticketLogChannelId ? `<#${settings.ticketLogChannelId}>` : 'Not set';
-    const setupCh = settings.ticketSetupChannelId ? `<#${settings.ticketSetupChannelId}>` : 'Not set';
+    const role = roleIds.length > 0 ? roleIds.map((id: string) => `<@&${id}>`).join(', ') : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
+    const log = settings.ticketLogChannelId ? `<#${settings.ticketLogChannelId}>` : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
+    const setupCh = settings.ticketSetupChannelId ? `<#${settings.ticketSetupChannelId}>` : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
 
     const embed = new EmbedBuilder()
-      .setTitle('Ticket System Configuration')
+      .setTitle(t(lang, 'commands.admin.ticket.setupEmbed.title'))
       .setColor(0x5865F2)
       .addFields(
-        { name: 'Category', value: cat, inline: true },
-        { name: 'Ticket Channel', value: setupCh, inline: true },
-        { name: 'Support Role', value: role, inline: true },
-        { name: 'Log Channel', value: log, inline: true },
-        { name: 'Max Open', value: String(settings.ticketMaxOpen || 3), inline: true },
-        { name: 'Custom Message', value: settings.ticketOpenMessage ? 'Set' : 'Default', inline: true },
+        { name: t(lang, 'commands.admin.ticket.setupEmbed.fields.category'), value: cat, inline: true },
+        { name: t(lang, 'commands.admin.ticket.setupEmbed.fields.ticketChannel'), value: setupCh, inline: true },
+        { name: t(lang, 'commands.admin.ticket.setupEmbed.fields.supportRole'), value: role, inline: true },
+        { name: t(lang, 'commands.admin.ticket.setupEmbed.fields.logChannel'), value: log, inline: true },
+        { name: t(lang, 'commands.admin.ticket.setupEmbed.fields.maxOpen'), value: String(settings.ticketMaxOpen || 3), inline: true },
         {
-          name: 'Setup Commands', value:
-            `\`${prefix}ticket setup category <id|create>\` - set ticket category\n` +
-            `\`${prefix}ticket setup channel [#channel|create]\` - set/create the ticket reaction channel\n` +
-            `\`${prefix}ticket setup role add/remove <@role>\` - manage support roles\n` +
-            `\`${prefix}ticket setup log <#channel>\` - set transcript log channel\n` +
-            `\`${prefix}ticket setup max <1-10>\` - max open tickets per user\n` +
-            `\`${prefix}ticket setup message <text>\` - custom open message ({user} {server} {ticket})`,
+          name: t(lang, 'commands.admin.ticket.setupEmbed.fields.customMessage'),
+          value: settings.ticketOpenMessage
+            ? t(lang, 'commands.admin.ticket.setupEmbed.customMessageValues.set')
+            : t(lang, 'commands.admin.ticket.setupEmbed.customMessageValues.default'),
+          inline: true,
+        },
+        {
+          name: t(lang, 'commands.admin.ticket.setupEmbed.fields.setupCommands'),
+          value: t(lang, 'commands.admin.ticket.setupEmbed.setupCommands', { prefix }),
           inline: false
         },
       )
@@ -420,15 +438,16 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
   },
 
   async claim(message, args, guild, settings, client, prefix) {
+    const lang = normalizeLocale(settings?.language);
     const access = await getMemberWithTicketAccess(message, guild, settings);
     if (!access.ok) return message.reply(access.reason);
 
     const channelId = (message as any).channelId || (message as any).channel?.id;
     const ticket = await Ticket.findOne({ channelId, status: 'open' });
-    if (!ticket) return message.reply('This command can only be used inside an open ticket channel.');
+    if (!ticket) return message.reply(t(lang, 'commands.admin.ticket.claim.ticketNotOpen'));
 
     if ((ticket as any).claimedBy) {
-      return message.reply(`This ticket is already claimed by <@${(ticket as any).claimedBy}>.`);
+      return message.reply(t(lang, 'commands.admin.ticket.claim.alreadyClaimed', { claimedBy: (ticket as any).claimedBy }));
     }
 
     (ticket as any).claimedBy = message.author.id;
@@ -436,8 +455,8 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     await ticket.save();
 
     const embed = new EmbedBuilder()
-      .setTitle(`Ticket #${(ticket as any).ticketNumber} - Claimed`)
-      .setDescription(`<@${message.author.id}> has claimed this ticket and will be handling it.`)
+      .setTitle(t(lang, 'commands.admin.ticket.user.claimEmbed.title', { ticketNumber: (ticket as any).ticketNumber }))
+      .setDescription(t(lang, 'commands.admin.ticket.user.claimEmbed.description', { userId: message.author.id }))
       .setColor(0x2ecc71)
       .setTimestamp(new Date());
 
@@ -445,6 +464,7 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
   },
 
   async close(message, args, guild, settings, client, _prefix) {
+    const lang = normalizeLocale(settings?.language);
     const access = await getMemberWithTicketAccess(message, guild, settings);
     if (!access.ok) return message.reply(access.reason);
 
@@ -452,19 +472,23 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     const ticket = await Ticket.findOne({ channelId, status: 'open' });
 
     if (!ticket) {
-      return message.reply('This channel is not an open ticket. Use this command inside a ticket channel.');
+      return message.reply(t(lang, 'commands.admin.ticket.close.ticketNotOpen'));
     }
 
-    const reason = args.join(' ').trim() || 'No reason provided';
+    const reason = args.join(' ').trim() || t(lang, 'commands.admin.ticket.close.noReasonProvided');
 
     const embed = new EmbedBuilder()
-      .setTitle(`Ticket #${(ticket as any).ticketNumber} - Closed`)
-      .setDescription(`Closed by <@${message.author.id}>`)
+      .setTitle(t(lang, 'commands.admin.ticket.user.closeEmbed.title', { ticketNumber: (ticket as any).ticketNumber }))
+      .setDescription(t(lang, 'commands.admin.ticket.user.closeEmbed.description', { userId: message.author.id }))
       .setColor(0xED4245)
-      .addFields({ name: 'Reason', value: reason, inline: false });
+      .addFields({ name: t(lang, 'commands.admin.ticket.user.closeEmbed.reasonField'), value: reason, inline: false });
 
     if ((ticket as any).claimedBy) {
-      embed.addFields({ name: 'Claimed By', value: `<@${(ticket as any).claimedBy}>`, inline: true });
+      embed.addFields({
+        name: t(lang, 'commands.admin.ticket.user.closeEmbed.claimedByField'),
+        value: `<@${(ticket as any).claimedBy}>`,
+        inline: true,
+      });
     }
 
     embed.setTimestamp(new Date());
@@ -490,22 +514,26 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
           }>;
 
           const logEmbed = new EmbedBuilder()
-            .setTitle(`Ticket #${(ticket as any).ticketNumber} Closed`)
+            .setTitle(t(lang, 'commands.admin.ticket.user.logEmbed.titleClosed', { ticketNumber: (ticket as any).ticketNumber }))
             .setColor(0xED4245)
-            .addFields({ name: 'Opened By', value: `<@${(ticket as any).openedBy}>`, inline: true })
-            .addFields({ name: 'Closed By', value: `<@${message.author.id}>`, inline: true });
+            .addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.openedByField'), value: `<@${(ticket as any).openedBy}>`, inline: true })
+            .addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.closedByField'), value: `<@${message.author.id}>`, inline: true });
 
           if ((ticket as any).claimedBy) {
-            logEmbed.addFields({ name: 'Claimed By', value: `<@${(ticket as any).claimedBy}>`, inline: true });
+            logEmbed.addFields({
+              name: t(lang, 'commands.admin.ticket.user.logEmbed.claimedByField'),
+              value: `<@${(ticket as any).claimedBy}>`,
+              inline: true,
+            });
           }
 
-          logEmbed.addFields({ name: 'Reason', value: reason, inline: false });
+          logEmbed.addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.reasonField'), value: reason, inline: false });
 
           if ((ticket as any).subject) {
-            logEmbed.addFields({ name: 'Subject', value: (ticket as any).subject, inline: false });
+            logEmbed.addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.subjectField'), value: (ticket as any).subject, inline: false });
           }
 
-          logEmbed.addFields({ name: 'Messages', value: String(transcriptMessages.length), inline: true })
+          logEmbed.addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.messagesField'), value: String(transcriptMessages.length), inline: true })
             .setTimestamp(new Date());
 
           const sendOpts: any = { embeds: [logEmbed] };
@@ -563,10 +591,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
           timestamp: Date | string;
         }>;
         const userEmbed = new EmbedBuilder()
-          .setTitle(`Ticket #${(ticket as any).ticketNumber} - Closed`)
-          .setDescription(`Your ticket in **${guild.name}** was closed by <@${message.author.id}>.`)
+          .setTitle(t(lang, 'commands.admin.ticket.user.dmEmbed.titleClosed', { ticketNumber: (ticket as any).ticketNumber }))
+          .setDescription(t(lang, 'commands.admin.ticket.user.dmEmbed.description', { guildName: guild.name, userId: message.author.id }))
           .setColor(0xED4245)
-          .addFields({ name: 'Reason', value: reason, inline: false })
+          .addFields({ name: t(lang, 'commands.admin.ticket.user.dmEmbed.reasonField'), value: reason, inline: false })
           .setTimestamp(new Date());
         const userSendOpts: any = { embeds: [userEmbed] };
         if (transcriptMessages.length > 0) {
@@ -615,18 +643,19 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
   },
 
   async add(message, args, guild, settings, client, prefix) {
+    const lang = normalizeLocale(settings?.language);
     const access = await getMemberWithTicketAccess(message, guild, settings);
     if (!access.ok) return message.reply(access.reason);
 
     const channelId = (message as any).channelId || (message as any).channel?.id;
     const ticket = await Ticket.findOne({ channelId, status: 'open' });
-    if (!ticket) return message.reply('This command can only be used inside an open ticket channel.');
+    if (!ticket) return message.reply(t(lang, 'commands.admin.ticket.add.ticketNotOpen'));
 
     const userId = args[0]?.match(/^<@!?(\d{17,19})>$/)?.[1] ?? (args[0]?.match(/^\d{17,19}$/)?.[0] || null);
-    if (!userId) return message.reply(`Usage: \`${prefix}ticket add <@user>\``);
+    if (!userId) return message.reply(t(lang, 'commands.admin.ticket.add.usage', { prefix }));
 
     const channel = guild.channels?.get(channelId);
-    if (!channel) return message.reply('Could not find this channel.');
+    if (!channel) return message.reply(t(lang, 'commands.admin.ticket.add.channelNotFound'));
 
     try {
       await channel.editPermission(userId, {
@@ -639,41 +668,43 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         await ticket.save();
       }
 
-      return message.reply(`<@${userId}> has been added to this ticket.`);
+      return message.reply(t(lang, 'commands.admin.ticket.add.added', { userId }));
     } catch (err: any) {
-      return message.reply(`Failed to add user: ${err.message}`);
+      return message.reply(t(lang, 'commands.admin.ticket.add.failedToAddUser', { error: err.message }));
     }
   },
 
   async remove(message, args, guild, settings, client, prefix) {
+    const lang = normalizeLocale(settings?.language);
     const access = await getMemberWithTicketAccess(message, guild, settings);
     if (!access.ok) return message.reply(access.reason);
 
     const channelId = (message as any).channelId || (message as any).channel?.id;
     const ticket = await Ticket.findOne({ channelId, status: 'open' });
-    if (!ticket) return message.reply('This command can only be used inside an open ticket channel.');
+    if (!ticket) return message.reply(t(lang, 'commands.admin.ticket.remove.ticketNotOpen'));
 
     const userId = args[0]?.match(/^<@!?(\d{17,19})>$/)?.[1] ?? (args[0]?.match(/^\d{17,19}$/)?.[0] || null);
-    if (!userId) return message.reply(`Usage: \`${prefix}ticket remove <@user>\``);
+    if (!userId) return message.reply(t(lang, 'commands.admin.ticket.remove.usage', { prefix }));
 
-    if (userId === (ticket as any).openedBy) return message.reply('You cannot remove the person who opened the ticket.');
+    if (userId === (ticket as any).openedBy) return message.reply(t(lang, 'commands.admin.ticket.remove.openedByCannotRemove'));
 
     const channel = guild.channels?.get(channelId);
-    if (!channel) return message.reply('Could not find this channel.');
+    if (!channel) return message.reply(t(lang, 'commands.admin.ticket.remove.channelNotFound'));
 
     try {
       await channel.deletePermission(userId);
       (ticket as any).participants = (ticket as any).participants.filter((id: string) => id !== userId);
       await ticket.save();
-      return message.reply(`<@${userId}> has been removed from this ticket.`);
+      return message.reply(t(lang, 'commands.admin.ticket.remove.removed', { userId }));
     } catch (err: any) {
-      return message.reply(`Failed to remove user: ${err.message}`);
+      return message.reply(t(lang, 'commands.admin.ticket.remove.failedToRemoveUser', { error: err.message }));
     }
   },
 
   async panel(message, args, guild, settings, client, prefix) {
+    const lang = normalizeLocale(settings?.language);
     if (!settings.ticketCategoryId) {
-      return message.reply(`Ticket system is not set up. Run \`${prefix}ticket setup category <id|create>\` first.`);
+      return message.reply(t(lang, 'commands.admin.ticket.panel.ticketNotSetup', { prefix }));
     }
 
     const channelMention = args[0];
@@ -685,29 +716,24 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (!targetChannel) {
       targetChannel = await client.channels.fetch(channelId).catch(() => null);
     }
-    if (!targetChannel) return message.reply('Could not find the target channel.');
+    if (!targetChannel) return message.reply(t(lang, 'commands.admin.ticket.panel.channelNotFound'));
 
     try {
       await postTicketPanel(targetChannel, guild, settings, client);
       if (channelId !== ((message as any).channelId || (message as any).channel?.id)) {
-        return message.reply(`Ticket panel posted in <#${channelId}> - users can react to create tickets!`);
+        return message.reply(t(lang, 'commands.admin.ticket.panel.posted', { channelId }));
       }
     } catch (err: any) {
-      return message.reply(`Failed to send panel: ${err.message}`);
+      return message.reply(t(lang, 'commands.admin.ticket.panel.failedToSend', { error: err.message }));
     }
   },
 };
 
-function showHelp(message: any, prefix = '!') {
+function showHelp(message: any, prefix = '!', lang = 'en') {
   return message.reply(
-    '**Ticket System**\n' +
-    `\`${prefix}ticket claim\` - claim this ticket (shows you're handling it)\n` +
-    `\`${prefix}ticket close [reason]\` - close the current ticket\n` +
-    `\`${prefix}ticket add <@user>\` - add a user to the ticket\n` +
-    `\`${prefix}ticket remove <@user>\` - remove a user from the ticket\n` +
-    `\`${prefix}ticket panel [#channel]\` - post the ticket reaction panel\n` +
-    `\`${prefix}ticket setup\` - configure the ticket system (admin)\n\n` +
-    '*To create a ticket, react to the ticket panel message in the designated channel.*'
+    t(lang, 'commands.admin.ticket.help.body', {
+      prefix,
+    })
   );
 }
 
@@ -722,17 +748,29 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.admin.ticket.serverOnly'));
 
     const sub = args[0]?.toLowerCase();
 
-    if (sub === 'open') {
-      return void await message.reply(`Tickets are now created by reacting to the ticket panel. Ask an admin to run \`${prefix}ticket setup channel create\` if no panel is set up yet.`);
+    let settings: any;
+    let lang = 'en';
+    try {
+      settings = await GuildSettings.getOrCreate(guild.id);
+      lang = normalizeLocale(settings?.language);
+    } catch (error: any) {
+      const guildName = guild?.name || 'Unknown Server';
+      if (isNetworkError(error)) {
+        console.warn(`[${guildName}] Fluxer API unreachable during !ticket (ECONNRESET)`);
+      } else {
+        console.error(`[${guildName}] Error in !ticket: ${error.message || error}`);
+      }
+      message.reply(t('en', 'commands.admin.ticket.processingError')).catch(() => { });
+      return;
     }
 
-    if (!sub || !subcommands[sub]) {
-      return showHelp(message, prefix);
-    }
+    if (sub === 'open') return void await message.reply(t(lang, 'commands.admin.ticket.openNotice', { prefix }));
+
+    if (!sub || !subcommands[sub]) return showHelp(message, prefix, lang);
 
     if (sub === 'setup' || sub === 'panel') {
       let member = guild.members?.get(message.author.id);
@@ -740,13 +778,12 @@ const command: Command = {
       if (member) {
         const perms = member.permissions;
         if (!perms?.has(PermissionFlags.ManageGuild) && !perms?.has(PermissionFlags.Administrator)) {
-          return void await message.reply('You need **Manage Server** permission to configure tickets.');
+          return void await message.reply(t(lang, 'commands.admin.ticket.missingManageServerPermission'));
         }
       }
     }
 
     try {
-      const settings: any = await GuildSettings.getOrCreate(guild.id);
       await subcommands[sub](message, args.slice(1), guild, settings, client, prefix);
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
@@ -754,7 +791,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !ticket (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !ticket: ${error.message || error}`);
-        message.reply('An error occurred while processing the ticket command.').catch(() => { });
+        message.reply(t(lang, 'commands.admin.ticket.processingError')).catch(() => { });
       }
     }
   }

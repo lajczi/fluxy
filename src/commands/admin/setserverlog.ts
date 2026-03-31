@@ -3,6 +3,7 @@ import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
 import { LOG_CATEGORIES, type LogCategory } from '../../utils/logger';
+import { t, normalizeLocale } from '../../i18n';
 
 const CATEGORY_LABELS: Record<string, string> = {
   member: 'Member (join/leave/role update)',
@@ -55,17 +56,18 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.admin.setserverlog.serverOnly'));
     }
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
+      const lang = normalizeLocale(settings?.language);
       const overrides = settings.logChannelOverrides || {};
 
       if (!args[0] || args[0].toLowerCase() === 'status') {
         const defaultCh = settings.serverLogChannelId;
         const lines: string[] = [];
-        lines.push(`**Default:** ${defaultCh ? `<#${defaultCh}>` : 'Not set'}`);
+        lines.push(`**${t(lang, 'commands.admin.setserverlog.defaultLabel')}:** ${defaultCh ? `<#${defaultCh}>` : t(lang, 'commands.admin.setserverlog.notSet')}`);
 
         let hasOverrides = false;
         for (const cat of LOG_CATEGORIES) {
@@ -76,11 +78,13 @@ const command: Command = {
         }
 
         if (!hasOverrides && !defaultCh) {
-          return void await message.reply(`No server log channel is set. Use \`${prefix}setserverlog #channel\` to set one.\n\nYou can also split logs by category: \`${prefix}setserverlog voice #voice-logs\``);
+          return void await message.reply(
+            t(lang, 'commands.admin.setserverlog.noServerLogChannelSet', { prefix })
+          );
         }
 
         if (!hasOverrides) {
-          lines.push('\n*All events go to the default channel. Use `' + prefix + 'setserverlog <category> #channel` to split them.*');
+          lines.push(t(lang, 'commands.admin.setserverlog.allEventsDefault', { prefix }));
         }
 
         return void await message.reply(lines.join('\n'));
@@ -90,7 +94,7 @@ const command: Command = {
         settings.serverLogChannelId = null;
         await settings.save();
         settingsCache.invalidate(guild.id);
-        return void await message.reply('Server log channel cleared.');
+        return void await message.reply(t(lang, 'commands.admin.setserverlog.cleared'));
       }
 
       const maybeCategory = args[0].toLowerCase();
@@ -100,9 +104,11 @@ const command: Command = {
 
         if (!action) {
           const current = overrides[category];
+          const defaultChannelLabel = t(lang, 'commands.admin.setserverlog.defaultChannel');
+          const categoryLabel = CATEGORY_LABELS[category] || category;
           return void await message.reply(
-            `**${CATEGORY_LABELS[category]}** logs → ${current ? `<#${current}>` : 'default channel'}\n` +
-            `Use \`${prefix}setserverlog ${category} #channel\` to set, or \`${prefix}setserverlog ${category} clear\` to reset.`
+            `**${categoryLabel}** logs → ${current ? `<#${current}>` : defaultChannelLabel}\n` +
+            t(lang, 'commands.admin.setserverlog.logsUsageHint', { prefix, category })
           );
         }
 
@@ -112,14 +118,17 @@ const command: Command = {
           settings.markModified('logChannelOverrides');
           await settings.save();
           settingsCache.invalidate(guild.id);
-          return void await message.reply(`**${CATEGORY_LABELS[category]}** logs will now go to the default channel.`);
+          const categoryLabel = CATEGORY_LABELS[category] || category;
+          return void await message.reply(
+            t(lang, 'commands.admin.setserverlog.logsWillGoToDefaultChannel', { categoryLabel })
+          );
         }
 
         const channelId = parseChannelId(args[1]);
-        if (!channelId) return void await message.reply('Please provide a valid channel mention or ID.');
+        if (!channelId) return void await message.reply(t(lang, 'commands.admin.setserverlog.invalidChannel'));
 
         const channel = await verifyChannel(channelId, guild, client);
-        if (!channel) return void await message.reply('That channel does not exist in this server.');
+        if (!channel) return void await message.reply(t(lang, 'commands.admin.setserverlog.channelDoesNotExist'));
 
         if (!settings.logChannelOverrides) settings.logChannelOverrides = {};
         settings.logChannelOverrides[category] = channelId;
@@ -127,27 +136,30 @@ const command: Command = {
         await settings.save();
         settingsCache.invalidate(guild.id);
 
-        return void await message.reply(`**${CATEGORY_LABELS[category]}** logs will now go to <#${channelId}>.`);
+        const categoryLabel = CATEGORY_LABELS[category] || category;
+        return void await message.reply(
+          t(lang, 'commands.admin.setserverlog.logsWillGoToChannel', { categoryLabel, channelId })
+        );
       }
 
       const channelId = parseChannelId(args[0]);
       if (!channelId) {
         return void await message.reply(
-          `Invalid argument. Usage:\n` +
-          `\`${prefix}setserverlog #channel\` - set the default log channel\n` +
-          `\`${prefix}setserverlog <category> #channel\` - split by category\n` +
-          `Categories: ${LOG_CATEGORIES.join(', ')}`
+          t(lang, 'commands.admin.setserverlog.invalidArgument', {
+            prefix,
+            categories: LOG_CATEGORIES.join(', ')
+          })
         );
       }
 
       const channel = await verifyChannel(channelId, guild, client);
-      if (!channel) return void await message.reply('That channel does not exist in this server.');
+      if (!channel) return void await message.reply(t(lang, 'commands.admin.setserverlog.channelDoesNotExist'));
 
       settings.serverLogChannelId = channelId;
       await settings.save();
       settingsCache.invalidate(guild.id);
 
-      await message.reply(`Server log channel has been set to <#${channelId}>.`);
+      await message.reply(t(lang, 'commands.admin.setserverlog.setDone', { channelId }));
 
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
@@ -155,7 +167,9 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !setserverlog (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !setserverlog: ${error.message || error}`);
-        message.reply('An error occurred while setting the server log channel.').catch(() => {});
+        const cached: any = await settingsCache.get(guild.id).catch(() => null);
+        const lang = normalizeLocale(cached?.language);
+        message.reply(t(lang, 'commands.admin.setserverlog.errors.generic')).catch(() => {});
       }
     }
   }

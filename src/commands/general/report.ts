@@ -2,6 +2,7 @@ import { EmbedBuilder } from '@fluxerjs/core';
 import type { Command } from '../../types';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
+import { t, normalizeLocale } from '../../i18n';
 
 async function tempReply(message: any, text: string, ms = 7000): Promise<void> {
   const reply = await message.reply(text).catch(() => null);
@@ -29,16 +30,19 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.report.serverOnly'));
+
+    const settingsForLang = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(settingsForLang?.language);
 
     const reportContent = args.join(' ').trim();
 
     if (!reportContent) {
-      return void await tempReply(message, `Please include a message with your report. Example: \`${prefix}report someone is posting spam in #general\``);
+      return void await tempReply(message, t(lang, 'commands.report.missingMessage', { prefix }));
     }
 
     if (reportContent.length > 1000) {
-      return void await tempReply(message, 'Your report is too long (max 1000 characters). Please summarise and try again.');
+      return void await tempReply(message, t(lang, 'commands.report.tooLong'));
     }
 
     (message as any).delete().catch(() => {});
@@ -52,27 +56,27 @@ const command: Command = {
       } else {
         console.error(`[${guild.name}] Error loading settings in !report: ${err.message || err}`);
       }
-      (message as any).author.send('Your report could not be submitted right now due to a server error. Please try again shortly.').catch(() => {});
+      (message as any).author.send(t(lang, 'commands.report.submitFailedDm')).catch(() => {});
       return;
     }
 
     if (!settings?.staffChannelId) {
-      (message as any).author.send('Staff reports are not configured on this server yet. Please contact an administrator directly.').catch(() => {});
+      (message as any).author.send(t(lang, 'commands.report.notConfiguredDm')).catch(() => {});
       return;
     }
 
     const author = (message as any).author;
     const embed = new EmbedBuilder()
-      .setTitle('New Staff Report')
+      .setTitle(t(lang, 'commands.report.embedTitle'))
       .setColor(0xED4245)
       .setDescription(reportContent)
       .addFields(
-        { name: 'Reporter', value: `${author.username} (<@${author.id}>)`, inline: true },
-        { name: 'User ID',  value: author.id, inline: true },
-        { name: 'Channel',  value: `<#${(message as any).channelId || (message as any).channel?.id}>`, inline: true }
+        { name: t(lang, 'commands.report.fieldReporter'), value: `${author.username} (<@${author.id}>)`, inline: true },
+        { name: t(lang, 'commands.report.fieldUserId'), value: author.id, inline: true },
+        { name: t(lang, 'commands.report.fieldChannel'), value: `<#${(message as any).channelId || (message as any).channel?.id}>`, inline: true }
       )
       .setThumbnail(author.displayAvatarURL?.() ?? author.avatarURL ?? null)
-      .setFooter({ text: 'This report is only visible to staff' })
+      .setFooter({ text: t(lang, 'commands.report.footer') })
       .setTimestamp(new Date());
 
     let staffChannel: any;
@@ -87,7 +91,7 @@ const command: Command = {
     if (!staffChannel) {
       console.warn(`[${guild.name}] Staff channel ${settings.staffChannelId} not found during !report`);
       author.send(
-        `Your report in **${guild.name}** could not be delivered because the staff channel is unavailable. Please contact a staff member directly.`
+        t(lang, 'commands.report.channelUnavailableDm', { guildName: guild.name })
       ).catch(() => {});
       return;
     }
@@ -100,13 +104,13 @@ const command: Command = {
       });
 
       author.send(
-        `Your report in **${guild.name}** has been sent to the staff team. Someone will follow up with you directly if needed. Thank you for letting us know.`
+        t(lang, 'commands.report.deliveredDm', { guildName: guild.name })
       ).catch(() => {});
 
     } catch (err: any) {
       console.error(`[${guild.name}] Failed to send report to staff channel: ${err.message || err}`);
       author.send(
-        `Your report in **${guild.name}** could not be delivered due to a permissions error. Please contact a staff member directly.`
+        t(lang, 'commands.report.permissionsErrorDm', { guildName: guild.name })
       ).catch(() => {});
     }
   }

@@ -2,6 +2,7 @@ import type { Command } from '../../types';
 import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'toggle-antilink',
@@ -14,10 +15,11 @@ const command: Command = {
   async execute(message, _args, client) {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.admin.toggleAntilink.serverOnly'));
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
+      const lang = normalizeLocale(settings?.language);
       const newState = !settings.automod.antiLink;
       settings.automod.antiLink = newState;
 
@@ -30,9 +32,9 @@ const command: Command = {
       settingsCache.invalidate(guild.id);
 
       const status = newState ? 'enabled' : 'disabled';
-      let reply = `Anti-link filter has been **${status}**.`;
+      let reply = t(lang, 'commands.admin.toggleAntilink.base', { status });
       if (newState && settings.automod.level === 'minimal') {
-        reply += ' Automod level set to `minimal` to activate it.';
+        reply += t(lang, 'commands.admin.toggleAntilink.suffixLevelMinimal');
       }
       await message.reply(reply);
     } catch (error: any) {
@@ -40,7 +42,9 @@ const command: Command = {
         console.warn(`[${guild?.name || 'Unknown Server'}] Fluxer API unreachable during !toggle-antilink (ECONNRESET)`);
       } else {
         console.error(`[${guild?.name || 'Unknown Server'}] Error in !toggle-antilink: ${error.message || error}`);
-        message.reply('An error occurred while toggling anti-link.').catch(() => {});
+        const cached: any = await settingsCache.get(guild.id).catch(() => null);
+        const lang = normalizeLocale(cached?.language);
+        message.reply(t(lang, 'commands.admin.toggleAntilink.errors.generic')).catch(() => {});
       }
     }
   }

@@ -3,6 +3,8 @@ import type { Command } from '../../types';
 import parseUserId from '../../utils/parseUserId';
 import Warning from '../../models/Warning';
 import isNetworkError from '../../utils/isNetworkError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'warnings',
@@ -19,8 +21,11 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.moderation.warnings.serverOnly'));
     }
+
+    const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(guildSettings?.language);
 
     let userId: string;
     let targetUser: any;
@@ -28,7 +33,7 @@ const command: Command = {
     if (args[0]) {
       const parsed = parseUserId(args[0]);
       if (!parsed) {
-        return void await message.reply('Please provide a valid user mention or ID.');
+        return void await message.reply(t(lang, 'commands.moderation.warnings.invalidUser'));
       }
       userId = parsed;
     } else {
@@ -46,34 +51,40 @@ const command: Command = {
       const warnings = warningRecord.warnings || [];
 
       const embed = new EmbedBuilder()
-        .setTitle(`Warnings for ${targetUser.username || targetUser.id}`)
+        .setTitle(t(lang, 'commands.moderation.warnings.title', { username: targetUser.username || targetUser.id }))
         .setColor(0xf39c12)
         .setTimestamp(new Date());
 
       if (warnings.length === 0) {
-        embed.setDescription('This user has no warnings.');
+        embed.setDescription(t(lang, 'commands.moderation.warnings.noWarnings'));
       } else {
         const displayWarnings = warnings.slice(-10);
         const totalWarnings = warnings.length;
 
-        embed.setDescription(`Showing ${displayWarnings.length} of ${totalWarnings} warning(s)`);
+        embed.setDescription(
+          t(lang, 'commands.moderation.warnings.showing', { shownCount: displayWarnings.length, totalWarnings })
+        );
 
         const warningList: string[] = [];
         for (let i = 0; i < displayWarnings.length; i++) {
           const warning = displayWarnings[i];
-          const date = warning.date ? new Date(warning.date).toLocaleDateString() : 'Unknown date';
-          const modMention = warning.modId ? `<@${warning.modId}>` : 'Unknown';
+          const date = warning.date
+            ? new Date(warning.date).toLocaleDateString()
+            : t(lang, 'commands.moderation.warnings.unknownDate');
+          const modMention = warning.modId ? `<@${warning.modId}>` : t(lang, 'commands.moderation.warnings.unknown');
 
           warningList.push(`**${i + 1}.** ${warning.reason}`);
-          warningList.push(`   \u2514 Moderator: ${modMention} | Date: ${date}`);
+          warningList.push(
+            `   \u2514 ${t(lang, 'commands.moderation.warnings.moderatorLabel')}: ${modMention} | ${t(lang, 'commands.moderation.warnings.dateLabel')}: ${date}`
+          );
         }
 
         embed.addFields({
-          name: 'Recent Warnings',
-          value: warningList.join('\n') || 'None'
+          name: t(lang, 'commands.moderation.warnings.fieldRecentWarnings'),
+          value: warningList.join('\n') || t(lang, 'commands.moderation.warnings.none')
         });
 
-        embed.setFooter({ text: `Total Warnings: ${totalWarnings}` });
+        embed.setFooter({ text: t(lang, 'commands.moderation.warnings.footerTotalWarnings', { totalWarnings }) });
       }
 
       await message.reply({ embeds: [embed] });
@@ -84,7 +95,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !warnings (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !warnings: ${error.message || error}`);
-        message.reply('An error occurred while fetching warnings.').catch(() => {});
+        message.reply(t(lang, 'commands.moderation.warnings.errors.generic')).catch(() => {});
       }
     }
   }

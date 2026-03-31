@@ -1,6 +1,8 @@
 import type { Command } from '../../types';
 import { canManageRole } from '../../utils/permissions';
 import isNetworkError from '../../utils/isNetworkError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'roleclear',
@@ -13,22 +15,25 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.admin.roleclear.serverOnly'));
+
+    const cached: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(cached?.language);
 
     const roleArg = args[0];
-    if (!roleArg) return void await message.reply(`Usage: \`${prefix}roleclear <@role>\``);
+    if (!roleArg) return void await message.reply(t(lang, 'commands.admin.roleclear.usage', { prefix }));
 
     const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
     let roleId: string;
     if (roleMention) roleId = roleMention[1];
     else if (/^\d{17,19}$/.test(roleArg)) roleId = roleArg;
-    else return void await message.reply('Please provide a valid role mention or role ID.');
+    else return void await message.reply(t(lang, 'commands.admin.roleclear.invalidRole'));
 
     let role = guild.roles?.get(roleId);
     if (!role) {
       try { role = await guild.fetchRole(roleId); } catch {}
     }
-    if (!role) return void await message.reply('That role does not exist in this server.');
+    if (!role) return void await message.reply(t(lang, 'commands.admin.roleclear.roleDoesNotExist'));
 
     let moderator = guild.members?.get(message.author.id);
     if (!moderator) {
@@ -39,7 +44,7 @@ const command: Command = {
       if (!check.allowed) return void await message.reply(check.reason || 'You cannot manage that role.');
     }
 
-    await message.reply(`Removing **${role.name}** from all members who have it... this may take a moment.`);
+    await message.reply(t(lang, 'commands.admin.roleclear.removing', { roleName: role.name }));
 
     let members: any[];
     try {
@@ -59,7 +64,7 @@ const command: Command = {
       } else {
         console.error(`[${guildName}] Error in !roleclear: ${err.message || err}`);
       }
-      return void await message.reply('Failed to fetch server members.');
+      return void await message.reply(t(lang, 'commands.admin.roleclear.failedFetchMembers'));
     }
 
     const hasRole = members.filter((m: any) => {
@@ -69,7 +74,7 @@ const command: Command = {
     });
 
     if (hasRole.length === 0) {
-      return void await message.reply(`No members currently have **${role.name}**.`);
+      return void await message.reply(t(lang, 'commands.admin.roleclear.noMembersHaveRole', { roleName: role.name }));
     }
 
     let removed = 0, failed = 0;
@@ -92,8 +97,8 @@ const command: Command = {
       }
     }
 
-    let result = `Done! Removed **${role.name}** from **${removed}** member(s).`;
-    if (failed > 0) result += ` ${failed} failed (missing permissions or unknown error).`;
+    let result = t(lang, 'commands.admin.roleclear.donePrefix', { roleName: role.name, removed });
+    if (failed > 0) result += t(lang, 'commands.admin.roleclear.doneFailedSuffix', { failed });
     return void await message.reply(result);
   }
 };

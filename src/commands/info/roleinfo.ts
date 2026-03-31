@@ -1,6 +1,8 @@
 import { EmbedBuilder } from '@fluxerjs/core';
 import type { Command } from '../../types';
 import isNetworkError from '../../utils/isNetworkError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'roleinfo',
@@ -12,47 +14,50 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.roleinfo.serverOnly'));
+    const settings = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(settings?.language);
 
     const roleArg = args[0];
-    if (!roleArg) return void await message.reply(`Usage: \`${prefix}roleinfo <@role>\``);
+    if (!roleArg) return void await message.reply(t(lang, 'commands.roleinfo.usage', { prefix }));
 
     const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
     let roleId: string;
     if (roleMention) roleId = roleMention[1];
     else if (/^\d{17,19}$/.test(roleArg)) roleId = roleArg;
-    else return void await message.reply('Please provide a valid role mention or role ID.');
+    else return void await message.reply(t(lang, 'commands.roleinfo.invalidRoleInput'));
 
     try {
       let role: any = guild.roles?.get(roleId);
       if (!role) {
         try { role = await guild.fetchRole(roleId); } catch {}
       }
-      if (!role) return void await message.reply('That role does not exist in this server.');
+      if (!role) return void await message.reply(t(lang, 'commands.roleinfo.roleNotFound'));
 
       const createdAt = new Date(Number(BigInt(role.id) / 4194304n + 1420070400000n));
-      const createdStr = createdAt.toLocaleDateString('en-US', {
+      const localeForDate = lang === 'en' ? 'en-US' : lang;
+      const createdStr = createdAt.toLocaleDateString(localeForDate, {
         year: 'numeric', month: 'long', day: 'numeric'
       });
 
       const colorHex = role.color && role.color !== 0
         ? `#${role.color.toString(16).padStart(6, '0').toUpperCase()}`
-        : 'Default (no color)';
+        : t(lang, 'commands.roleinfo.defaultColor');
 
       const embed = new EmbedBuilder()
-        .setTitle(`Role: ${role.name}`)
+        .setTitle(t(lang, 'commands.roleinfo.title', { roleName: role.name }))
         .setColor(role.color || 0x5865F2)
         .addFields(
-          { name: 'ID', value: role.id, inline: true },
-          { name: 'Color', value: colorHex, inline: true },
-          { name: 'Position', value: `${role.position ?? 'Unknown'}`, inline: true },
-          { name: 'Hoisted', value: role.hoist ? 'Yes' : 'No', inline: true },
-          { name: 'Mentionable', value: role.mentionable ? 'Yes' : 'No', inline: true },
-          { name: 'Managed', value: role.managed ? 'Yes (bot/integration)' : 'No', inline: true },
-          { name: 'Created', value: createdStr, inline: false },
+          { name: t(lang, 'commands.roleinfo.fieldId'), value: role.id, inline: true },
+          { name: t(lang, 'commands.roleinfo.fieldColor'), value: colorHex, inline: true },
+          { name: t(lang, 'commands.roleinfo.fieldPosition'), value: `${role.position ?? t(lang, 'commands.roleinfo.unknown')}`, inline: true },
+          { name: t(lang, 'commands.roleinfo.fieldHoisted'), value: role.hoist ? t(lang, 'commands.roleinfo.yes') : t(lang, 'commands.roleinfo.no'), inline: true },
+          { name: t(lang, 'commands.roleinfo.fieldMentionable'), value: role.mentionable ? t(lang, 'commands.roleinfo.yes') : t(lang, 'commands.roleinfo.no'), inline: true },
+          { name: t(lang, 'commands.roleinfo.fieldManaged'), value: role.managed ? t(lang, 'commands.roleinfo.managedYes') : t(lang, 'commands.roleinfo.no'), inline: true },
+          { name: t(lang, 'commands.roleinfo.fieldCreated'), value: createdStr, inline: false },
         )
         .setTimestamp(new Date())
-        .setFooter({ text: `Requested by ${(message as any).author.username}` });
+        .setFooter({ text: t(lang, 'commands.roleinfo.requestedBy', { username: (message as any).author.username }) });
 
       return void await message.reply({ embeds: [embed] });
 
@@ -62,7 +67,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !roleinfo (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !roleinfo: ${error.message || error}`);
-        message.reply('An error occurred while fetching role information.').catch(() => {});
+        message.reply(t(lang, 'commands.roleinfo.genericError')).catch(() => {});
       }
     }
   }

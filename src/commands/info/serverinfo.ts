@@ -3,6 +3,8 @@ import { Routes } from '@fluxerjs/types';
 import type { Command } from '../../types';
 import isNetworkError from '../../utils/isNetworkError';
 import * as memberCounter from '../../utils/memberCounter';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'serverinfo',
@@ -18,10 +20,12 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.serverinfo.serverOnly'));
     }
 
     try {
+      const settings = await settingsCache.get(guild.id).catch(() => null);
+      const lang = normalizeLocale(settings?.language);
       const ownerId = guild.ownerId;
 
       let textChannels = 0;
@@ -71,32 +75,33 @@ const command: Command = {
       const roleCount = guild.roles?.cache?.size || guild.roles?.size || 0;
 
       const createdAt = guild.createdAt ? new Date(guild.createdAt) : new Date(parseInt(guild.id) / 4194304 + 1420070400000);
-      const createdString = createdAt.toLocaleDateString('en-US', {
+      const localeForDate = lang === 'en' ? 'en-US' : lang;
+      const createdString = createdAt.toLocaleDateString(localeForDate, {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
       });
 
-      const features = guild.features?.length ? guild.features.join(', ') : 'None';
+      const features = guild.features?.length ? guild.features.join(', ') : t(lang, 'commands.serverinfo.none');
 
       const embed = new EmbedBuilder()
-        .setTitle(`Server Information`)
+        .setTitle(t(lang, 'commands.serverinfo.title'))
         .setColor(0x3498db)
         .setThumbnail(guild.iconURL?.() || null)
         .addFields(
-          { name: 'Name', value: guild.name, inline: true },
-          { name: 'ID', value: guild.id, inline: true },
-          { name: 'Owner', value: `<@${ownerId}>`, inline: true },
-          { name: 'Members', value: `${memberCount}`, inline: true },
-          { name: 'Text Channels', value: `${textChannels}`, inline: true },
-          { name: 'Voice Channels', value: `${voiceChannels}`, inline: true },
-          { name: 'Categories', value: `${categories}`, inline: true },
-          { name: 'Roles', value: `${roleCount}`, inline: true },
-          { name: 'Created', value: createdString, inline: true },
-          { name: 'Features', value: (features.substring(0, 1024) || 'None'), inline: false }
+          { name: t(lang, 'commands.serverinfo.fieldName'), value: guild.name, inline: true },
+          { name: t(lang, 'commands.serverinfo.fieldId'), value: guild.id, inline: true },
+          { name: t(lang, 'commands.serverinfo.fieldOwner'), value: `<@${ownerId}>`, inline: true },
+          { name: t(lang, 'commands.serverinfo.fieldMembers'), value: `${memberCount}`, inline: true },
+          { name: t(lang, 'commands.serverinfo.fieldTextChannels'), value: `${textChannels}`, inline: true },
+          { name: t(lang, 'commands.serverinfo.fieldVoiceChannels'), value: `${voiceChannels}`, inline: true },
+          { name: t(lang, 'commands.serverinfo.fieldCategories'), value: `${categories}`, inline: true },
+          { name: t(lang, 'commands.serverinfo.fieldRoles'), value: `${roleCount}`, inline: true },
+          { name: t(lang, 'commands.serverinfo.fieldCreated'), value: createdString, inline: true },
+          { name: t(lang, 'commands.serverinfo.fieldFeatures'), value: (features.substring(0, 1024) || t(lang, 'commands.serverinfo.none')), inline: false }
         )
         .setTimestamp(new Date())
-        .setFooter({ text: `Requested by ${(message as any).author.username}` });
+        .setFooter({ text: t(lang, 'commands.serverinfo.requestedBy', { username: (message as any).author.username }) });
 
       await message.reply({ embeds: [embed] });
 
@@ -106,7 +111,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !serverinfo (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !serverinfo: ${error.message || error}`);
-        message.reply('An error occurred while fetching server information.').catch(() => {});
+        message.reply(t('en', 'commands.serverinfo.genericError')).catch(() => {});
       }
     }
   }

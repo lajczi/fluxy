@@ -189,6 +189,8 @@ const settingsSchema = new Schema<GuildSettingsDocument, GuildSettingsModel>({
     },
   },
 
+  language: { type: String, default: 'en' },
+
   welcomeMessage: { type: welcomeMessageSchema, default: () => ({}) },
 
   reactionRoles: { type: [reactionRoleSchema], default: [] },

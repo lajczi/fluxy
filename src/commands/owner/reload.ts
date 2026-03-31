@@ -2,6 +2,8 @@ import path from 'path';
 import type { Command } from '../../types';
 import config from '../../config';
 import isNetworkError from '../../utils/isNetworkError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'reload',
@@ -13,11 +15,14 @@ const command: Command = {
 
   async execute(message, args, client) {
     if (config.ownerId && (message as any).author.id !== config.ownerId) {
-      return void await message.reply('This command is restricted to the bot owner.');
+      const guildId = message.guildId || message.guild?.id;
+      const guildSettings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
+      const lang = normalizeLocale(guildSettings?.language);
+      return void await message.reply(t(lang, 'commands.reload.ownerOnly'));
     }
 
     if (!args[0]) {
-      return void await message.reply('Usage: `!reload <command>`');
+      return void await message.reply(t('en', 'commands.reload.usage', { prefix: config.prefix }));
     }
 
     const commandName = args[0].toLowerCase();
@@ -25,13 +30,19 @@ const command: Command = {
     const commandHandler = (client as any).commandHandler;
 
     if (!commandHandler) {
-      return void await message.reply('Command handler not available.');
+      const guildId = message.guildId || message.guild?.id;
+      const guildSettings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
+      const lang = normalizeLocale(guildSettings?.language);
+      return void await message.reply(t(lang, 'commands.reload.commandHandlerMissing'));
     }
 
     const oldCommand = commandHandler.getCommand(commandName);
 
     if (!oldCommand) {
-      return void await message.reply(`Command \`${commandName}\` not found.`);
+      const guildId = message.guildId || message.guild?.id;
+      const guildSettings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
+      const lang = normalizeLocale(guildSettings?.language);
+      return void await message.reply(t(lang, 'commands.reload.commandNotFound', { commandName }));
     }
 
     try {
@@ -72,14 +83,20 @@ const command: Command = {
         }
       }
 
-      await message.reply(`Successfully reloaded command \`${newCommand.name}\`.`);
+      const guildId = message.guildId || message.guild?.id;
+      const guildSettings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
+      const lang = normalizeLocale(guildSettings?.language);
+      await message.reply(t(lang, 'commands.reload.success', { commandName: newCommand.name }));
 
     } catch (error: any) {
       if (isNetworkError(error)) {
         console.warn(`Fluxer API unreachable during !reload (ECONNRESET)`);
       } else {
         console.error(`Error in !reload: ${error.message || error}`);
-        message.reply(`Error reloading command: \`${error.message}\``).catch(() => {});
+        const guildId = message.guildId || message.guild?.id;
+        const guildSettings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
+        const lang = normalizeLocale(guildSettings?.language);
+        message.reply(t(lang, 'commands.reload.error', { error: error.message })).catch(() => {});
       }
     }
   }

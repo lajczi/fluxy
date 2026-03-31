@@ -32,6 +32,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Validate locales
+        run: npm run i18n:check
+
       - name: Security audit
         run: npm audit --audit-level=high
         continue-on-error: true

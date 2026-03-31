@@ -2,6 +2,7 @@ import type { Command } from '../../types';
 import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'toggle-ghostping',
@@ -14,10 +15,11 @@ const command: Command = {
   async execute(message, _args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.admin.toggleGhostping.serverOnly'));
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
+      const lang = normalizeLocale(settings?.language);
       if (!settings.automod) settings.automod = {};
       settings.automod.ghostPing = !settings.automod.ghostPing;
       settings.markModified('automod');
@@ -25,18 +27,22 @@ const command: Command = {
       settingsCache.invalidate(guild.id);
 
       const status = settings.automod.ghostPing ? 'enabled' : 'disabled';
-      await message.reply(`Anti-ghost ping filter has been **${status}**.`);
+      let reply = t(lang, 'commands.admin.toggleGhostping.base', { status });
 
       if (settings.automod.ghostPing && settings.automod.level === 'off') {
-        await message.reply(`**Note:** Automod level is currently set to \`off\`. Use \`${prefix}automod level minimal\` (or higher) or run \`${prefix}toggle-automod\` for ghost ping detection to take effect.`);
+        reply += t(lang, 'commands.admin.toggleGhostping.noteLevelOff', { prefix });
       }
+
+      await message.reply(reply);
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
         console.warn(`[${guildName}] Fluxer API unreachable during !toggle-ghostping (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !toggle-ghostping: ${error.message || error}`);
-        message.reply('An error occurred while toggling anti-ghost ping.').catch(() => {});
+        const cached: any = await settingsCache.get(guild.id).catch(() => null);
+        const lang = normalizeLocale(cached?.language);
+        message.reply(t(lang, 'commands.admin.toggleGhostping.errors.generic')).catch(() => {});
       }
     }
   }

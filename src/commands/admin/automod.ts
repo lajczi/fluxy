@@ -3,18 +3,16 @@ import { EmbedBuilder } from '@fluxerjs/core';
 import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
+import { t, normalizeLocale } from '../../i18n';
 
 const VALID_LEVELS = ['off', 'minimal', 'medium', 'high'];
 
-const LEVEL_DESCRIPTIONS: Record<string, string> = {
-  off:     'All automod modules disabled',
-  minimal: 'Anti-spam on, anti-link off, relaxed mention/line limits',
-  medium:  'Anti-spam + anti-link + anti-reaction spam on, moderate limits',
-  high:    'Anti-spam + anti-link + anti-reaction spam on, strict limits'
-};
+function levelDescription(lang: string, level: string): string {
+  return t(lang, `commands.admin.automod.levelDescriptions.${level}`);
+}
 
-function yn(bool: any): string {
-  return bool ? 'Yes' : 'No';
+function yn(bool: any, lang: string): string {
+  return bool ? t(lang, 'commands.admin.automod.yes') : t(lang, 'commands.admin.automod.no');
 }
 
 
@@ -28,33 +26,37 @@ function parseChannelId(arg?: string): string | null {
   return m ? m[1] : (/^\d{17,19}$/.test(arg || '') ? arg! : null);
 }
 
-async function showStatus(message: any, guild: any, settings: any) {
+async function showStatus(message: any, guild: any, settings: any, lang: string) {
   const am = settings.automod || {};
   const spam = am.spam || {};
-  const exemptRoles    = (am.exemptRoles    || []).map((id: string) => `<@&${id}>`).join(', ') || 'None';
-  const exemptChannels = (am.exemptChannels || []).map((id: string) => `<#${id}>`).join(', ')   || 'None';
-  const customDomains  = (am.allowedDomains || []).join(', ') || 'None';
+  const exemptRoles    = (am.exemptRoles    || []).map((id: string) => `<@&${id}>`).join(', ') || t(lang, 'commands.admin.automod.status.none');
+  const exemptChannels = (am.exemptChannels || []).map((id: string) => `<#${id}>`).join(', ')   || t(lang, 'commands.admin.automod.status.none');
+  const customDomains  = (am.allowedDomains || []).join(', ') || t(lang, 'commands.admin.automod.status.none');
+  const level = am.level || 'off';
 
   const embed = new EmbedBuilder()
-    .setTitle(`Automod Settings - ${guild.name}`)
+    .setTitle(t(lang, 'commands.admin.automod.status.title', { guildName: guild.name }))
     .setColor(0x5865F2)
     .addFields(
-      { name: 'Level',       value: `\`${am.level || 'off'}\` - ${LEVEL_DESCRIPTIONS[am.level || 'off']}` },
-      { name: 'Anti-Spam',   value: yn(am.antiSpam),  inline: true },
-      { name: 'Anti-Link',   value: yn(am.antiLink),  inline: true },
-      { name: 'Anti-Reaction Spam', value: yn(am.antiReactionSpam), inline: true },
-      { name: 'Ghost Ping',  value: yn(am.ghostPing), inline: true },
+      { name: t(lang, 'commands.admin.automod.status.fieldLevel'), value: t(lang, 'commands.admin.automod.status.levelValue', { level, description: levelDescription(lang, level) }) },
+      { name: t(lang, 'commands.admin.automod.status.fieldAntiSpam'), value: yn(am.antiSpam, lang),  inline: true },
+      { name: t(lang, 'commands.admin.automod.status.fieldAntiLink'), value: yn(am.antiLink, lang),  inline: true },
+      { name: t(lang, 'commands.admin.automod.status.fieldAntiReactionSpam'), value: yn(am.antiReactionSpam, lang), inline: true },
+      { name: t(lang, 'commands.admin.automod.status.fieldGhostPing'), value: yn(am.ghostPing, lang), inline: true },
       {
-        name: 'Spam Thresholds',
-        value:
-          `**Max messages:** ${spam.maxMessages ?? 5} per **${spam.timeWindow ?? 5}s** window\n` +
-          `**Timeout after:** ${spam.violationThreshold ?? 3} violations → ${spam.timeoutDuration ?? 10} min timeout`
+        name: t(lang, 'commands.admin.automod.status.fieldSpamThresholds'),
+        value: t(lang, 'commands.admin.automod.status.spamThresholdsValue', {
+          maxMessages: spam.maxMessages ?? 5,
+          timeWindow: spam.timeWindow ?? 5,
+          violationThreshold: spam.violationThreshold ?? 3,
+          timeoutDuration: spam.timeoutDuration ?? 10,
+        })
       },
-      { name: 'Allowed Domains (extra)', value: customDomains },
-      { name: 'Exempt Roles',    value: exemptRoles },
-      { name: 'Exempt Channels', value: exemptChannels }
+      { name: t(lang, 'commands.admin.automod.status.fieldAllowedDomains'), value: customDomains },
+      { name: t(lang, 'commands.admin.automod.status.fieldExemptRoles'), value: exemptRoles },
+      { name: t(lang, 'commands.admin.automod.status.fieldExemptChannels'), value: exemptChannels }
     )
-    .setFooter({ text: 'Use !automod <subcommand> to change settings' })
+    .setFooter({ text: t(lang, 'commands.admin.automod.status.footer') })
     .setTimestamp(new Date());
 
   return message.reply({ embeds: [embed] });
@@ -63,13 +65,15 @@ async function showStatus(message: any, guild: any, settings: any) {
 const subcommands: Record<string, (message: any, args: string[], guild: any, settings: any) => Promise<any>> = {
 
   async status(message, args, guild, settings) {
-    return showStatus(message, guild, settings);
+    const lang = normalizeLocale(settings?.language);
+    return showStatus(message, guild, settings, lang);
   },
 
   async level(message, args, guild, settings) {
+    const lang = normalizeLocale(settings?.language);
     const lvl = args[0]?.toLowerCase();
     if (!lvl || !VALID_LEVELS.includes(lvl)) {
-      return message.reply(`Valid levels: \`${VALID_LEVELS.join('`, `')}\``);
+      return message.reply(t(lang, 'commands.admin.automod.level.validLevels', { levels: VALID_LEVELS.join('`, `') }));
     }
 
     settings.automod.level = lvl;
@@ -86,10 +90,11 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     await settings.save();
     settingsCache.invalidate(guild.id);
 
-    return message.reply(`Automod level set to \`${lvl}\`. ${LEVEL_DESCRIPTIONS[lvl]}.`);
+    return message.reply(t(lang, 'commands.admin.automod.level.setDone', { level: lvl, description: levelDescription(lang, lvl) }));
   },
 
   async spam(message, args, guild, settings) {
+    const lang = normalizeLocale(settings?.language);
     const [sub, rawVal] = args;
     const val = parseInt(rawVal, 10);
 
@@ -97,33 +102,27 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
     switch (sub) {
       case 'messages': {
-        if (isNaN(val) || val < 2 || val > 20) return message.reply('`messages` must be between 2 and 20.');
+        if (isNaN(val) || val < 2 || val > 20) return message.reply(t(lang, 'commands.admin.automod.spam.messagesRange'));
         settings.automod.spam.maxMessages = val;
         break;
       }
       case 'window': {
-        if (isNaN(val) || val < 1 || val > 60) return message.reply('`window` must be between 1 and 60 seconds.');
+        if (isNaN(val) || val < 1 || val > 60) return message.reply(t(lang, 'commands.admin.automod.spam.windowRange'));
         settings.automod.spam.timeWindow = val;
         break;
       }
       case 'timeout': {
-        if (isNaN(val) || val < 1 || val > 60) return message.reply('`timeout` must be between 1 and 60 minutes.');
+        if (isNaN(val) || val < 1 || val > 60) return message.reply(t(lang, 'commands.admin.automod.spam.timeoutRange'));
         settings.automod.spam.timeoutDuration = val;
         break;
       }
       case 'violations': {
-        if (isNaN(val) || val < 1 || val > 10) return message.reply('`violations` must be between 1 and 10.');
+        if (isNaN(val) || val < 1 || val > 10) return message.reply(t(lang, 'commands.admin.automod.spam.violationsRange'));
         settings.automod.spam.violationThreshold = val;
         break;
       }
       default:
-        return message.reply(
-          'Usage: `!automod spam <messages|window|timeout|violations> <value>`\n' +
-          '- `messages` - max messages per window (2–20, default 5)\n' +
-          '- `window` - tracking window in seconds (1–60, default 5)\n' +
-          '- `timeout` - timeout length in minutes (1–60, default 10)\n' +
-          '- `violations` - violations before timeout (1–10, default 3)'
-        );
+        return message.reply(t(lang, 'commands.admin.automod.spam.usage'));
     }
 
     settings.markModified('automod');
@@ -131,23 +130,20 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     settingsCache.invalidate(guild.id);
 
     const spam = settings.automod.spam;
-    return message.reply(
-      `Spam settings updated.\n` +
-      `Max **${spam.maxMessages ?? 5}** messages per **${spam.timeWindow ?? 5}s** → ` +
-      `timeout after **${spam.violationThreshold ?? 3}** violations (**${spam.timeoutDuration ?? 10} min**).`
-    );
+    return message.reply(t(lang, 'commands.admin.automod.spam.updated', {
+      maxMessages: spam.maxMessages ?? 5,
+      timeWindow: spam.timeWindow ?? 5,
+      violationThreshold: spam.violationThreshold ?? 3,
+      timeoutDuration: spam.timeoutDuration ?? 10,
+    }));
   },
 
   async link(message, args, guild, settings) {
+    const lang = normalizeLocale(settings?.language);
     const [action, domain] = args;
 
     if (!domain || !['allow', 'deny'].includes(action)) {
-      return message.reply(
-        'Usage:\n' +
-        '`!automod link allow <domain>` - exempt a domain from the link filter\n' +
-        '`!automod link deny <domain>` - remove a domain exemption\n\n' +
-        'Example: `!automod link allow youtube.com`'
-      );
+      return message.reply(t(lang, 'commands.admin.automod.link.usage'));
     }
 
     const clean = domain.replace(/^https?:\/\//i, '').replace(/\/$/, '').toLowerCase();
@@ -156,28 +152,29 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
     if (action === 'allow') {
       if (settings.automod.allowedDomains.includes(clean)) {
-        return message.reply(`\`${clean}\` is already in the allowed list.`);
+        return message.reply(t(lang, 'commands.admin.automod.link.alreadyAllowed', { domain: clean }));
       }
       settings.automod.allowedDomains.push(clean);
       settings.markModified('automod');
       await settings.save();
       settingsCache.invalidate(guild.id);
-      return message.reply(`\`${clean}\` added to the link allowlist. Links from this domain will no longer be deleted.`);
+      return message.reply(t(lang, 'commands.admin.automod.link.added', { domain: clean }));
     } else {
       const idx = settings.automod.allowedDomains.indexOf(clean);
-      if (idx === -1) return message.reply(`\`${clean}\` is not in the allowed list.`);
+      if (idx === -1) return message.reply(t(lang, 'commands.admin.automod.link.notAllowed', { domain: clean }));
       settings.automod.allowedDomains.splice(idx, 1);
       settings.markModified('automod');
       await settings.save();
       settingsCache.invalidate(guild.id);
-      return message.reply(`\`${clean}\` removed from the link allowlist.`);
+      return message.reply(t(lang, 'commands.admin.automod.link.removed', { domain: clean }));
     }
   },
 
   async reactionspam(message, args, guild, settings) {
+    const lang = normalizeLocale(settings?.language);
     const val = args[0]?.toLowerCase();
     if (!val || !['on', 'off'].includes(val)) {
-      return message.reply('Usage: `!automod reactionspam <on|off>`');
+      return message.reply(t(lang, 'commands.admin.automod.reactionspam.usage'));
     }
 
     settings.automod.antiReactionSpam = val === 'on';
@@ -191,17 +188,18 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     settingsCache.invalidate(guild.id);
 
     const status = settings.automod.antiReactionSpam ? 'enabled' : 'disabled';
-    let reply = `Anti-reaction spam has been **${status}**.`;
+    let reply = t(lang, 'commands.admin.automod.reactionspam.base', { status });
     if (settings.automod.antiReactionSpam && settings.automod.level === 'minimal') {
-      reply += ' Automod level set to `minimal` to activate it.';
+      reply += t(lang, 'commands.admin.automod.reactionspam.activatedMinimal');
     }
     return message.reply(reply);
   },
 
   async ghostping(message, args, guild, settings) {
+    const lang = normalizeLocale(settings?.language);
     const val = args[0]?.toLowerCase();
     if (!val || !['on', 'off'].includes(val)) {
-      return message.reply('Usage: `!automod ghostping <on|off>`');
+      return message.reply(t(lang, 'commands.admin.automod.ghostping.usage'));
     }
 
     settings.automod.ghostPing = val === 'on';
@@ -211,126 +209,114 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
     const status = settings.automod.ghostPing ? 'enabled' : 'disabled';
 
-    let reply = `Ghost ping detection has been **${status}**.`;
+    let reply = t(lang, 'commands.admin.automod.ghostping.base', { status });
     if (settings.automod.ghostPing && settings.automod.level === 'off') {
-      reply += '\n**Note:** Automod level is `off` - run `!automod level minimal` for this to take effect.';
+      reply += t(lang, 'commands.admin.automod.ghostping.noteLevelOff');
     }
     return message.reply(reply);
   },
 
   async exempt(message, args, guild, settings) {
+    const lang = normalizeLocale(settings?.language);
     const [type, action, target] = args;
 
     if (!type || !action || !target || !['role', 'channel'].includes(type) || !['add', 'remove'].includes(action)) {
-      return message.reply(
-        'Usage:\n' +
-        '`!automod exempt role add <@role>` - exempt a role from all automod checks\n' +
-        '`!automod exempt role remove <@role>` - remove role exemption\n' +
-        '`!automod exempt channel add <#channel>` - disable automod in a channel\n' +
-        '`!automod exempt channel remove <#channel>` - re-enable automod in a channel'
-      );
+      return message.reply(t(lang, 'commands.admin.automod.exempt.usage'));
     }
 
     if (type === 'role') {
       const roleId = parseRoleId(target);
-      if (!roleId) return message.reply('Please provide a valid role mention or role ID.');
+      if (!roleId) return message.reply(t(lang, 'commands.admin.automod.exempt.invalidRole'));
 
       if (!settings.automod.exemptRoles) settings.automod.exemptRoles = [];
 
       if (action === 'add') {
         if (settings.automod.exemptRoles.includes(roleId)) {
-          return message.reply('That role is already exempt.');
+          return message.reply(t(lang, 'commands.admin.automod.exempt.roleAlreadyExempt'));
         }
         settings.automod.exemptRoles.push(roleId);
         settings.markModified('automod');
         await settings.save();
         settingsCache.invalidate(guild.id);
-        return message.reply(`Members with <@&${roleId}> are now exempt from automod.`);
+        return message.reply(t(lang, 'commands.admin.automod.exempt.roleNowExempt', { roleId }));
       } else {
         const idx = settings.automod.exemptRoles.indexOf(roleId);
-        if (idx === -1) return message.reply('That role is not in the exempt list.');
+        if (idx === -1) return message.reply(t(lang, 'commands.admin.automod.exempt.roleNotExempt'));
         settings.automod.exemptRoles.splice(idx, 1);
         settings.markModified('automod');
         await settings.save();
         settingsCache.invalidate(guild.id);
-        return message.reply(`<@&${roleId}> is no longer exempt from automod.`);
+        return message.reply(t(lang, 'commands.admin.automod.exempt.roleNoLongerExempt', { roleId }));
       }
     }
 
     if (type === 'channel') {
       const channelId = parseChannelId(target);
-      if (!channelId) return message.reply('Please provide a valid channel mention or channel ID.');
+      if (!channelId) return message.reply(t(lang, 'commands.admin.automod.exempt.invalidChannel'));
 
       if (!settings.automod.exemptChannels) settings.automod.exemptChannels = [];
 
       if (action === 'add') {
         if (settings.automod.exemptChannels.includes(channelId)) {
-          return message.reply('That channel is already exempt.');
+          return message.reply(t(lang, 'commands.admin.automod.exempt.channelAlreadyExempt'));
         }
         settings.automod.exemptChannels.push(channelId);
         settings.markModified('automod');
         await settings.save();
         settingsCache.invalidate(guild.id);
-        return message.reply(`Automod is now disabled in <#${channelId}>.`);
+        return message.reply(t(lang, 'commands.admin.automod.exempt.channelNowDisabled', { channelId }));
       } else {
         const idx = settings.automod.exemptChannels.indexOf(channelId);
-        if (idx === -1) return message.reply('That channel is not in the exempt list.');
+        if (idx === -1) return message.reply(t(lang, 'commands.admin.automod.exempt.channelNotExempt'));
         settings.automod.exemptChannels.splice(idx, 1);
         settings.markModified('automod');
         await settings.save();
         settingsCache.invalidate(guild.id);
-        return message.reply(`Automod has been re-enabled in <#${channelId}>.`);
+        return message.reply(t(lang, 'commands.admin.automod.exempt.channelReEnabled', { channelId }));
       }
     }
   }
 };
 
-function showHelp(message: any) {
+function showHelp(message: any, lang: string) {
   const embed = new EmbedBuilder()
-    .setTitle('Automod - Subcommands')
+    .setTitle(t(lang, 'commands.admin.automod.help.title'))
     .setColor(0x5865F2)
     .addFields(
       {
-        name: '!automod status',
-        value: 'Show all current automod settings'
+        name: t(lang, 'commands.admin.automod.help.fieldStatusName'),
+        value: t(lang, 'commands.admin.automod.help.fieldStatusValue')
       },
       {
-        name: '!automod level <off|minimal|medium|high>',
-        value:
-          '`off` - disable all\n' +
-          '`minimal` - anti-spam only\n' +
-          '`medium` - anti-spam + anti-link\n' +
-          '`high` - anti-spam + anti-link, strict limits'
+        name: t(lang, 'commands.admin.automod.help.fieldLevelName'),
+        value: t(lang, 'commands.admin.automod.help.fieldLevelValue')
       },
       {
-        name: '!automod spam <messages|window|timeout|violations> <value>',
-        value:
-          'Fine-tune spam detection:\n' +
-          '`messages` 2–20 (default 5) · `window` 1–60 s (default 5)\n' +
-          '`violations` 1–10 (default 3) · `timeout` 1–60 min (default 10)'
+        name: t(lang, 'commands.admin.automod.help.fieldSpamName'),
+        value: t(lang, 'commands.admin.automod.help.fieldSpamValue')
       },
       {
-        name: '!automod link <allow|deny> <domain>',
-        value: 'Manage domains exempt from the link filter\nExample: `!automod link allow youtube.com`'
+        name: t(lang, 'commands.admin.automod.help.fieldLinkName'),
+        value: t(lang, 'commands.admin.automod.help.fieldLinkValue')
       },
       {
-        name: '!automod reactionspam <on|off>',
-        value: 'Enable or disable anti-reaction spam detection'
+        name: t(lang, 'commands.admin.automod.help.fieldReactionSpamName'),
+        value: t(lang, 'commands.admin.automod.help.fieldReactionSpamValue')
       },
       {
-        name: '!automod ghostping <on|off>',
-        value: 'Enable or disable ghost-ping detection'
+        name: t(lang, 'commands.admin.automod.help.fieldGhostPingName'),
+        value: t(lang, 'commands.admin.automod.help.fieldGhostPingValue')
       },
       {
-        name: '!automod exempt role <add|remove> <@role>',
-        value: 'Exempt a role from all automod checks'
+        name: t(lang, 'commands.admin.automod.help.fieldExemptRoleName'),
+        value: t(lang, 'commands.admin.automod.help.fieldExemptRoleValue')
       },
       {
-        name: '!automod exempt channel <add|remove> <#channel>',
-        value: 'Disable automod in a specific channel'
+        name: t(lang, 'commands.admin.automod.help.fieldExemptChannelName'),
+        value: t(lang, 'commands.admin.automod.help.fieldExemptChannelValue')
       }
     )
-    .setFooter({ text: 'Requires Manage Server permission' });
+    .setFooter({ text: t(lang, 'commands.admin.automod.help.footer') });
 
   return message.reply({ embeds: [embed] });
 }
@@ -357,16 +343,17 @@ const command: Command = {
   async execute(message, args, client) {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.admin.automod.serverOnly'));
 
     try {
+      const settings: any = await GuildSettings.getOrCreate(guild.id);
+      const lang = normalizeLocale(settings?.language);
       const sub = args[0]?.toLowerCase();
 
       if (!sub || !subcommands[sub]) {
-        return showHelp(message);
+        return showHelp(message, lang);
       }
 
-      const settings: any = await GuildSettings.getOrCreate(guild.id);
       if (!settings.automod) settings.automod = {};
 
       await subcommands[sub](message, args.slice(1), guild, settings);
@@ -377,7 +364,9 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !automod (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !automod: ${error.message || error}`);
-        message.reply('There was an error executing this command.').catch(() => {});
+        const cached: any = guild ? await settingsCache.get(guild.id).catch(() => null) : null;
+        const lang = normalizeLocale(cached?.language);
+        message.reply(t(lang, 'commands.admin.automod.errorGeneric')).catch(() => {});
       }
     }
   }

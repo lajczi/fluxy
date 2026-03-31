@@ -2,6 +2,7 @@ import type { Command } from '../../types';
 import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'commandperms',
@@ -18,30 +19,24 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.admin.commandperms.serverOnly'));
     }
 
     const subcommand = args[0]?.toLowerCase();
 
     if (!subcommand || !['add', 'remove', 'list', 'clear'].includes(subcommand)) {
-      return void await message.reply(
-        '**Command Permissions**\n' +
-        'Restrict bot command usage to specific roles. When set, only members with an allowed role (or staff/admins) can use non-admin commands.\n\n' +
-        `\`${prefix}commandperms add <@role>\` - allow a role to use commands\n` +
-        `\`${prefix}commandperms remove <@role>\` - remove a role from the allowlist\n` +
-        `\`${prefix}commandperms list\` - show allowed roles\n` +
-        `\`${prefix}commandperms clear\` - clear all (everyone can use commands)`
-      );
+      return void await message.reply(t('en', 'commands.admin.commandperms.usage', { prefix }));
     }
 
     try {
       const settings = await (GuildSettings as any).getOrCreate(guild.id);
+      const lang = normalizeLocale(settings?.language);
 
       switch (subcommand) {
         case 'add': {
           const roleArg = args[1];
           if (!roleArg) {
-            return void await message.reply(`Please specify a role. Usage: \`${prefix}commandperms add <@role>\``);
+            return void await message.reply(t(lang, 'commands.admin.commandperms.roleRequiredUsageAdd', { prefix }));
           }
 
           const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
@@ -51,7 +46,7 @@ const command: Command = {
           } else if (/^\d{17,19}$/.test(roleArg)) {
             roleId = roleArg;
           } else {
-            return void await message.reply('Invalid role. Please use a role mention or role ID.');
+            return void await message.reply(t(lang, 'commands.admin.commandperms.invalidRole'));
           }
 
           let role = guild.roles?.get(roleId);
@@ -59,11 +54,11 @@ const command: Command = {
             try { role = await guild.fetchRole(roleId); } catch {}
           }
           if (!role) {
-            return void await message.reply('That role doesn\'t exist in this server.');
+            return void await message.reply(t(lang, 'commands.admin.commandperms.roleDoesNotExist'));
           }
 
           if (settings.commandAllowedRoles?.includes(roleId)) {
-            return void await message.reply(`**${role.name}** is already in the command allowlist.`);
+            return void await message.reply(t(lang, 'commands.admin.commandperms.alreadyAllowed', { roleName: role.name }));
           }
 
           if (!settings.commandAllowedRoles) {
@@ -73,13 +68,13 @@ const command: Command = {
           await settings.save();
           settingsCache.invalidate(guild.id);
 
-          return void await message.reply(`Added **${role.name}** to the command allowlist. Members with this role can use bot commands.`);
+          return void await message.reply(t(lang, 'commands.admin.commandperms.added', { roleName: role.name }));
         }
 
         case 'remove': {
           const roleArg = args[1];
           if (!roleArg) {
-            return void await message.reply(`Please specify a role. Usage: \`${prefix}commandperms remove <@role>\``);
+            return void await message.reply(t(lang, 'commands.admin.commandperms.roleRequiredUsageRemove', { prefix }));
           }
 
           const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
@@ -89,11 +84,11 @@ const command: Command = {
           } else if (/^\d{17,19}$/.test(roleArg)) {
             roleId = roleArg;
           } else {
-            return void await message.reply('Invalid role. Please use a role mention or role ID.');
+            return void await message.reply(t(lang, 'commands.admin.commandperms.invalidRole'));
           }
 
           if (!settings.commandAllowedRoles?.includes(roleId)) {
-            return void await message.reply('That role is not in the command allowlist.');
+            return void await message.reply(t(lang, 'commands.admin.commandperms.notInAllowlist'));
           }
 
           settings.commandAllowedRoles = settings.commandAllowedRoles.filter((id: string) => id !== roleId);
@@ -101,32 +96,32 @@ const command: Command = {
           settingsCache.invalidate(guild.id);
 
           const note = settings.commandAllowedRoles.length === 0
-            ? ' The allowlist is now empty - everyone can use commands again.'
+            ? t(lang, 'commands.admin.commandperms.noteAllowlistEmpty')
             : '';
-          return void await message.reply(`Removed <@&${roleId}> from the command allowlist.${note}`);
+          return void await message.reply(t(lang, 'commands.admin.commandperms.removed', { roleId }) + note);
         }
 
         case 'list': {
           const roles: string[] = settings.commandAllowedRoles || [];
 
           if (roles.length === 0) {
-            return void await message.reply('No command role restrictions are set. Everyone can use bot commands.');
+            return void await message.reply(t(lang, 'commands.admin.commandperms.noRestrictions'));
           }
 
           const roleList = roles.map((id: string) => `<@&${id}>`).join('\n');
-          return void await message.reply(`**Allowed Command Roles:**\n${roleList}\n\nOnly members with one of these roles (plus staff/admins) can use non-admin commands.`);
+          return void await message.reply(t(lang, 'commands.admin.commandperms.list', { roleList }));
         }
 
         case 'clear': {
           if (!settings.commandAllowedRoles || settings.commandAllowedRoles.length === 0) {
-            return void await message.reply('No command role restrictions to clear.');
+            return void await message.reply(t(lang, 'commands.admin.commandperms.noRestrictionsToClear'));
           }
 
           settings.commandAllowedRoles = [];
           await settings.save();
           settingsCache.invalidate(guild.id);
 
-          return void await message.reply('Cleared all command role restrictions. Everyone can use bot commands again.');
+          return void await message.reply(t(lang, 'commands.admin.commandperms.clearedAll'));
         }
       }
 
@@ -136,7 +131,9 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !commandperms (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !commandperms: ${error.message || error}`);
-        message.reply('An error occurred while managing command permissions.').catch(() => {});
+        const cached: any = await settingsCache.get(guild.id).catch(() => null);
+        const lang = normalizeLocale(cached?.language);
+        message.reply(t(lang, 'commands.admin.commandperms.errors.generic')).catch(() => {});
       }
     }
   }

@@ -1,6 +1,8 @@
 import { EmbedBuilder } from '@fluxerjs/core';
 import type { Command } from '../../types';
 import isNetworkError from '../../utils/isNetworkError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'inrole',
@@ -12,23 +14,25 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.inrole.serverOnly'));
+    const settings = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(settings?.language);
 
     const roleArg = args[0];
-    if (!roleArg) return void await message.reply(`Usage: \`${prefix}inrole <@role> [page]\``);
+    if (!roleArg) return void await message.reply(t(lang, 'commands.inrole.usage', { prefix }));
 
     const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
     let roleId: string;
     if (roleMention) roleId = roleMention[1];
     else if (/^\d{17,19}$/.test(roleArg)) roleId = roleArg;
-    else return void await message.reply('Please provide a valid role mention or role ID.');
+    else return void await message.reply(t(lang, 'commands.inrole.invalidRoleInput'));
 
     try {
       let role: any = guild.roles?.get(roleId);
       if (!role) {
         try { role = await guild.fetchRole(roleId); } catch {}
       }
-      if (!role) return void await message.reply('That role does not exist in this server.');
+      if (!role) return void await message.reply(t(lang, 'commands.inrole.roleNotFound'));
 
       let members: any[];
       try {
@@ -48,7 +52,7 @@ const command: Command = {
         } else {
           console.error(`[${guildName}] Error in !inrole: ${err.message || err}`);
         }
-        return void await message.reply('Failed to fetch server members.');
+        return void await message.reply(t(lang, 'commands.inrole.membersFetchFailed'));
       }
 
       const withRole = members.filter((m: any) => {
@@ -58,7 +62,7 @@ const command: Command = {
       });
 
       if (withRole.length === 0) {
-        return void await message.reply(`No members currently have the **${role.name}** role.`);
+        return void await message.reply(t(lang, 'commands.inrole.noneWithRole', { roleName: role.name }));
       }
 
       const PAGE_SIZE = 50;
@@ -67,8 +71,8 @@ const command: Command = {
       let page = 1;
       if (args[1]) {
         const parsed = parseInt(args[1], 10);
-        if (isNaN(parsed) || parsed < 1) return void await message.reply('Page must be a number starting from 1.');
-        if (parsed > totalPages) return void await message.reply(`Only ${totalPages} page(s) available for this role.`);
+        if (isNaN(parsed) || parsed < 1) return void await message.reply(t(lang, 'commands.inrole.invalidPage'));
+        if (parsed > totalPages) return void await message.reply(t(lang, 'commands.inrole.pageTooHigh', { totalPages }));
         page = parsed;
       }
 
@@ -79,11 +83,13 @@ const command: Command = {
         .map((m: any) => m.user ? `<@${m.id}> (${m.user.username})` : `<@${m.id}>`)
         .join('\n');
 
-      const footerParts = [`${withRole.length} member(s) total`];
-      if (totalPages > 1) footerParts.push(`page ${page}/${totalPages} \u2014 run !inrole <role> <page> to see other pages`);
+      const footerParts = [t(lang, 'commands.inrole.footerTotal', { memberCount: withRole.length })];
+      if (totalPages > 1) {
+        footerParts.push(t(lang, 'commands.inrole.footerPageHint', { page, totalPages, prefix }));
+      }
 
       const embed = new EmbedBuilder()
-        .setTitle(`Members with ${role.name}`)
+        .setTitle(t(lang, 'commands.inrole.embedTitle', { roleName: role.name }))
         .setColor(role.color || 0x5865F2)
         .setDescription(list)
         .setFooter({ text: footerParts.join(' \u00b7 ') })
@@ -97,7 +103,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !inrole (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !inrole: ${error.message || error}`);
-        message.reply('An error occurred while fetching members.').catch(() => {});
+        message.reply(t(lang, 'commands.inrole.genericError')).catch(() => {});
       }
     }
   }

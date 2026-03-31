@@ -2,6 +2,8 @@ import { EmbedBuilder } from '@fluxerjs/core';
 import type { Command } from '../../types';
 import parseUserId from '../../utils/parseUserId';
 import isNetworkError from '../../utils/isNetworkError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'userinfo',
@@ -17,16 +19,18 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.userinfo.serverOnly'));
     }
 
     try {
+      const settings = await settingsCache.get(guild.id).catch(() => null);
+      const lang = normalizeLocale(settings?.language);
       let userId = (message as any).author.id;
 
       if (args[0]) {
         const parsedId = parseUserId(args[0]);
         if (!parsedId) {
-          return void await message.reply('Please provide a valid user mention or ID.');
+          return void await message.reply(t(lang, 'commands.userinfo.invalidUser'));
         }
         userId = parsedId;
       }
@@ -35,7 +39,7 @@ const command: Command = {
       try {
         user = await client.users.fetch(userId);
       } catch {
-        return void await message.reply('Could not find that user.');
+        return void await message.reply(t(lang, 'commands.userinfo.userNotFound'));
       }
 
       let member: any = guild.members?.get(userId);
@@ -48,37 +52,38 @@ const command: Command = {
       }
 
       const createdAt = new Date(parseInt(user.id) / 4194304 + 1420070400000);
-      const createdString = createdAt.toLocaleDateString('en-US', {
+      const localeForDate = lang === 'en' ? 'en-US' : lang;
+      const createdString = createdAt.toLocaleDateString(localeForDate, {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
       });
 
       const embed = new EmbedBuilder()
-        .setTitle(`User Information`)
+        .setTitle(t(lang, 'commands.userinfo.title'))
         .setColor(member?.displayColor || 0x3498db)
         .setThumbnail(user.avatarURL?.() || null)
         .addFields(
-          { name: 'Username', value: user.username, inline: true },
-          { name: 'ID', value: user.id, inline: true },
-          { name: 'Bot', value: user.bot ? 'Yes' : 'No', inline: true },
-          { name: 'Account Created', value: createdString, inline: true }
+          { name: t(lang, 'commands.userinfo.fieldUsername'), value: user.username, inline: true },
+          { name: t(lang, 'commands.userinfo.fieldId'), value: user.id, inline: true },
+          { name: t(lang, 'commands.userinfo.fieldBot'), value: user.bot ? t(lang, 'commands.userinfo.yes') : t(lang, 'commands.userinfo.no'), inline: true },
+          { name: t(lang, 'commands.userinfo.fieldAccountCreated'), value: createdString, inline: true }
         )
         .setTimestamp(new Date())
-        .setFooter({ text: `Requested by ${(message as any).author.username}` });
+        .setFooter({ text: t(lang, 'commands.userinfo.requestedBy', { username: (message as any).author.username }) });
 
       if (member) {
         const joinedAt = member.joinedAt ? new Date(member.joinedAt) : null;
         const joinedString = joinedAt
-          ? joinedAt.toLocaleDateString('en-US', {
+          ? joinedAt.toLocaleDateString(localeForDate, {
               year: 'numeric',
               month: 'long',
               day: 'numeric'
             })
-          : 'Unknown';
+          : t(lang, 'commands.userinfo.unknown');
 
         embed.addFields(
-          { name: 'Joined Server', value: joinedString, inline: true }
+          { name: t(lang, 'commands.userinfo.fieldJoinedServer'), value: joinedString, inline: true }
         );
 
         if (member.roles && member.roles.cache) {
@@ -92,8 +97,8 @@ const command: Command = {
             const totalRoles = member.roles.cache.size - 1;
             embed.addFields(
               {
-                name: `Roles (${totalRoles})`,
-                value: roles + (totalRoles > 10 ? '...' : ''),
+                name: t(lang, 'commands.userinfo.fieldRoles', { totalRoles }),
+                value: roles + (totalRoles > 10 ? t(lang, 'commands.userinfo.rolesOverflowSuffix') : ''),
                 inline: false
               }
             );
@@ -103,13 +108,13 @@ const command: Command = {
         if (member.communicationDisabledUntil && member.communicationDisabledUntil > new Date()) {
           const timeoutEnd = new Date(member.communicationDisabledUntil);
           embed.addFields(
-            { name: 'Timeout', value: `Until ${timeoutEnd.toLocaleString()}`, inline: true }
+            { name: t(lang, 'commands.userinfo.fieldTimeout'), value: t(lang, 'commands.userinfo.timeoutUntil', { timeoutEnd: timeoutEnd.toLocaleString(localeForDate) }), inline: true }
           );
         }
 
         if (member.nickname) {
           embed.addFields(
-            { name: 'Nickname', value: member.nickname, inline: true }
+            { name: t(lang, 'commands.userinfo.fieldNickname'), value: member.nickname, inline: true }
           );
         }
       }
@@ -122,7 +127,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !userinfo (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !userinfo: ${error.message || error}`);
-        message.reply('An error occurred while fetching user information.').catch(() => {});
+        message.reply(t('en', 'commands.userinfo.genericError')).catch(() => {});
       }
     }
   }

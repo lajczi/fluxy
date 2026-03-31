@@ -2,6 +2,7 @@ import type { Command } from '../../types';
 import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'toggle-automod',
@@ -14,10 +15,11 @@ const command: Command = {
   async execute(message, _args, client) {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply('This command can only be used in a server.');
+    if (!guild) return void await message.reply(t('en', 'commands.admin.toggleAutomod.serverOnly'));
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
+      const lang = normalizeLocale(settings?.language);
       const currentLevel = settings.automod?.level || 'off';
       const newLevel = currentLevel === 'off' ? 'minimal' : 'off';
 
@@ -26,14 +28,16 @@ const command: Command = {
       await settings.save();
       settingsCache.invalidate(guild.id);
 
-      const status = newLevel === 'off' ? 'disabled' : 'enabled';
-      await message.reply(`Automod system has been **${status}**.${newLevel !== 'off' ? ' Level: `minimal` (anti-spam on, anti-link off). Use `!toggle-antilink` / `!toggle-antispam` to adjust.' : ''}`);
+      if (newLevel === 'off') return void await message.reply(t(lang, 'commands.admin.toggleAutomod.disabled'));
+      return void await message.reply(t(lang, 'commands.admin.toggleAutomod.enabled'));
     } catch (error: any) {
       if (isNetworkError(error)) {
         console.warn(`[${guild?.name || 'Unknown Server'}] Fluxer API unreachable during !toggle-automod (ECONNRESET)`);
       } else {
         console.error(`[${guild?.name || 'Unknown Server'}] Error in !toggle-automod: ${error.message || error}`);
-        message.reply('An error occurred while toggling automod.').catch(() => {});
+        const cached: any = guild ? await settingsCache.get(guild.id).catch(() => null) : null;
+        const lang = normalizeLocale(cached?.language);
+        message.reply(t(lang, 'commands.admin.toggleAutomod.errors.generic')).catch(() => {});
       }
     }
   }

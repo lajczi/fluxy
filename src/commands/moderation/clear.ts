@@ -3,6 +3,8 @@ import type { Command } from '../../types';
 import { logModAction } from '../../utils/logger';
 import isNetworkError from '../../utils/isNetworkError';
 import { isPermDenied, PERM_MESSAGES } from '../../utils/permError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'clear',
@@ -19,21 +21,24 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.moderation.clear.serverOnly'));
     }
 
+    const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(guildSettings?.language);
+
     if (!args[0]) {
-      return void await message.reply(`Usage: \`${prefix}clear <amount>\` (1-100)`);
+      return void await message.reply(t(lang, 'commands.moderation.clear.usage', { prefix }));
     }
 
     const amount = parseInt(args[0], 10);
 
     if (isNaN(amount)) {
-      return void await message.reply('Please provide a valid number.');
+      return void await message.reply(t(lang, 'commands.moderation.clear.invalidNumber'));
     }
 
     if (amount < 1 || amount > 100) {
-      return void await message.reply('Amount must be between 1 and 100.');
+      return void await message.reply(t(lang, 'commands.moderation.clear.amountRange'));
     }
 
     try {
@@ -45,7 +50,7 @@ const command: Command = {
       const messages = Array.isArray(messagesData) ? messagesData : [];
 
       if (messages.length === 0) {
-        return void await message.reply('No messages found to delete.');
+        return void await message.reply(t(lang, 'commands.moderation.clear.noMessages'));
       }
 
       const messageIds = messages.map((msg: any) => msg.id).slice(0, 100);
@@ -79,7 +84,9 @@ const command: Command = {
       }
 
       const userCount = Math.max(0, deletedCount - 1);
-      const confirmMsg = await (message as any).channel.send(`Successfully deleted **${userCount}** message(s).`);
+      const confirmMsg = await (message as any).channel.send(
+        t(lang, 'commands.moderation.clear.successDeleted', { userCount })
+      );
 
       setTimeout(() => {
         confirmMsg.delete().catch(() => {});
@@ -98,12 +105,12 @@ const command: Command = {
       if (isNetworkError(error)) {
         console.warn(`[${guildName}] Fluxer API unreachable during !clear (ECONNRESET)`);
       } else if (error.code === 50034) {
-        message.reply('Cannot delete messages older than 14 days.').catch(() => {});
+        message.reply(t(lang, 'commands.moderation.clear.errors.cannotDeleteOlderThan14Days')).catch(() => {});
       } else if (isPermDenied(error)) {
         message.reply(PERM_MESSAGES.clear).catch(() => {});
       } else {
         console.error(`[${guildName}] Error in !clear: ${error.message || error}`);
-        message.reply('An error occurred while trying to delete messages.').catch(() => {});
+        message.reply(t(lang, 'commands.moderation.clear.errors.generic')).catch(() => {});
       }
     }
   }

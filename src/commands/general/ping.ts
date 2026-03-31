@@ -1,6 +1,8 @@
 import { EmbedBuilder, Routes } from '@fluxerjs/core';
 import type { Command } from '../../types';
 import isNetworkError from '../../utils/isNetworkError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'ping',
@@ -11,8 +13,11 @@ const command: Command = {
 
   async execute(message, args, client) {
     try {
+      const guildId = (message as any).guildId || (message as any).guild?.id;
+      const settings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
+      const lang = normalizeLocale(settings?.language);
       const msgStart = Date.now();
-      const msg = await message.reply('Pinging...');
+      const msg = await message.reply(t(lang, 'commands.ping.pinging'));
       const msgLatency = Date.now() - msgStart;
 
       const restStart = Date.now();
@@ -20,13 +25,13 @@ const command: Command = {
       const restLatency = Date.now() - restStart;
 
       const embed = new EmbedBuilder()
-        .setTitle('Pong!')
+        .setTitle(t(lang, 'commands.ping.title'))
         .setColor(0x5865F2)
         .addFields(
-          { name: 'REST API',        value: `\`${restLatency}ms\``,  inline: true },
-          { name: 'Message Round-trip', value: `\`${msgLatency}ms\``, inline: true }
+          { name: t(lang, 'commands.ping.restApi'), value: `\`${restLatency}ms\``, inline: true },
+          { name: t(lang, 'commands.ping.roundTrip'), value: `\`${msgLatency}ms\``, inline: true }
         )
-        .setFooter({ text: 'Fluxer API - api.fluxer.app' })
+        .setFooter({ text: t(lang, 'commands.ping.footer') })
         .setTimestamp(new Date());
 
       await msg.edit({ content: '', embeds: [embed] });

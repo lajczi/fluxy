@@ -5,6 +5,7 @@ import settingsCache from '../../utils/settingsCache';
 import ModerationLog from '../../models/ModerationLog';
 import isNetworkError from '../../utils/isNetworkError';
 import { isPermDenied, PERM_MESSAGES } from '../../utils/permError';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'unmute',
@@ -21,16 +22,19 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.moderation.unmute.serverOnly'));
     }
 
+    const settings: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(settings?.language);
+
     if (!args[0]) {
-      return void await message.reply(`Usage: \`${prefix}unmute <user>\``);
+      return void await message.reply(t(lang, 'commands.moderation.unmute.usage', { prefix }));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply('Please provide a valid user mention or ID.');
+      return void await message.reply(t(lang, 'commands.moderation.unmute.invalidUser'));
     }
 
     let moderator: any = guild.members?.get((message as any).author.id);
@@ -43,15 +47,13 @@ const command: Command = {
       try {
         targetMember = await guild.fetchMember(userId);
       } catch {
-        return void await message.reply('That user is not in this server.');
+        return void await message.reply(t(lang, 'commands.moderation.unmute.userNotInServer'));
       }
     }
 
     if (!targetMember) {
-      return void await message.reply('That user is not in this server.');
+      return void await message.reply(t(lang, 'commands.moderation.unmute.userNotInServer'));
     }
-
-    const settings = await settingsCache.get(guild.id);
     const muteRoleId = settings?.moderation?.muteRoleId || settings?.muteRoleId;
     const muteMethod: 'auto' | 'timeout' | 'mute_role' = settings?.moderation?.muteMethod || 'auto';
 
@@ -63,7 +65,7 @@ const command: Command = {
     const unmuteByRole = muteMethod === 'mute_role' || muteMethod === 'auto';
 
     if ((!unmuteByTimeout || !isTimeoutMuted) && (!unmuteByRole || !isRoleMuted)) {
-      return void await message.reply('That user is not currently muted.');
+      return void await message.reply(t(lang, 'commands.moderation.unmute.notCurrentlyMuted'));
     }
 
     try {
@@ -77,7 +79,10 @@ const command: Command = {
         });
       }
 
-      await message.reply(`Successfully unmuted **${targetMember.user?.username || targetMember.id}** (<@${targetMember.id}>).`);
+      const displayName = targetMember.user?.username || targetMember.id;
+      await message.reply(
+        t(lang, 'commands.moderation.unmute.success', { username: displayName, userId: targetMember.id })
+      );
 
       await logModAction(guild, (message as any).author, targetMember.user || targetMember, 'unmute', 'Timeout removed', { client });
 
@@ -97,7 +102,7 @@ const command: Command = {
         message.reply(PERM_MESSAGES.unmute).catch(() => {});
       } else {
         console.error(`[${guildName}] Error in !unmute: ${error.message || error}`);
-        message.reply('An error occurred while trying to unmute that member.').catch(() => {});
+        message.reply(t(lang, 'commands.moderation.unmute.errors.generic')).catch(() => {});
       }
     }
   }

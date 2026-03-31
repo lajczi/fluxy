@@ -2,6 +2,8 @@ import { EmbedBuilder } from '@fluxerjs/core';
 import { Routes } from '@fluxerjs/types';
 import type { Command } from '../../types';
 import isNetworkError from '../../utils/isNetworkError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const packageJson = require('../../../package.json');
 
@@ -49,13 +51,16 @@ const command: Command = {
 
   async execute(message, args, client) {
     try {
+      const guildId = (message as any).guildId || (message as any).guild?.id;
+      const settings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
+      const lang = normalizeLocale(settings?.language);
       const uptime = Date.now() - startTime;
       const days = Math.floor(uptime / (24 * 60 * 60 * 1000));
       const hours = Math.floor((uptime % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
       const minutes = Math.floor((uptime % (60 * 60 * 1000)) / (60 * 1000));
       const seconds = Math.floor((uptime % (60 * 1000)) / 1000);
 
-      const uptimeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+      const uptimeString = t(lang, 'commands.botinfo.uptimeFormat', { days, hours, minutes, seconds });
 
       const memoryUsage = process.memoryUsage();
       const usedMemory = Math.round(memoryUsage.heapUsed / 1024 / 1024);
@@ -64,26 +69,23 @@ const command: Command = {
       const guildCount = await fetchAccurateGuildCount(client);
 
       const embed = new EmbedBuilder()
-        .setTitle('Bot Information')
+        .setTitle(t(lang, 'commands.botinfo.title'))
         .setColor(0x3498db)
         .setThumbnail((client as any).user?.avatarURL?.() || null)
         .setDescription(
           [
-            `\`Name    \` ${(client as any).user?.username || 'Unknown'}`,
-            `\`ID      \` ${(client as any).user?.id || 'Unknown'}`,
-            `\`Version \` ${packageJson.version || '1.0.0'}`,
-            `\`Uptime  \` ${uptimeString}`,
-            `\`Memory  \` ${usedMemory}MB / ${totalMemory}MB`,
-            `\`Servers \` ${guildCount}`,
-            `\`Node.js \` ${process.version}`,
-            `\`Library \` Fluxer.js`,
+            `\`${t(lang, 'commands.botinfo.labelName').padEnd(8)}\` ${(client as any).user?.username || t(lang, 'commands.botinfo.unknown')}`,
+            `\`${t(lang, 'commands.botinfo.labelId').padEnd(8)}\` ${(client as any).user?.id || t(lang, 'commands.botinfo.unknown')}`,
+            `\`${t(lang, 'commands.botinfo.labelVersion').padEnd(8)}\` ${packageJson.version || '1.0.0'}`,
+            `\`${t(lang, 'commands.botinfo.labelUptime').padEnd(8)}\` ${uptimeString}`,
+            `\`${t(lang, 'commands.botinfo.labelMemory').padEnd(8)}\` ${t(lang, 'commands.botinfo.memoryFormat', { usedMemory, totalMemory })}`,
+            `\`${t(lang, 'commands.botinfo.labelServers').padEnd(8)}\` ${guildCount}`,
+            `\`${t(lang, 'commands.botinfo.labelNode').padEnd(8)}\` ${process.version}`,
+            `\`${t(lang, 'commands.botinfo.labelLibrary').padEnd(8)}\` ${t(lang, 'commands.botinfo.libraryName')}`,
           ].join('\n')
         )
-        .addFields(
-          { name: 'Quick Stats', value: `${guildCount} servers • ${usedMemory}MB heap used`, inline: false }
-        )
         .setTimestamp(new Date())
-        .setFooter({ text: `Requested by ${(message as any).author.username}` });
+        .setFooter({ text: t(lang, 'commands.botinfo.requestedBy', { username: (message as any).author.username }) });
 
       await message.reply({ embeds: [embed] });
 
@@ -93,7 +95,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !botinfo (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !botinfo: ${error.message || error}`);
-        message.reply('An error occurred while fetching bot information.').catch(() => {});
+        message.reply(t('en', 'commands.botinfo.errorFetchFailed')).catch(() => {});
       }
     }
   }

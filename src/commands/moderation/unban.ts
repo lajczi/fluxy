@@ -4,6 +4,8 @@ import { logModAction } from '../../utils/logger';
 import ModerationLog from '../../models/ModerationLog';
 import isNetworkError from '../../utils/isNetworkError';
 import { isPermDenied, PERM_MESSAGES } from '../../utils/permError';
+import settingsCache from '../../utils/settingsCache';
+import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'unban',
@@ -20,19 +22,22 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply('This command can only be used in a server.');
+      return void await message.reply(t('en', 'commands.moderation.unban.serverOnly'));
     }
 
+    const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
+    const lang = normalizeLocale(guildSettings?.language);
+
     if (!args[0]) {
-      return void await message.reply(`Usage: \`${prefix}unban <userId> [reason]\``);
+      return void await message.reply(t(lang, 'commands.moderation.unban.usage', { prefix }));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply('Please provide a valid user ID.');
+      return void await message.reply(t(lang, 'commands.moderation.unban.invalidUser'));
     }
 
-    const reason = args.slice(1).join(' ').trim() || 'No reason provided';
+    const reason = args.slice(1).join(' ').trim() || t(lang, 'commands.moderation.unban.noReasonProvided');
 
     try {
       let targetUser: any;
@@ -44,7 +49,10 @@ const command: Command = {
 
       await guild.unban(userId);
 
-      await message.reply(`Successfully unbanned **${targetUser.username || targetUser.id}** (<@${targetUser.id}>).\n**Reason:** ${reason}`);
+      const displayName = targetUser.username || targetUser.id;
+      await message.reply(
+        t(lang, 'commands.moderation.unban.success', { username: displayName, userId: targetUser.id, reason })
+      );
 
       await logModAction(guild, (message as any).author, targetUser, 'unban', reason, { client });
 
@@ -61,12 +69,12 @@ const command: Command = {
       if (isNetworkError(error)) {
         console.warn(`[${guildName}] Fluxer API unreachable during !unban (ECONNRESET)`);
       } else if (error.code === 10026) {
-        message.reply('That user is not banned from this server.').catch(() => {});
+        message.reply(t(lang, 'commands.moderation.unban.notBanned')).catch(() => {});
       } else if (isPermDenied(error)) {
         message.reply(PERM_MESSAGES.unban).catch(() => {});
       } else {
         console.error(`[${guildName}] Error in !unban: ${error.message || error}`);
-        message.reply('An error occurred while trying to unban that user.').catch(() => {});
+        message.reply(t(lang, 'commands.moderation.unban.errors.generic')).catch(() => {});
       }
     }
   }

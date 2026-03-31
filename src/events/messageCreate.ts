@@ -10,6 +10,7 @@ import * as messageCache from '../utils/messageCache';
 import Ticket from '../models/Ticket';
 import config from '../config';
 import { requestDMProcess } from '../utils/dmCoordinator';
+import { t, normalizeLocale } from '../i18n';
 
 async function handleInboxMessage(message: any, client: any, settings: any): Promise<void> {
   message.delete().catch(() => { });
@@ -146,6 +147,7 @@ const event: BotEvent = {
 
           if (session && message.author.id === session.userId && message.content) {
             const answer = message.content.trim().toUpperCase();
+            const lang = normalizeLocale(settings?.language);
 
             if (answer === session.code) {
               clearTimeout(session.timeout);
@@ -183,8 +185,8 @@ const event: BotEvent = {
 
               try {
                 const successEmbed = new EmbedBuilder()
-                  .setTitle('✅ Verification Complete!')
-                  .setDescription('You have been verified. This channel will be deleted shortly.')
+                  .setTitle(t(lang, 'verification.result.passedTitle'))
+                  .setDescription(t(lang, 'verification.result.passedDescription'))
                   .setColor(0x2ecc71);
                 await message.reply({ embeds: [successEmbed] });
               } catch { }
@@ -196,8 +198,8 @@ const event: BotEvent = {
                     const logChannel = guild.channels?.get(verification.logChannelId) || await client.channels.fetch(verification.logChannelId).catch(() => null);
                     if (logChannel) {
                       const logEmbed = new EmbedBuilder()
-                        .setTitle('✅ Verification Passed')
-                        .setDescription(`<@${message.author.id}> passed verification.`)
+                        .setTitle(t(lang, 'verification.log.passedTitle'))
+                        .setDescription(t(lang, 'verification.log.passedDescription', { userId: message.author.id }))
                         .setColor(0x2ecc71)
                         .setTimestamp(new Date());
                       await logChannel.send({ embeds: [logEmbed] });
@@ -223,8 +225,8 @@ const event: BotEvent = {
 
                 try {
                   const failEmbed = new EmbedBuilder()
-                    .setTitle('❌ Verification Failed')
-                    .setDescription('You have used all your attempts. This channel will be deleted. Please try again by reacting to the verification panel.')
+                    .setTitle(t(lang, 'verification.result.failedTitle'))
+                    .setDescription(t(lang, 'verification.result.failedDescription'))
                     .setColor(0xe74c3c);
                   await message.reply({ embeds: [failEmbed] });
                 } catch { }
@@ -237,8 +239,8 @@ const event: BotEvent = {
                       const logChannel = guild.channels?.get(verification.logChannelId) || await client.channels.fetch(verification.logChannelId).catch(() => null);
                       if (logChannel) {
                         const logEmbed = new EmbedBuilder()
-                          .setTitle('❌ Verification Failed')
-                          .setDescription(`<@${message.author.id}> failed verification (used all attempts).`)
+                          .setTitle(t(lang, 'verification.log.failedTitle'))
+                          .setDescription(t(lang, 'verification.log.failedDescription', { userId: message.author.id }))
                           .setColor(0xe74c3c)
                           .setTimestamp(new Date());
                         await logChannel.send({ embeds: [logEmbed] });
@@ -268,8 +270,8 @@ const event: BotEvent = {
                 const remaining = session.maxAttempts - session.attempts;
                 try {
                   const retryEmbed = new EmbedBuilder()
-                    .setTitle('❌ Incorrect')
-                    .setDescription(`That wasn't right. You have **${remaining}** attempt(s) left.`)
+                    .setTitle(t(lang, 'verification.result.incorrectTitle'))
+                    .setDescription(t(lang, 'verification.result.incorrectDescription', { remaining }))
                     .setColor(0xf39c12);
                   await message.reply({ embeds: [retryEmbed] });
                 } catch { }

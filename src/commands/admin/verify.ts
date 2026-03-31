@@ -4,6 +4,7 @@ import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
 import { generateCaptcha } from '../../utils/captchaCard';
 import { EmbedBuilder, PermissionFlags } from '@fluxerjs/core';
+import { t, normalizeLocale } from '../../i18n';
 
 export const verificationSessions = new Map<string, {
   userId: string;
@@ -29,6 +30,7 @@ async function save(settings: any, guildId: string): Promise<void> {
 
 
 async function setupVerification(message: any, args: string[], guild: any, settings: any, client: any, prefix: string): Promise<any> {
+  const lang = normalizeLocale(settings.language);
   const verification = settings.verification;
   const botId = client.user?.id;
   const everyoneRoleId = guild.id;
@@ -44,7 +46,7 @@ async function setupVerification(message: any, args: string[], guild: any, setti
       verifiedRoleId = role.id;
       verification.verifiedRoleId = verifiedRoleId;
     } catch (err: any) {
-      return embedReply(message, `Failed to create Verified role: ${err.message}`);
+      return embedReply(message, t(lang, 'verification.errors.createVerifiedRoleFailed', { error: err.message }));
     }
   }
 
@@ -62,7 +64,7 @@ async function setupVerification(message: any, args: string[], guild: any, setti
       categoryId = category.id;
       verification.categoryId = categoryId;
     } catch (err: any) {
-      return embedReply(message, `Failed to create Verification category: ${err.message}`);
+      return embedReply(message, t(lang, 'verification.errors.createCategoryFailed', { error: err.message }));
     }
   }
 
@@ -83,20 +85,16 @@ async function setupVerification(message: any, args: string[], guild: any, setti
       panelChannelId = panelChannel.id;
       verification.panelChannelId = panelChannelId;
     } catch (err: any) {
-      return embedReply(message, `Failed to create verify-here channel: ${err.message}`);
+      return embedReply(message, t(lang, 'verification.errors.createPanelChannelFailed', { error: err.message }));
     }
   }
 
   try {
     const panelEmbed = new EmbedBuilder()
-      .setTitle('🔒 Server Verification')
-      .setDescription(
-        '**Welcome!** This server requires manual verification to help fight bot abuse.\n\n' +
-        'React with ✅ below to begin the verification process.\n\n' +
-        'You will be given a private channel with a captcha image - simply type the 6 letters shown to verify yourself.'
-      )
+      .setTitle(t(lang, 'verification.panel.title'))
+      .setDescription(t(lang, 'verification.panel.description'))
       .setColor(0x5865F2)
-      .setFooter({ text: 'Verification is quick and easy!' })
+      .setFooter({ text: t(lang, 'verification.panel.footer') })
       .setTimestamp(new Date());
 
     const channel = guild.channels?.get?.(panelChannelId) || await client.channels.fetch(panelChannelId);
@@ -105,22 +103,15 @@ async function setupVerification(message: any, args: string[], guild: any, setti
 
     verification.panelMessageId = panelMessage.id;
   } catch (err: any) {
-    return embedReply(message, `Failed to post verification panel: ${err.message}`);
+    return embedReply(message, t(lang, 'verification.errors.postPanelFailed', { error: err.message }));
   }
 
   verification.enabled = true;
   await save(settings, guild.id);
 
   const statusEmbed = new EmbedBuilder()
-    .setTitle('✅ Verification Setup Complete')
-    .setDescription(
-      `**Category:** Verification\n` +
-      `**Panel Channel:** <#${panelChannelId}>\n` +
-      `**Verified Role:** <@&${verifiedRoleId}>\n\n` +
-      `Users can now react with ✅ in <#${panelChannelId}> to begin verification.\n\n` +
-      `> **Important:** Make sure to deny \`@everyone\` the \`View Channel\` permission on your other channels, ` +
-      `and allow the **Verified** role to see them. This ensures unverified users can only see the verification channel.`
-    )
+    .setTitle(t(lang, 'verification.setupComplete.title'))
+    .setDescription(t(lang, 'verification.setupComplete.description', { panelChannelId, verifiedRoleId }))
     .setColor(0x2ecc71)
     .setTimestamp(new Date());
 
@@ -128,6 +119,7 @@ async function setupVerification(message: any, args: string[], guild: any, setti
 }
 
 async function postPanel(message: any, args: string[], guild: any, settings: any, client: any, prefix: string): Promise<any> {
+  const lang = normalizeLocale(settings.language);
   const verification = settings.verification;
 
   const channelArg = args[0];
@@ -139,19 +131,15 @@ async function postPanel(message: any, args: string[], guild: any, settings: any
   }
 
   if (!channelId) {
-    return embedReply(message, `Please specify a channel or run \`${prefix}verify setup\` first.`);
+    return embedReply(message, t(lang, 'verification.errors.missingPanelChannel', { prefix }));
   }
 
   try {
     const panelEmbed = new EmbedBuilder()
-      .setTitle('🔒 Server Verification')
-      .setDescription(
-        '**Welcome!** This server requires manual verification to help fight bot abuse.\n\n' +
-        'React with ✅ below to begin the verification process.\n\n' +
-        'You will be given a private channel with a captcha image - simply type the 6 letters shown to verify yourself.'
-      )
+      .setTitle(t(lang, 'verification.panel.title'))
+      .setDescription(t(lang, 'verification.panel.description'))
       .setColor(0x5865F2)
-      .setFooter({ text: 'Verification is quick and easy!' })
+      .setFooter({ text: t(lang, 'verification.panel.footer') })
       .setTimestamp(new Date());
 
     const channel = guild.channels?.get?.(channelId) || await client.channels.fetch(channelId);
@@ -162,67 +150,71 @@ async function postPanel(message: any, args: string[], guild: any, settings: any
     verification.panelMessageId = panelMsg.id;
     await save(settings, guild.id);
 
-    return embedReply(message, `Verification panel posted in <#${channelId}>.`);
+    return embedReply(message, t(lang, 'verification.panelPosted', { channelId }));
   } catch (err: any) {
-    return embedReply(message, `Failed to post panel: ${err.message}`);
+    return embedReply(message, t(lang, 'verification.errors.postPanelGenericFailed', { error: err.message }));
   }
 }
 
 async function setRole(message: any, args: string[], guild: any, settings: any, _client: any, prefix: string): Promise<any> {
+  const lang = normalizeLocale(settings.language);
   const roleArg = args[0];
-  if (!roleArg) return embedReply(message, `Usage: \`${prefix}verify role <@role>\``);
+  if (!roleArg) return embedReply(message, t(lang, 'verification.errors.usageRole', { prefix }));
 
   const roleId = roleArg.match(/^<@&(\d{17,19})>$/)?.[1] ?? (/^\d{17,19}$/.test(roleArg) ? roleArg : null);
-  if (!roleId) return embedReply(message, 'Please mention a valid role or provide a role ID.');
+  if (!roleId) return embedReply(message, t(lang, 'verification.errors.invalidRole'));
 
   settings.verification.verifiedRoleId = roleId;
   await save(settings, guild.id);
-  return embedReply(message, `Verified role set to <@&${roleId}>.`);
+  return embedReply(message, t(lang, 'verification.roleSetDone', { roleId }));
 }
 
 async function setCategory(message: any, args: string[], guild: any, settings: any, _client: any, prefix: string): Promise<any> {
+  const lang = normalizeLocale(settings.language);
   const catArg = args[0];
-  if (!catArg) return embedReply(message, `Usage: \`${prefix}verify category <categoryId>\``);
+  if (!catArg) return embedReply(message, t(lang, 'verification.errors.usageCategory', { prefix }));
 
   const catId = /^\d{17,19}$/.test(catArg) ? catArg : null;
-  if (!catId) return embedReply(message, 'Please provide a valid category ID.');
+  if (!catId) return embedReply(message, t(lang, 'verification.errors.invalidCategory'));
 
   settings.verification.categoryId = catId;
   await save(settings, guild.id);
-  return embedReply(message, `Verification category set to \`${catId}\`.`);
+  return embedReply(message, t(lang, 'verification.categorySetDone', { categoryId: catId }));
 }
 
 async function setLog(message: any, args: string[], guild: any, settings: any, _client: any, prefix: string): Promise<any> {
+  const lang = normalizeLocale(settings.language);
   const channelArg = args[0];
-  if (!channelArg) return embedReply(message, `Usage: \`${prefix}verify log <#channel>\` or \`${prefix}verify log clear\``);
+  if (!channelArg) return embedReply(message, t(lang, 'verification.errors.usageLog', { prefix }));
 
   if (channelArg.toLowerCase() === 'clear') {
     settings.verification.logChannelId = null;
     await save(settings, guild.id);
-    return embedReply(message, 'Verification log channel cleared.');
+    return embedReply(message, t(lang, 'verification.log.cleared'));
   }
 
   const channelId = channelArg.match(/^<#(\d{17,19})>$/)?.[1] ?? (/^\d{17,19}$/.test(channelArg) ? channelArg : null);
-  if (!channelId) return embedReply(message, 'Please mention a valid channel or provide a channel ID.');
+  if (!channelId) return embedReply(message, t(lang, 'verification.errors.invalidChannel'));
 
   settings.verification.logChannelId = channelId;
   await save(settings, guild.id);
-  return embedReply(message, `Verification log channel set to <#${channelId}>.`);
+  return embedReply(message, t(lang, 'verification.log.setDone', { channelId }));
 }
 
 async function showStatus(message: any, args: string[], guild: any, settings: any, _client: any, _prefix: string): Promise<any> {
+  const lang = normalizeLocale(settings.language);
   const v = settings.verification;
 
   const statusEmbed = new EmbedBuilder()
-    .setTitle('Verification Configuration')
+    .setTitle(t(lang, 'verification.status.title'))
     .setColor(0x5865F2)
     .setDescription(
-      `**Enabled:** ${v.enabled ? 'Yes' : 'No'}\n` +
-      `**Verified Role:** ${v.verifiedRoleId ? `<@&${v.verifiedRoleId}>` : 'Not set'}\n` +
-      `**Category:** ${v.categoryId || 'Not set'}\n` +
-      `**Panel Channel:** ${v.panelChannelId ? `<#${v.panelChannelId}>` : 'Not set'}\n` +
-      `**Log Channel:** ${v.logChannelId ? `<#${v.logChannelId}>` : 'Not set'}\n` +
-      `**Max Attempts:** ${v.maxAttempts || 2}`
+      `**Enabled:** ${v.enabled ? t(lang, 'verification.status.enabledYes') : t(lang, 'verification.status.enabledNo')}\n` +
+      `**Verified Role:** ${v.verifiedRoleId ? `<@&${v.verifiedRoleId}>` : t(lang, 'verification.status.notSet')}\n` +
+      `**Category:** ${v.categoryId || t(lang, 'verification.status.notSet')}\n` +
+      `**Panel Channel:** ${v.panelChannelId ? `<#${v.panelChannelId}>` : t(lang, 'verification.status.notSet')}\n` +
+      `**Log Channel:** ${v.logChannelId ? `<#${v.logChannelId}>` : t(lang, 'verification.status.notSet')}\n` +
+      `**${t(lang, 'verification.status.maxAttemptsLabel')}:** ${v.maxAttempts || 2}`
     )
     .setTimestamp(new Date());
 
@@ -230,6 +222,7 @@ async function showStatus(message: any, args: string[], guild: any, settings: an
 }
 
 async function resetVerification(message: any, args: string[], guild: any, settings: any, _client: any, _prefix: string): Promise<any> {
+  const lang = normalizeLocale(settings.language);
   settings.verification = {
     enabled: false,
     categoryId: null,
@@ -240,14 +233,15 @@ async function resetVerification(message: any, args: string[], guild: any, setti
     maxAttempts: 2,
   };
   await save(settings, guild.id);
-  return embedReply(message, 'Verification settings have been reset. Channels and roles created during setup were **not** deleted - remove them manually if needed.');
+  return embedReply(message, t(lang, 'verification.resetDone'));
 }
 
 async function testVerification(message: any, args: string[], guild: any, settings: any, client: any, prefix: string): Promise<any> {
+  const lang = normalizeLocale(settings.language);
   const verification = settings.verification;
 
   if (!verification.categoryId) {
-    return embedReply(message, `Run \`${prefix}verify setup\` first to create the verification category.`);
+    return embedReply(message, t(lang, 'verification.errors.usageTestFirst', { prefix }));
   }
 
   const userId = message.author.id;
@@ -270,7 +264,7 @@ async function testVerification(message: any, args: string[], guild: any, settin
       ],
     });
   } catch (err: any) {
-    return embedReply(message, `Failed to create test verification channel: ${err.message}`);
+    return embedReply(message, t(lang, 'verification.errors.createTestVerificationChannelFailed', { error: err.message }));
   }
 
   try {
@@ -278,13 +272,8 @@ async function testVerification(message: any, args: string[], guild: any, settin
     const maxAttempts = verification.maxAttempts || 2;
 
     const captchaEmbed = new EmbedBuilder()
-      .setTitle('🔒 Verification Required')
-      .setDescription(
-        `Welcome, <@${userId}>!\n\n` +
-        `Please type the **6 letters** shown in the image above to verify yourself.\n\n` +
-        `You have **${maxAttempts}** attempt(s). The code is **not** case-sensitive.\n` +
-        `This channel will expire in **60 seconds**.`
-      )
+      .setTitle(t(lang, 'verification.captcha.title'))
+      .setDescription(t(lang, 'verification.captcha.description', { userId, maxAttempts }))
       .setColor(0x5865F2)
             .setTimestamp(new Date());
 
@@ -310,26 +299,16 @@ async function testVerification(message: any, args: string[], guild: any, settin
       timeout,
     });
 
-    return embedReply(message, `Test verification channel created: <#${channel.id}>`);
+    return embedReply(message, t(lang, 'verification.testChannelCreated', { channelId: channel.id }));
   } catch (err: any) {
     try { await channel.delete(); } catch { }
-    return embedReply(message, `Failed to generate captcha: ${err.message}`);
+    return embedReply(message, t(lang, 'verification.errors.generateCaptchaFailed', { error: err.message }));
   }
 }
 
 
-function showHelp(message: any, prefix: string): Promise<any> {
-  return embedReply(message,
-    `\`${prefix}verify setup\` - auto-create category, channel, role, and panel\n` +
-    `\`${prefix}verify panel [#channel]\` - (re-)post the verification panel\n` +
-    `\`${prefix}verify role <@role>\` - set the verified role\n` +
-    `\`${prefix}verify category <id>\` - set the verification category\n` +
-    `\`${prefix}verify log <#channel>\` - set a log channel\n` +
-    `\`${prefix}verify status\` - show current configuration\n` +
-    `\`${prefix}verify reset\` - disable and clear settings\n` +
-    `\`${prefix}verify test\` - open a test verification channel for yourself`,
-    'Manual Verification System'
-  );
+function showHelp(message: any, prefix: string, lang: string): Promise<any> {
+  return embedReply(message, t(lang, 'verification.help.body', { prefix }), t(lang, 'verification.help.title'));
 }
 
 
@@ -368,17 +347,22 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await embedReply(message, 'This command can only be used in a server.');
+    if (!guild) return void await embedReply(message, t('en', 'verification.errors.serverOnly'));
 
     const sub = args[0]?.toLowerCase();
 
-    if (!sub || !subcommands[sub]) {
-      return showHelp(message, prefix);
-    }
+    let settings: any = null;
+    let lang = 'en';
 
     try {
-      const settings: any = await GuildSettings.getOrCreate(guild.id);
+      settings = await GuildSettings.getOrCreate(guild.id);
       if (!settings.verification) settings.verification = {};
+      lang = normalizeLocale(settings.language);
+    } catch {}
+
+    if (!sub || !subcommands[sub]) return showHelp(message, prefix, lang);
+
+    try {
       await subcommands[sub](message, args.slice(1), guild, settings, client, prefix);
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
@@ -386,7 +370,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !verify (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !verify: ${error.message || error}`);
-        embedReply(message, 'An error occurred while updating verification settings.').catch(() => { });
+        embedReply(message, t(lang, 'verification.errors.updateFailed')).catch(() => { });
       }
     }
   },
