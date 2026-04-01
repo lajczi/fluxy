@@ -6,6 +6,8 @@ import settingsCache from '../../utils/settingsCache';
 import { hasAnyPermission } from '../../utils/permissions';
 import { t, normalizeLocale } from '../../i18n';
 
+const ACCENT_COLOR = 0xf1c40f;
+
 const CATEGORY_META: Record<string, { label: string; description: string }> = {
   moderation: { label: 'Moderation', description: 'Ban, kick, warn, timeout, mute, clear, slowmode' },
   admin:      { label: 'Admin',      description: 'Configure the bot - logging, automod, tickets, lockdown, reaction roles' },
@@ -134,7 +136,7 @@ const command: Command = {
         const embed = new EmbedBuilder()
           .setTitle(`${cmd.name}`)
           .setDescription(Array.isArray(cmd.description) ? cmd.description.join('\n') : (cmd.description || 'No description provided.'))
-          .setColor(0x6c72f8)
+          .setColor(ACCENT_COLOR)
           .addFields({ name: 'Usage', value: usageStr, inline: false });
 
         if (cmd.permissions?.length) {
@@ -155,7 +157,7 @@ const command: Command = {
           return void await message.reply({ embeds: [embed] });
         } catch {
           const lines = [
-            `**${cmd.name}** \u2014 ${Array.isArray(cmd.description) ? cmd.description[0] : cmd.description || ''}`,
+            `**${cmd.name}** - ${Array.isArray(cmd.description) ? cmd.description[0] : cmd.description || ''}`,
             `Usage: ${usageStr}`,
             cmd.permissions?.length ? `Permission: ${cmd.permissions.join(', ')}` : '',
             cmd.aliases?.length    ? `Aliases: ${cmd.aliases.join(', ')}` : '',
@@ -171,7 +173,7 @@ const command: Command = {
       const embed = new EmbedBuilder()
         .setTitle(t(lang, 'commands.help.menuTitle'))
         .setDescription(t(lang, 'commands.help.menuDescription', { prefix }))
-        .setColor(0x6c72f8)
+        .setColor(ACCENT_COLOR)
         .setFooter({ text: t(lang, 'commands.help.menuFooter', { prefix }) })
         .setTimestamp(new Date());
 
@@ -186,7 +188,8 @@ const command: Command = {
         if (visible.length === 0) continue;
         const meta = CATEGORY_META[cat] ?? { label: cat };
         const cmdList = visible.map((cmd: Command) => `\`${cmd.name}\``).join('  ');
-        embed.addFields({ name: meta.label, value: cmdList, inline: false });
+        const value = meta.description ? `${meta.description}\n${cmdList}` : cmdList;
+        embed.addFields({ name: meta.label, value, inline: false });
       }
 
       try {
@@ -203,7 +206,7 @@ const command: Command = {
           }
           if (visible.length === 0) continue;
           const meta = CATEGORY_META[cat] ?? { label: cat };
-          lines.push(`**${meta.label}**`);
+          lines.push(`**${meta.label}**${meta.description ? ` - ${meta.description}` : ''}`);
           lines.push(visible.map((c: Command) => `\`${c.name}\``).join('  '));
           lines.push('');
         }

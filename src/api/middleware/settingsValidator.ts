@@ -63,6 +63,20 @@ function isBoundedInt(v: unknown, min: number, max: number): v is number {
   return typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
 }
 
+function validateStarboardEntry(value: unknown): true | string {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return 'starboard must be an object';
+  const sb = value as Record<string, unknown>;
+  if (sb.enabled !== undefined && typeof sb.enabled !== 'boolean') return 'starboard.enabled must be boolean';
+  if (sb.channelId !== undefined && !isSnowflakeOrNull(sb.channelId)) return 'starboard.channelId must be a valid channel ID';
+  if (sb.threshold !== undefined && !isBoundedInt(sb.threshold, 1, 100)) return 'starboard.threshold must be 1-100';
+  if (sb.emoji !== undefined && !isBoundedString(sb.emoji, 64)) return 'starboard.emoji must be under 64 characters';
+  if (sb.selfStarEnabled !== undefined && typeof sb.selfStarEnabled !== 'boolean') return 'starboard.selfStarEnabled must be boolean';
+  if (sb.ignoreBots !== undefined && typeof sb.ignoreBots !== 'boolean') return 'starboard.ignoreBots must be boolean';
+  if (sb.ignoredChannels !== undefined && !isSnowflakeArray(sb.ignoredChannels, 50)) return 'starboard.ignoredChannels must be channel IDs';
+  if (sb.ignoredRoles !== undefined && !isSnowflakeArray(sb.ignoredRoles, 50)) return 'starboard.ignoredRoles must be role IDs';
+  return true;
+}
+
 interface ValidationResult {
   valid: boolean;
   errors: string[];
@@ -257,16 +271,16 @@ const fieldValidators: Record<string, (value: unknown) => true | string> = {
   },
 
   starboard(v) {
-    if (typeof v !== 'object' || v === null || Array.isArray(v)) return 'starboard must be an object';
-    const sb = v as Record<string, unknown>;
-    if (sb.enabled !== undefined && typeof sb.enabled !== 'boolean') return 'starboard.enabled must be boolean';
-    if (sb.channelId !== undefined && !isSnowflakeOrNull(sb.channelId)) return 'starboard.channelId must be a valid channel ID';
-    if (sb.threshold !== undefined && !isBoundedInt(sb.threshold, 1, 100)) return 'starboard.threshold must be 1-100';
-    if (sb.emoji !== undefined && !isBoundedString(sb.emoji, 64)) return 'starboard.emoji must be under 64 characters';
-    if (sb.selfStarEnabled !== undefined && typeof sb.selfStarEnabled !== 'boolean') return 'starboard.selfStarEnabled must be boolean';
-    if (sb.ignoreBots !== undefined && typeof sb.ignoreBots !== 'boolean') return 'starboard.ignoreBots must be boolean';
-    if (sb.ignoredChannels !== undefined && !isSnowflakeArray(sb.ignoredChannels, 50)) return 'starboard.ignoredChannels must be channel IDs';
-    if (sb.ignoredRoles !== undefined && !isSnowflakeArray(sb.ignoredRoles, 50)) return 'starboard.ignoredRoles must be role IDs';
+    return validateStarboardEntry(v);
+  },
+
+  starboards(v) {
+    if (!Array.isArray(v)) return 'starboards must be an array';
+    if (v.length > 3) return 'Cannot have more than 3 starboards';
+    for (const entry of v) {
+      const res = validateStarboardEntry(entry);
+      if (res !== true) return res;
+    }
     return true;
   },
 

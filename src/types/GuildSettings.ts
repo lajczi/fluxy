@@ -148,7 +148,7 @@ export interface ILogChannelOverrides {
   server: string | null;
 }
 
-export interface IStarboard {
+export interface IStarboardBoard {
   enabled: boolean;
   channelId: string | null;
   threshold: number;
@@ -232,7 +232,8 @@ export interface IGuildSettings {
 
   verification: IVerification;
 
-  starboard: IStarboard;
+  starboards: IStarboardBoard[];
+  starboard?: IStarboardBoard;
 
   onboardingComplete: boolean;
   onboardingStep: number;

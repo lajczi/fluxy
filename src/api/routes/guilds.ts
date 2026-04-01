@@ -62,6 +62,7 @@ const ALLOWED_SETTINGS_FIELDS = new Set([
   'onboardingStep',
   'verification',
   'starboard',
+  'starboards',
 ]);
 
 function sanitizeUpdates(body: Record<string, unknown>): Record<string, unknown> {
@@ -980,10 +981,21 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
   router.get('/:id/starboard/leaderboard', requireGuildAccess, async (req: AuthRequest, res) => {
     try {
       const StarboardMessage = (await import('../../models/StarboardMessage')).default;
-      const entries = await StarboardMessage.find({ guildId: req.params.id, starCount: { $gt: 0 } })
+      const guildId = req.params.id as string;
+      const rawBoardId = typeof req.query.boardId === 'string'
+        ? req.query.boardId
+        : (typeof req.query.channelId === 'string' ? req.query.channelId : null);
+      const limitRaw = typeof req.query.limit === 'string' ? parseInt(req.query.limit, 10) : 10;
+      const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 50) : 10;
+
+      const match: any = { guildId, starCount: { $gt: 0 } };
+      if (rawBoardId) match.starboardChannelId = rawBoardId;
+
+      const entries = await StarboardMessage.find(match)
         .sort({ starCount: -1 })
-        .limit(10)
+        .limit(limit)
         .lean();
+
       res.json(entries);
     } catch (err: any) {
       res.status(500).json({ error: 'Internal server error' });
@@ -995,22 +1007,35 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
     try {
       const StarboardMessage = (await import('../../models/StarboardMessage')).default;
       const guildId = req.params.id as string;
-      const totalEntries = await StarboardMessage.countDocuments({ guildId });
-      const postedCount = await StarboardMessage.countDocuments({ guildId, starboardMessageId: { $ne: null } });
+      const rawBoardId = typeof req.query.boardId === 'string'
+        ? req.query.boardId
+        : (typeof req.query.channelId === 'string' ? req.query.channelId : null);
+
+      const match: any = { guildId };
+      if (rawBoardId) match.starboardChannelId = rawBoardId;
+
+      const totalEntries = await StarboardMessage.countDocuments(match);
+      const postedCount = await StarboardMessage.countDocuments({ ...match, starboardMessageId: { $ne: null } });
       const totalStarsResult = await StarboardMessage.aggregate([
-        { $match: { guildId } },
+        { $match: { ...match } },
         { $group: { _id: null, total: { $sum: '$starCount' } } },
       ]);
       const totalStars = totalStarsResult[0]?.total ?? 0;
 
       const topUsers = await StarboardMessage.aggregate([
-        { $match: { guildId, starCount: { $gt: 0 } } },
+        { $match: { ...match, starCount: { $gt: 0 } } },
         { $group: { _id: '$authorId', totalStars: { $sum: '$starCount' }, messageCount: { $sum: 1 } } },
         { $sort: { totalStars: -1 } },
         { $limit: 5 },
       ]);
 
-      res.json({ totalEntries, totalStars, postedCount, topUsers });
+      const boardBreakdown = await StarboardMessage.aggregate([
+        { $match: { guildId } },
+        { $group: { _id: '$starboardChannelId', stars: { $sum: '$starCount' }, messages: { $sum: 1 } } },
+        { $sort: { stars: -1 } },
+      ]);
+
+      res.json({ totalEntries, totalStars, postedCount, topUsers, boardBreakdown });
     } catch (err: any) {
       res.status(500).json({ error: 'Internal server error' });
     }

@@ -4,7 +4,7 @@ import type {
   IWelcomeCard, IWelcomeEmbed, IWelcomeDM, IWelcomeMessage,
   IReactionRole, IReactionRoleEntry, IModeration, ICustomCommand,
   IAutomodSpam, IAutomodRaid, IAutomod, IGoodbyeEmbed, IGoodbyeMessage,
-  ILogChannelOverrides, IVerification, IStarboard,
+  ILogChannelOverrides, IVerification, IStarboardBoard,
 } from '../types';
 
 const keywordEntrySchema = new Schema<IKeywordEntry>({
@@ -148,7 +148,7 @@ const verificationSchema = new Schema<IVerification>({
   maxAttempts: { type: Number, default: 2, min: 1, max: 5 },
 }, { _id: false });
 
-const starboardSchema = new Schema<IStarboard>({
+const starboardSchema = new Schema<IStarboardBoard>({
   enabled: { type: Boolean, default: false },
   channelId: { type: String, default: null },
   threshold: { type: Number, default: 3, min: 1, max: 100 },
@@ -295,6 +295,17 @@ const settingsSchema = new Schema<GuildSettingsDocument, GuildSettingsModel>({
   disabledCommands: { type: [String], default: [] },
 
   verification: { type: verificationSchema, default: () => ({}) },
+
+  starboards: {
+    type: [starboardSchema],
+    default: [],
+    validate: {
+      validator: function (v: IStarboardBoard[]) {
+        return v.length <= 3;
+      },
+      message: 'Cannot have more than 3 starboards',
+    },
+  },
 
   starboard: { type: starboardSchema, default: () => ({}) },
 

@@ -6,6 +6,7 @@ import * as roleQueue from '../utils/roleQueue';
 import StarboardMessage from '../models/StarboardMessage';
 import { Routes } from '@fluxerjs/types';
 import { EmbedBuilder } from '@fluxerjs/core';
+import { getActiveStarboards, getStarEmoji, getStarColor } from '../utils/starboardBoards';
 
 const event: BotEvent = {
   name: 'messageReactionRemove',
@@ -44,42 +45,47 @@ const event: BotEvent = {
         }
       ).catch(() => { });
 
-      const starboard = (settings as any).starboard;
-      if (starboard?.enabled && starboard?.channelId) {
+      const starboards = getActiveStarboards(settings);
+      if (starboards.length > 0) {
         const starEmojiRaw = reaction.emoji.id
           ? `${reaction.emoji.name}:${reaction.emoji.id}`
           : String(reaction.emoji.name ?? '');
-        const configEmoji = starboard.emoji ?? '⭐';
         const stripVS = (s: string) => s.replace(/[\uFE00-\uFE0F\u200D]/g, '').trim();
 
-        const emojiMatches = reaction.emoji.id
-          ? (starEmojiRaw === configEmoji || `<:${starEmojiRaw}>` === configEmoji || `<a:${starEmojiRaw}>` === configEmoji)
-          : (stripVS(starEmojiRaw) === stripVS(configEmoji));
+        for (const board of starboards) {
+          const configEmoji = board.emoji ?? '⭐';
+          const emojiMatches = reaction.emoji.id
+            ? (starEmojiRaw === configEmoji || `<:${starEmojiRaw}>` === configEmoji || `<a:${starEmojiRaw}>` === configEmoji)
+            : (stripVS(starEmojiRaw) === stripVS(configEmoji));
 
-        if (emojiMatches) {
+          if (!emojiMatches) continue;
+
           try {
-            const entry = await StarboardMessage.findOne({ guildId: guild.id, messageId: reaction.messageId });
+            const entry = await StarboardMessage.findOne({
+              guildId: guild.id,
+              messageId: reaction.messageId,
+              starboardChannelId: { $in: [board.channelId, null] },
+            });
+
             if (entry) {
               entry.reactors = entry.reactors.filter((id: string) => id !== user.id);
               entry.starCount = entry.reactors.length;
+              if (!entry.starboardChannelId && board.channelId) entry.starboardChannelId = board.channelId;
               await entry.save();
 
-              const threshold = starboard.threshold ?? 3;
+              const threshold = board.threshold ?? 3;
               if (entry.starCount < threshold) {
-                if (entry.starboardMessageId) {
+                if (entry.starboardMessageId && board.channelId) {
                   try {
-                    await client.rest.delete(Routes.channelMessage(starboard.channelId, entry.starboardMessageId));
-                  } catch { }
+                    await client.rest.delete(Routes.channelMessage(board.channelId, entry.starboardMessageId));
+                  } catch {}
                   entry.starboardMessageId = null;
                   await entry.save();
                 }
-              } else if (entry.starboardMessageId) {
+              } else if (entry.starboardMessageId && board.channelId) {
                 try {
                   const origMsg = await client.rest.get(Routes.channelMessage(reaction.channelId, reaction.messageId)) as any;
                   if (origMsg) {
-                    const getStarEmoji = (c: number) => c >= 25 ? '💫' : c >= 10 ? '🌟' : '⭐';
-                    const getStarColor = (c: number) => c >= 25 ? 0xe74c3c : c >= 10 ? 0xe67e22 : 0xf1c40f;
-
                     const content = origMsg.content?.length > 1024
                       ? origMsg.content.substring(0, 1021) + '...'
                       : (origMsg.content || '');
@@ -110,14 +116,14 @@ const event: BotEvent = {
                       if (img?.url) starEmbed.setImage(img.url);
                     }
 
-                    await client.rest.patch(Routes.channelMessage(starboard.channelId, entry.starboardMessageId), {
+                    await client.rest.patch(Routes.channelMessage(board.channelId, entry.starboardMessageId), {
                       body: {
                         content: `${starEmoji} **${entry.starCount}** | <#${reaction.channelId}>`,
                         embeds: [starEmbed.toJSON()],
                       },
                     });
                   }
-                } catch { }
+                } catch {}
               }
             }
           } catch (sbErr: any) {

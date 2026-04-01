@@ -1,6 +1,6 @@
 # Fluxy
 
-![License: ELv2](https://img.shields.io/badge/license-ELv2-blue) ![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)
+![License: ELv2](https://img.shields.io/badge/license-ELv2-blue) ![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen) [![Crowdin](https://badges.crowdin.net/fluxy/localized.svg)](https://crowdin.com/project/fluxy)
 
 Fluxy is a Fluxer moderation and server-management bot written in TypeScript.
 
@@ -79,6 +79,16 @@ Full list is in `.env.example`. The ones you'll actually touch:
 | `npm run test:watch` | Watch tests |
 | `npm run test:coverage` | Coverage report |
 | `npm run lint` | ESLint |
+| `npm run i18n:check` | Validate locale JSON files (keys + placeholders vs `en.json`) |
+| `npm run crowdin:consolidate` | Copy translations from legacy nested Crowdin paths into `src/locales/` (only if needed) |
+
+### Localization
+
+Strings live under [`src/locales/`](src/locales/): **`en.json`** is the source; other files are named by locale (for example `de.json`, `zh-CN.json`). The bot loads every `*.json` in that folder at runtime; `npm run build` copies them into `build/locales/` for production.
+
+**Crowdin:** [Fluxy on Crowdin](https://crowdin.com/project/fluxy) — translations are synced from this repo via [`crowdin.yml`](crowdin.yml) (source `src/locales/en.json`, translations `src/locales/%locale%.json`). Replace the badge project slug in this README if your Crowdin project identifier differs.
+
+**Contributors:** After editing `en.json`, run `npm run i18n:check`. Add or update other locale files so checks stay green.
 
 ### Deployment
 

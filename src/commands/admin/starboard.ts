@@ -5,18 +5,7 @@ import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
 import { EmbedBuilder, PermissionFlags } from '@fluxerjs/core';
 import { t, normalizeLocale } from '../../i18n';
-
-function getStarEmoji(count: number): string {
-  if (count >= 25) return '💫';
-  if (count >= 10) return '🌟';
-  return '⭐';
-}
-
-function getStarColor(count: number): number {
-  if (count >= 25) return 0xe74c3c;
-  if (count >= 10) return 0xe67e22;
-  return 0xf1c40f;
-}
+import { getStarboards, getStarEmoji, getStarColor } from '../../utils/starboardBoards';
 
 async function isStarboardAdmin(message: any, guild: any): Promise<boolean> {
   let member = guild.members?.get(message.author.id);
@@ -30,10 +19,38 @@ async function isStarboardAdmin(message: any, guild: any): Promise<boolean> {
   );
 }
 
+function parseChannelId(raw?: string): string | null {
+  if (!raw) return null;
+  const mention = raw.match(/^<#(\d{17,19})>$/);
+  if (mention) return mention[1];
+  if (/^\d{17,19}$/.test(raw)) return raw;
+  return null;
+}
+
+function normalizeBoards(settings: any) {
+  const boards = getStarboards(settings);
+  settings.starboards = boards;
+  settings.starboard = boards[0] || {};
+  return boards;
+}
+
+function saveBoards(settings: any, boards: any[]) {
+  settings.starboards = boards.slice(0, 3);
+  settings.starboard = settings.starboards[0] || {};
+  settings.markModified('starboards');
+  settings.markModified('starboard');
+}
+
+function findBoard(boards: any[], channelId?: string | null) {
+  if (channelId) return boards.find(b => b.channelId === channelId) || null;
+  if (boards.length === 1) return boards[0];
+  return null;
+}
+
 const command: Command = {
   name: 'starboard',
   description: [
-    'Configure the starboard system for your server.',
+    'Configure up to three starboards for your server.',
     'Subcommands: setup, threshold, emoji, toggle, selfstar, ignorechannel, ignorerole, settings, leaderboard, top, stats, force, remove',
   ],
   usage: '<subcommand> [args]',
@@ -52,21 +69,21 @@ const command: Command = {
     if (!sub || sub === 'help') {
       const usageStr = `\`${prefix}starboard <subcommand> [args]\``;
       const publicSubs = [
-        `\`${prefix}starboard leaderboard\``,
-        `\`${prefix}starboard top\``,
-        `\`${prefix}starboard stats\``,
+        `\`${prefix}starboard leaderboard [#board]\``,
+        `\`${prefix}starboard top [#board]\``,
+        `\`${prefix}starboard stats [#board]\``,
       ];
       const adminSubs = [
         `\`${prefix}starboard setup #channel\``,
-        `\`${prefix}starboard threshold <1-100>\``,
-        `\`${prefix}starboard emoji <emoji>\``,
-        `\`${prefix}starboard toggle\``,
-        `\`${prefix}starboard selfstar\``,
-        `\`${prefix}starboard ignorechannel #channel\``,
-        `\`${prefix}starboard ignorerole @role\``,
+        `\`${prefix}starboard threshold <1-100> [#board]\``,
+        `\`${prefix}starboard emoji <emoji> [#board]\``,
+        `\`${prefix}starboard toggle [#board]\``,
+        `\`${prefix}starboard selfstar [#board]\``,
+        `\`${prefix}starboard ignorechannel #channel [#board]\``,
+        `\`${prefix}starboard ignorerole @role [#board]\``,
         `\`${prefix}starboard settings\``,
         `\`${prefix}starboard force <messageLink|messageId> [channelId]\``,
-        `\`${prefix}starboard remove <messageId>\``,
+        `\`${prefix}starboard remove <messageId> [#board]\``,
       ];
 
       const embed = new EmbedBuilder()
@@ -87,6 +104,7 @@ const command: Command = {
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
       const lang = normalizeLocale(settings?.language);
+      let boards = normalizeBoards(settings);
       const needsAdmin = ![
         'leaderboard',
         'lb',
@@ -106,13 +124,8 @@ const command: Command = {
         case 'setup':
         case 'setchannel':
         case 'channel': {
-          if (!args[1]) return void await message.reply(t(lang, 'commands.admin.starboard.setup.usage', { prefix }));
-
-          const channelMention = args[1].match(/^<#(\d{17,19})>$/);
-          let channelId: string;
-          if (channelMention) channelId = channelMention[1];
-          else if (/^\d{17,19}$/.test(args[1])) channelId = args[1];
-          else return void await message.reply(t(lang, 'commands.admin.starboard.setup.invalidChannel'));
+          const channelId = parseChannelId(args[1]);
+          if (!channelId) return void await message.reply(t(lang, 'commands.admin.starboard.setup.usage', { prefix }));
 
           let channel: any = guild.channels?.get(channelId);
           if (!channel) {
@@ -122,101 +135,181 @@ const command: Command = {
           }
           if (!channel) return void await message.reply(t(lang, 'commands.admin.starboard.setup.channelDoesNotExist'));
 
-          if (!settings.starboard) settings.starboard = {};
-          settings.starboard.channelId = channelId;
-          settings.starboard.enabled = true;
-          settings.markModified('starboard');
+          const existing = boards.find((b: any) => b.channelId === channelId);
+          if (!existing && boards.length >= 3) {
+            return void await message.reply('You can have up to 3 starboards. Remove one before adding another.');
+          }
+
+          if (existing) {
+            existing.channelId = channelId;
+            existing.enabled = true;
+          } else {
+            const defaults = boards[0] || settings.starboard || {};
+            boards.push({
+              enabled: true,
+              channelId,
+              threshold: defaults.threshold ?? 3,
+              emoji: defaults.emoji ?? '⭐',
+              selfStarEnabled: defaults.selfStarEnabled ?? false,
+              ignoreBots: defaults.ignoreBots ?? true,
+              ignoredChannels: [],
+              ignoredRoles: [],
+            });
+          }
+
+          saveBoards(settings, boards);
           await settings.save();
           settingsCache.invalidate(guild.id);
+          boards = normalizeBoards(settings);
+
+          const board = boards.find((b: any) => b.channelId === channelId) || boards[0];
 
           const embed = new EmbedBuilder()
             .setTitle(t(lang, 'commands.admin.starboard.setup.title'))
             .setDescription(t(lang, 'commands.admin.starboard.setup.description', { channelId }))
             .setColor(0xf1c40f)
             .addFields(
-              { name: t(lang, 'commands.admin.starboard.setup.fieldThreshold'), value: t(lang, 'commands.admin.starboard.setup.thresholdReactions', { threshold: settings.starboard.threshold ?? 3 }), inline: true },
-              { name: t(lang, 'commands.admin.starboard.setup.fieldEmoji'), value: settings.starboard.emoji ?? '⭐', inline: true },
+              { name: t(lang, 'commands.admin.starboard.setup.fieldThreshold'), value: t(lang, 'commands.admin.starboard.setup.thresholdReactions', { threshold: board?.threshold ?? 3 }), inline: true },
+              { name: t(lang, 'commands.admin.starboard.setup.fieldEmoji'), value: board?.emoji ?? '⭐', inline: true },
             )
             .setTimestamp(new Date());
           return void await message.reply({ embeds: [embed] });
         }
 
         case 'threshold': {
-          const num = parseInt(args[1], 10);
-          if (!args[1] || isNaN(num) || num < 1 || num > 100) {
-            return void await message.reply(t(lang, 'commands.admin.starboard.threshold.usage', { prefix, current: settings.starboard?.threshold ?? 3 }));
+          const tokens = args.slice(1);
+          let targetChannelId: string | null = null;
+          let thresholdInput: string | undefined;
+
+          for (const token of tokens) {
+            const cid = parseChannelId(token);
+            if (cid) {
+              targetChannelId = cid;
+              continue;
+            }
+            if (!thresholdInput) thresholdInput = token;
           }
-          if (!settings.starboard) settings.starboard = {};
-          settings.starboard.threshold = num;
-          settings.markModified('starboard');
+
+          const num = parseInt(thresholdInput ?? '', 10);
+          const currentBoard = findBoard(boards, targetChannelId);
+
+          if (!thresholdInput || isNaN(num) || num < 1 || num > 100) {
+            const current = currentBoard?.threshold ?? boards[0]?.threshold ?? 3;
+            return void await message.reply(t(lang, 'commands.admin.starboard.threshold.usage', { prefix, current }));
+          }
+
+          const board = findBoard(boards, targetChannelId);
+          if (!board) {
+            if (boards.length > 1) return void await message.reply('Specify which starboard channel to update.');
+            return void await message.reply(t(lang, 'commands.admin.starboard.setup.usage', { prefix }));
+          }
+
+          board.threshold = num;
+          saveBoards(settings, boards);
           await settings.save();
           settingsCache.invalidate(guild.id);
+          boards = normalizeBoards(settings);
           return void await message.reply(t(lang, 'commands.admin.starboard.threshold.setDone', { threshold: num }));
         }
 
         case 'emoji': {
-          if (!args[1]) {
-            return void await message.reply(t(lang, 'commands.admin.starboard.emoji.usage', { prefix, currentEmoji: settings.starboard?.emoji ?? '⭐' }));
+          const tokens = args.slice(1);
+          let targetChannelId: string | null = null;
+          let rawEmoji: string | undefined;
+
+          for (const token of tokens) {
+            const cid = parseChannelId(token);
+            if (cid) {
+              targetChannelId = cid;
+              continue;
+            }
+            if (!rawEmoji) rawEmoji = token;
           }
-          const rawEmoji = args[1].trim();
-          if (!settings.starboard) settings.starboard = {};
-          settings.starboard.emoji = rawEmoji;
-          settings.markModified('starboard');
+
+          if (!rawEmoji) {
+            const current = findBoard(boards, targetChannelId)?.emoji ?? boards[0]?.emoji ?? '⭐';
+            return void await message.reply(t(lang, 'commands.admin.starboard.emoji.usage', { prefix, currentEmoji: current }));
+          }
+
+          const board = findBoard(boards, targetChannelId);
+          if (!board) {
+            if (boards.length > 1) return void await message.reply('Specify which starboard channel to update.');
+            return void await message.reply(t(lang, 'commands.admin.starboard.setup.usage', { prefix }));
+          }
+
+          board.emoji = rawEmoji.trim();
+          saveBoards(settings, boards);
           await settings.save();
           settingsCache.invalidate(guild.id);
-          return void await message.reply(t(lang, 'commands.admin.starboard.emoji.setDone', { emoji: rawEmoji }));
+          boards = normalizeBoards(settings);
+          return void await message.reply(t(lang, 'commands.admin.starboard.emoji.setDone', { emoji: board.emoji }));
         }
 
         case 'toggle':
         case 'enable':
         case 'disable': {
-          if (!settings.starboard) settings.starboard = {};
-          if (sub === 'enable') {
-            settings.starboard.enabled = true;
-          } else if (sub === 'disable') {
-            settings.starboard.enabled = false;
-          } else {
-            settings.starboard.enabled = !settings.starboard.enabled;
+          const channelId = parseChannelId(args[1]);
+          const board = findBoard(boards, channelId);
+          if (!board) {
+            if (boards.length > 1) return void await message.reply('Specify which starboard channel to update.');
+            return void await message.reply(t(lang, 'commands.admin.starboard.setup.usage', { prefix }));
           }
-          settings.markModified('starboard');
+
+          if (sub === 'enable') board.enabled = true;
+          else if (sub === 'disable') board.enabled = false;
+          else board.enabled = !board.enabled;
+
+          saveBoards(settings, boards);
           await settings.save();
           settingsCache.invalidate(guild.id);
-          return void await message.reply(t(lang, 'commands.admin.starboard.toggle.setDone', { status: settings.starboard.enabled ? 'enabled' : 'disabled' }));
+          boards = normalizeBoards(settings);
+          return void await message.reply(t(lang, 'commands.admin.starboard.toggle.setDone', { status: board.enabled ? 'enabled' : 'disabled' }));
         }
 
         case 'selfstar': {
-          if (!settings.starboard) settings.starboard = {};
-          settings.starboard.selfStarEnabled = !settings.starboard.selfStarEnabled;
-          settings.markModified('starboard');
+          const channelId = parseChannelId(args[1]);
+          const board = findBoard(boards, channelId);
+          if (!board) {
+            if (boards.length > 1) return void await message.reply('Specify which starboard channel to update.');
+            return void await message.reply(t(lang, 'commands.admin.starboard.setup.usage', { prefix }));
+          }
+
+          board.selfStarEnabled = !board.selfStarEnabled;
+          saveBoards(settings, boards);
           await settings.save();
           settingsCache.invalidate(guild.id);
-          return void await message.reply(t(lang, 'commands.admin.starboard.selfstar.setDone', { status: settings.starboard.selfStarEnabled ? 'enabled' : 'disabled' }));
+          boards = normalizeBoards(settings);
+          return void await message.reply(t(lang, 'commands.admin.starboard.selfstar.setDone', { status: board.selfStarEnabled ? 'enabled' : 'disabled' }));
         }
 
         case 'ignorechannel': {
-          if (!args[1]) return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.usage', { prefix }));
-          const channelMention = args[1].match(/^<#(\d{17,19})>$/);
-          let channelId: string;
-          if (channelMention) channelId = channelMention[1];
-          else if (/^\d{17,19}$/.test(args[1])) channelId = args[1];
-          else return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.invalidChannel'));
+          const targetChannelId = parseChannelId(args[1]);
+          const boardChannelId = parseChannelId(args[2]);
+          if (!targetChannelId) return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.usage', { prefix }));
 
-          if (!settings.starboard) settings.starboard = {};
-          if (!settings.starboard.ignoredChannels) settings.starboard.ignoredChannels = [];
+          const board = findBoard(boards, boardChannelId);
+          if (!board) {
+            if (boards.length > 1) return void await message.reply('Specify which starboard channel to update.');
+            return void await message.reply(t(lang, 'commands.admin.starboard.setup.usage', { prefix }));
+          }
 
-          const idx = settings.starboard.ignoredChannels.indexOf(channelId);
+          if (!board.ignoredChannels) board.ignoredChannels = [];
+
+          const idx = board.ignoredChannels.indexOf(targetChannelId);
           if (idx === -1) {
-            settings.starboard.ignoredChannels.push(channelId);
-            settings.markModified('starboard');
+            board.ignoredChannels.push(targetChannelId);
+            saveBoards(settings, boards);
             await settings.save();
             settingsCache.invalidate(guild.id);
-            return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.nowIgnored', { channelId }));
+            boards = normalizeBoards(settings);
+            return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.nowIgnored', { channelId: targetChannelId }));
           } else {
-            settings.starboard.ignoredChannels.splice(idx, 1);
-            settings.markModified('starboard');
+            board.ignoredChannels.splice(idx, 1);
+            saveBoards(settings, boards);
             await settings.save();
             settingsCache.invalidate(guild.id);
-            return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.noLongerIgnored', { channelId }));
+            boards = normalizeBoards(settings);
+            return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.noLongerIgnored', { channelId: targetChannelId }));
           }
         }
 
@@ -228,21 +321,29 @@ const command: Command = {
           else if (/^\d{17,19}$/.test(args[1])) roleId = args[1];
           else return void await message.reply(t(lang, 'commands.admin.starboard.ignorerole.invalidRole'));
 
-          if (!settings.starboard) settings.starboard = {};
-          if (!settings.starboard.ignoredRoles) settings.starboard.ignoredRoles = [];
+          const boardChannelId = parseChannelId(args[2]);
+          const board = findBoard(boards, boardChannelId);
+          if (!board) {
+            if (boards.length > 1) return void await message.reply('Specify which starboard channel to update.');
+            return void await message.reply(t(lang, 'commands.admin.starboard.setup.usage', { prefix }));
+          }
 
-          const idx = settings.starboard.ignoredRoles.indexOf(roleId);
+          if (!board.ignoredRoles) board.ignoredRoles = [];
+
+          const idx = board.ignoredRoles.indexOf(roleId);
           if (idx === -1) {
-            settings.starboard.ignoredRoles.push(roleId);
-            settings.markModified('starboard');
+            board.ignoredRoles.push(roleId);
+            saveBoards(settings, boards);
             await settings.save();
             settingsCache.invalidate(guild.id);
+            boards = normalizeBoards(settings);
             return void await message.reply(t(lang, 'commands.admin.starboard.ignorerole.nowExcluded', { roleId }));
           } else {
-            settings.starboard.ignoredRoles.splice(idx, 1);
-            settings.markModified('starboard');
+            board.ignoredRoles.splice(idx, 1);
+            saveBoards(settings, boards);
             await settings.save();
             settingsCache.invalidate(guild.id);
+            boards = normalizeBoards(settings);
             return void await message.reply(t(lang, 'commands.admin.starboard.ignorerole.canStarAgain', { roleId }));
           }
         }
@@ -250,37 +351,51 @@ const command: Command = {
         case 'settings':
         case 'config':
         case 'info': {
-          const sb = settings.starboard || {};
+          if (boards.length === 0) {
+            return void await message.reply(t(lang, 'commands.admin.starboard.settings.notSet'));
+          }
+
           const embed = new EmbedBuilder()
             .setTitle(t(lang, 'commands.admin.starboard.settings.title'))
             .setColor(0xf1c40f)
-            .addFields(
-              { name: t(lang, 'commands.admin.starboard.settings.status'), value: sb.enabled ? t(lang, 'commands.admin.starboard.settings.enabled') : t(lang, 'commands.admin.starboard.settings.disabled'), inline: true },
-              { name: t(lang, 'commands.admin.starboard.settings.channel'), value: sb.channelId ? `<#${sb.channelId}>` : t(lang, 'commands.admin.starboard.settings.notSet'), inline: true },
-              { name: t(lang, 'commands.admin.starboard.settings.threshold'), value: t(lang, 'commands.admin.starboard.settings.thresholdReactions', { threshold: sb.threshold ?? 3 }), inline: true },
-              { name: t(lang, 'commands.admin.starboard.settings.emoji'), value: sb.emoji ?? '⭐', inline: true },
-              { name: t(lang, 'commands.admin.starboard.settings.selfStar'), value: sb.selfStarEnabled ? t(lang, 'commands.admin.starboard.settings.allowed') : t(lang, 'commands.admin.starboard.settings.notAllowed'), inline: true },
-              { name: t(lang, 'commands.admin.starboard.settings.ignoreBots'), value: sb.ignoreBots !== false ? t(lang, 'commands.admin.starboard.settings.yes') : t(lang, 'commands.admin.starboard.settings.no'), inline: true },
-              {
-                name: t(lang, 'commands.admin.starboard.settings.ignoredChannels'),
-                value: sb.ignoredChannels?.length > 0
-                  ? sb.ignoredChannels.map((id: string) => `<#${id}>`).join(', ')
-                  : t(lang, 'commands.admin.starboard.settings.none'),
-              },
-              {
-                name: t(lang, 'commands.admin.starboard.settings.ignoredRoles'),
-                value: sb.ignoredRoles?.length > 0
-                  ? sb.ignoredRoles.map((id: string) => `<@&${id}>`).join(', ')
-                  : t(lang, 'commands.admin.starboard.settings.none'),
-              },
-            )
             .setTimestamp(new Date());
+
+          for (const board of boards) {
+            const ignoredChannels = board.ignoredChannels?.length
+              ? board.ignoredChannels.map((id: string) => `<#${id}>`).join(', ')
+              : t(lang, 'commands.admin.starboard.settings.none');
+            const ignoredRoles = board.ignoredRoles?.length
+              ? board.ignoredRoles.map((id: string) => `<@&${id}>`).join(', ')
+              : t(lang, 'commands.admin.starboard.settings.none');
+
+            const lines = [
+              `${t(lang, 'commands.admin.starboard.settings.status')}: ${board.enabled ? t(lang, 'commands.admin.starboard.settings.enabled') : t(lang, 'commands.admin.starboard.settings.disabled')}`,
+              `${t(lang, 'commands.admin.starboard.settings.channel')}: ${board.channelId ? `<#${board.channelId}>` : t(lang, 'commands.admin.starboard.settings.notSet')}`,
+              `${t(lang, 'commands.admin.starboard.settings.threshold')}: ${t(lang, 'commands.admin.starboard.settings.thresholdReactions', { threshold: board.threshold ?? 3 })}`,
+              `${t(lang, 'commands.admin.starboard.settings.emoji')}: ${board.emoji ?? '⭐'}`,
+              `${t(lang, 'commands.admin.starboard.settings.selfStar')}: ${board.selfStarEnabled ? t(lang, 'commands.admin.starboard.settings.allowed') : t(lang, 'commands.admin.starboard.settings.notAllowed')}`,
+              `${t(lang, 'commands.admin.starboard.settings.ignoreBots')}: ${board.ignoreBots !== false ? t(lang, 'commands.admin.starboard.settings.yes') : t(lang, 'commands.admin.starboard.settings.no')}`,
+              `${t(lang, 'commands.admin.starboard.settings.ignoredChannels')}: ${ignoredChannels}`,
+              `${t(lang, 'commands.admin.starboard.settings.ignoredRoles')}: ${ignoredRoles}`,
+            ].join('\n');
+
+            embed.addFields({
+              name: board.channelId ? `<#${board.channelId}>` : t(lang, 'commands.admin.starboard.settings.notSet'),
+              value: lines,
+              inline: false,
+            });
+          }
+
           return void await message.reply({ embeds: [embed] });
         }
 
         case 'leaderboard':
         case 'lb': {
-          const entries = await StarboardMessage.find({ guildId: guild.id, starCount: { $gt: 0 } })
+          const boardChannelId = parseChannelId(args[1]);
+          const query: any = { guildId: guild.id, starCount: { $gt: 0 } };
+          if (boardChannelId) query.starboardChannelId = boardChannelId;
+
+          const entries = await StarboardMessage.find(query)
             .sort({ starCount: -1 })
             .limit(10)
             .lean();
@@ -291,7 +406,8 @@ const command: Command = {
 
           const lines = entries.map((e: any, i: number) => {
             const emoji = getStarEmoji(e.starCount);
-            return `**${i + 1}.** ${emoji} **${e.starCount}** - <@${e.authorId}> in <#${e.channelId}>\n[Jump to message](https://fluxer.app/channels/${guild.id}/${e.channelId}/${e.messageId})`;
+            const boardLabel = e.starboardChannelId ? ` in <#${e.starboardChannelId}>` : '';
+            return `**${i + 1}.** ${emoji} **${e.starCount}** - <@${e.authorId}> in <#${e.channelId}>${boardLabel}\n[Jump to message](https://fluxer.app/channels/${guild.id}/${e.channelId}/${e.messageId})`;
           });
 
           const embed = new EmbedBuilder()
@@ -305,8 +421,12 @@ const command: Command = {
 
         case 'top':
         case 'topusers': {
+          const boardChannelId = parseChannelId(args[1]);
+          const match: any = { guildId: guild.id, starCount: { $gt: 0 } };
+          if (boardChannelId) match.starboardChannelId = boardChannelId;
+
           const pipeline = await StarboardMessage.aggregate([
-            { $match: { guildId: guild.id, starCount: { $gt: 0 } } },
+            { $match: match },
             { $group: { _id: '$authorId', totalStars: { $sum: '$starCount' }, messageCount: { $sum: 1 } } },
             { $sort: { totalStars: -1 } },
             { $limit: 10 },
@@ -331,13 +451,29 @@ const command: Command = {
         }
 
         case 'stats': {
-          const totalEntries = await StarboardMessage.countDocuments({ guildId: guild.id });
+          const boardChannelId = parseChannelId(args[1]);
+          const match: any = { guildId: guild.id };
+          if (boardChannelId) match.starboardChannelId = boardChannelId;
+
+          const totalEntries = await StarboardMessage.countDocuments({ ...match });
           const totalStarsResult = await StarboardMessage.aggregate([
-            { $match: { guildId: guild.id } },
+            { $match: match },
             { $group: { _id: null, total: { $sum: '$starCount' } } },
           ]);
           const totalStars = totalStarsResult[0]?.total ?? 0;
-          const postedCount = await StarboardMessage.countDocuments({ guildId: guild.id, starboardMessageId: { $ne: null } });
+          const postedCount = await StarboardMessage.countDocuments({ ...match, starboardMessageId: { $ne: null } });
+
+          const boardBreakdown = await StarboardMessage.aggregate([
+            { $match: { guildId: guild.id } },
+            {
+              $group: {
+                _id: '$starboardChannelId',
+                stars: { $sum: '$starCount' },
+                messages: { $sum: 1 },
+              },
+            },
+            { $sort: { stars: -1 } },
+          ]);
 
           const embed = new EmbedBuilder()
             .setTitle(t(lang, 'commands.admin.starboard.stats.title'))
@@ -348,14 +484,20 @@ const command: Command = {
               { name: t(lang, 'commands.admin.starboard.stats.postedToStarboard'), value: `${postedCount}`, inline: true },
             )
             .setTimestamp(new Date());
+
+          if (boardBreakdown.length > 0) {
+            const lines = boardBreakdown.map((b: any) => {
+              const ch = b._id ? `<#${b._id}>` : 'Unknown board';
+              return `${ch}: ${b.stars} stars across ${b.messages} message(s)`;
+            });
+            embed.addFields({ name: 'Boards', value: lines.join('\n'), inline: false });
+          }
+
           return void await message.reply({ embeds: [embed] });
         }
 
         case 'force': {
           if (!args[1]) return void await message.reply(t(lang, 'commands.admin.starboard.force.usage', { prefix }));
-
-          const sb = settings.starboard || {};
-          if (!sb.channelId) return void await message.reply(t(lang, 'commands.admin.starboard.force.noStarboardChannel', { prefix }));
 
           let targetChannelId: string | null = null;
           let targetMessageId: string;
@@ -366,12 +508,18 @@ const command: Command = {
             targetMessageId = linkMatch[3];
           } else if (/^\d{17,19}$/.test(args[1])) {
             targetMessageId = args[1];
-            targetChannelId = args[2]?.match(/^<#(\d{17,19})>$/)?.[1] || args[2] || (message as any).channelId;
+            targetChannelId = parseChannelId(args[2]) || (message as any).channelId;
           } else {
             return void await message.reply(t(lang, 'commands.admin.starboard.force.invalidMessageLinkOrId'));
           }
 
           if (!targetChannelId) return void await message.reply(t(lang, 'commands.admin.starboard.force.couldNotDetermineChannel'));
+
+          const boardArg = linkMatch ? args[2] : args[3];
+          const boardChannelId = parseChannelId(boardArg);
+          const board = findBoard(boards, boardChannelId) || boards[0];
+
+          if (!board || !board.channelId) return void await message.reply(t(lang, 'commands.admin.starboard.force.noStarboardChannel', { prefix }));
 
           try {
             const { Routes } = await import('@fluxerjs/types');
@@ -382,8 +530,8 @@ const command: Command = {
               ? msgData.content.substring(0, 1021) + '...'
               : (msgData.content || '*(no text content)*');
 
-            const starEmoji = getStarEmoji(sb.threshold ?? 3);
-            const starColor = getStarColor(sb.threshold ?? 3);
+            const starEmoji = getStarEmoji(board.threshold ?? 3);
+            const starColor = getStarColor(board.threshold ?? 3);
 
             const starEmbed = new EmbedBuilder()
               .setAuthor({
@@ -406,7 +554,7 @@ const command: Command = {
               if (img?.url) starEmbed.setImage(img.url);
             }
 
-            const starboardMsg = await client.rest.post(Routes.channelMessages(sb.channelId), {
+            const starboardMsg = await client.rest.post(Routes.channelMessages(board.channelId), {
               body: {
                 content: `${starEmoji} **Manually Added** | <#${targetChannelId}>`,
                 embeds: [starEmbed.toJSON()],
@@ -414,13 +562,14 @@ const command: Command = {
             }) as any;
 
             await StarboardMessage.findOneAndUpdate(
-              { guildId: guild.id, messageId: targetMessageId },
+              { guildId: guild.id, messageId: targetMessageId, starboardChannelId: board.channelId },
               {
                 $set: {
                   channelId: targetChannelId,
                   authorId: msgData.author?.id ?? 'unknown',
+                  starboardChannelId: board.channelId,
                   starboardMessageId: starboardMsg?.id ?? null,
-                  starCount: sb.threshold ?? 3,
+                  starCount: board.threshold ?? 3,
                 },
                 $setOnInsert: { reactors: [] },
               },
@@ -438,17 +587,25 @@ const command: Command = {
           if (!args[1]) return void await message.reply(t(lang, 'commands.admin.starboard.remove.usage', { prefix }));
           if (!/^\d{17,19}$/.test(args[1])) return void await message.reply(t(lang, 'commands.admin.starboard.remove.invalidMessageId'));
 
-          const entry = await StarboardMessage.findOne({ guildId: guild.id, messageId: args[1] });
-          if (!entry) return void await message.reply(t(lang, 'commands.admin.starboard.remove.notInStarboard'));
+          const boardChannelId = parseChannelId(args[2]);
+          const query: any = { guildId: guild.id, messageId: args[1] };
+          if (boardChannelId) query.starboardChannelId = { $in: [boardChannelId, null] };
 
-          if (entry.starboardMessageId && settings.starboard?.channelId) {
-            try {
-              const { Routes } = await import('@fluxerjs/types');
-              await client.rest.delete(Routes.channelMessage(settings.starboard.channelId, entry.starboardMessageId));
-            } catch { }
+          const entries = await StarboardMessage.find(query);
+          if (!entries || entries.length === 0) return void await message.reply(t(lang, 'commands.admin.starboard.remove.notInStarboard'));
+
+          for (const entry of entries) {
+            const channelId = entry.starboardChannelId || boardChannelId || boards[0]?.channelId;
+            if (entry.starboardMessageId && channelId) {
+              try {
+                const { Routes } = await import('@fluxerjs/types');
+                await client.rest.delete(Routes.channelMessage(channelId, entry.starboardMessageId));
+              } catch {}
+            }
+
+            await StarboardMessage.deleteOne({ _id: entry._id });
           }
 
-          await StarboardMessage.deleteOne({ _id: entry._id });
           return void await message.reply(t(lang, 'commands.admin.starboard.remove.done'));
         }
 

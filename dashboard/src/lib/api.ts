@@ -63,6 +63,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   get: <T>(path: string, { skipCache = false }: { skipCache?: boolean } = {}) => {
+  starboards: Starboard[];
     if (!skipCache) {
       const cached = getCached<T>(path);
       if (cached !== undefined) return Promise.resolve(cached);
@@ -237,6 +238,28 @@ export interface Moderation {
 export interface CustomCommand {
   name: string;
   response: string;
+    starboards: (() => {
+      const normalizeBoard = (raw: any): Starboard => ({
+        enabled: !!raw?.enabled,
+        channelId: raw?.channelId ?? null,
+        threshold: typeof raw?.threshold === 'number' ? raw.threshold : 3,
+        emoji: typeof raw?.emoji === 'string' ? raw.emoji : '⭐',
+        selfStarEnabled: !!raw?.selfStarEnabled,
+        ignoreBots: raw?.ignoreBots === false ? false : true,
+        ignoredChannels: Array.isArray(raw?.ignoredChannels) ? raw.ignoredChannels : [],
+        ignoredRoles: Array.isArray(raw?.ignoredRoles) ? raw.ignoredRoles : [],
+      });
+
+      const rawBoards = Array.isArray((s as any).starboards) ? (s as any).starboards : [];
+      const boards = rawBoards.map(normalizeBoard).slice(0, 3);
+      const primary = boards[0] ?? normalizeBoard((s as any).starboard ?? {});
+      const starboards = boards.length > 0 ? boards : [primary];
+
+      return {
+        starboards,
+        starboard: primary,
+      };
+    })(),
   embed: boolean;
   color: string | null;
   title: string | null;
@@ -358,6 +381,7 @@ export interface GuildSettings {
   commandAllowedRoles: string[];
   disabledCommands: string[];
   verification: Verification;
+  starboards: Starboard[];
   starboard: Starboard;
 }
 
@@ -367,6 +391,21 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
   const mod = (s.moderation ?? {}) as Partial<Moderation>;
   const kw = (s.keywordWarnings ?? {}) as Partial<KeywordWarnings>;
   const gm = (s.goodbyeMessage ?? {}) as Partial<GoodbyeMessage>;
+  const normalizeBoard = (raw: any): Starboard => ({
+    enabled: !!raw?.enabled,
+    channelId: raw?.channelId ?? null,
+    threshold: typeof raw?.threshold === 'number' ? raw.threshold : 3,
+    emoji: typeof raw?.emoji === 'string' ? raw.emoji : '⭐',
+    selfStarEnabled: !!raw?.selfStarEnabled,
+    ignoreBots: raw?.ignoreBots === false ? false : true,
+    ignoredChannels: Array.isArray(raw?.ignoredChannels) ? raw.ignoredChannels : [],
+    ignoredRoles: Array.isArray(raw?.ignoredRoles) ? raw.ignoredRoles : [],
+  });
+
+  const rawBoards = Array.isArray((s as any).starboards) ? (s as any).starboards : [];
+  const boards = rawBoards.map(normalizeBoard).slice(0, 3);
+  const primaryBoard = boards[0] ?? normalizeBoard((s as any).starboard ?? {});
+  const starboards = boards.length > 0 ? boards : [primaryBoard];
 
   return {
     guildId: s.guildId,
@@ -510,16 +549,8 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
       maxAttempts: (s as any).verification?.maxAttempts ?? 2,
     },
 
-    starboard: {
-      enabled: (s as any).starboard?.enabled ?? false,
-      channelId: (s as any).starboard?.channelId ?? null,
-      threshold: (s as any).starboard?.threshold ?? 3,
-      emoji: (s as any).starboard?.emoji ?? '⭐',
-      selfStarEnabled: (s as any).starboard?.selfStarEnabled ?? false,
-      ignoreBots: (s as any).starboard?.ignoreBots ?? true,
-      ignoredChannels: (s as any).starboard?.ignoredChannels ?? [],
-      ignoredRoles: (s as any).starboard?.ignoredRoles ?? [],
-    },
+    starboards,
+    starboard: primaryBoard,
   };
 }
 

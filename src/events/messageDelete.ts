@@ -5,6 +5,7 @@ import * as messageCache from '../utils/messageCache';
 import StarboardMessage from '../models/StarboardMessage';
 import settingsCache from '../utils/settingsCache';
 import { Routes } from '@fluxerjs/types';
+import { getStarboards } from '../utils/starboardBoards';
 
 const event: BotEvent = {
   name: 'messageDelete',
@@ -48,24 +49,24 @@ const event: BotEvent = {
     if (message.id) {
       try {
         const settings = await settingsCache.get(guildId);
-        const starboard = (settings as any)?.starboard;
-        if (starboard?.enabled && starboard?.channelId) {
-          // Check if the deleted message is an original tracked message
-          const asOriginal = await StarboardMessage.findOne({ guildId, messageId: message.id });
-          if (asOriginal) {
-            // Original was deleted - remove the starboard post
-            if (asOriginal.starboardMessageId) {
-              try {
-                await client.rest.delete(Routes.channelMessage(starboard.channelId, asOriginal.starboardMessageId));
-              } catch { }
+        const boards = getStarboards(settings);
+        if (boards.length > 0) {
+          const originals = await StarboardMessage.find({ guildId, messageId: message.id });
+          if (originals.length > 0) {
+            for (const entry of originals) {
+              const channelId = entry.starboardChannelId || boards.find(b => b.channelId)?.channelId;
+              if (entry.starboardMessageId && channelId) {
+                try {
+                  await client.rest.delete(Routes.channelMessage(channelId, entry.starboardMessageId));
+                } catch {}
+              }
+              await StarboardMessage.deleteOne({ _id: entry._id });
             }
-            await StarboardMessage.deleteOne({ _id: asOriginal._id });
           } else {
-            // Check if the deleted message is a starboard post
-            const asStarboard = await StarboardMessage.findOne({ guildId, starboardMessageId: message.id });
-            if (asStarboard) {
-              asStarboard.starboardMessageId = null;
-              await asStarboard.save();
+            const asStarboard = await StarboardMessage.find({ guildId, starboardMessageId: message.id });
+            for (const entry of asStarboard) {
+              entry.starboardMessageId = null;
+              await entry.save();
             }
           }
         }

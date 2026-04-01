@@ -2001,225 +2001,327 @@ function GoodbyeTab({ settings, guild, onSave, saving }: TabProps) {
 }
 
 function StarboardTab({ settings, guild, onSave, saving, guildId }: TabProps) {
-  const [sb, setSb] = useState<Starboard>(settings.starboard);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [stats, setStats] = useState<{ totalEntries: number; totalStars: number; postedCount: number } | null>(null);
-
-  const update = (patch: Partial<Starboard>) => setSb(prev => ({ ...prev, ...patch }));
-
-  useEffect(() => {
-    if (guildId) {
-      api.get<any[]>(`/guilds/${guildId}/starboard/leaderboard`, { skipCache: true }).then(setLeaderboard).catch(() => {});
-      api.get<any>(`/guilds/${guildId}/starboard/stats`, { skipCache: true }).then(setStats).catch(() => {});
-    }
-  }, [guildId]);
-
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
-    update({ emoji: emojiData.emoji });
-    setShowEmojiPicker(false);
+  type StarboardStats = {
+    totalEntries: number;
+    totalStars: number;
+    postedCount: number;
+    topUsers?: Array<{ _id: string; totalStars: number; messageCount: number }>;
+    boardBreakdown?: Array<{ _id: string | null; stars: number; messages: number }>;
   };
 
-  const handleSave = () => onSave({ starboard: sb });
+  const makeBoard = (raw?: Partial<Starboard>): Starboard => ({
+    enabled: !!raw?.enabled,
+    channelId: raw?.channelId ?? null,
+    threshold: typeof raw?.threshold === 'number' ? raw.threshold : 3,
+    emoji: raw?.emoji ?? '⭐',
+    selfStarEnabled: !!raw?.selfStarEnabled,
+    ignoreBots: raw?.ignoreBots === false ? false : true,
+    ignoredChannels: Array.isArray(raw?.ignoredChannels) ? raw.ignoredChannels : [],
+    ignoredRoles: Array.isArray(raw?.ignoredRoles) ? raw.ignoredRoles : [],
+  });
+
+  const deriveBoards = () => {
+    const source = settings.starboards?.length ? settings.starboards : [settings.starboard];
+    return source.slice(0, 3).map(makeBoard);
+  };
+
+  const [boards, setBoards] = useState<Starboard[]>(deriveBoards);
+  const [emojiPickerFor, setEmojiPickerFor] = useState<string | null>(null);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [stats, setStats] = useState<StarboardStats | null>(null);
+  const [selectedBoardId, setSelectedBoardId] = useState<string>('all');
+
+  useEffect(() => {
+    setBoards(deriveBoards());
+  }, [settings.starboards, settings.starboard]);
+
+  useEffect(() => {
+    if (!guildId) return;
+    const query = selectedBoardId !== 'all' && selectedBoardId ? `?boardId=${selectedBoardId}` : '';
+    api.get<any[]>(`/guilds/${guildId}/starboard/leaderboard${query}`, { skipCache: true }).then(setLeaderboard).catch(() => {});
+    api.get<StarboardStats>(`/guilds/${guildId}/starboard/stats${query}`, { skipCache: true }).then(setStats).catch(() => {});
+  }, [guildId, selectedBoardId]);
+
+  const updateBoard = (index: number, patch: Partial<Starboard>) => {
+    setBoards(prev => prev.map((b, i) => i === index ? { ...b, ...patch } : b));
+  };
+
+  const addBoard = () => {
+    if (boards.length >= 3) return;
+    const template = boards[0] ?? makeBoard();
+    setBoards(prev => [...prev, makeBoard({ ...template, channelId: null, enabled: true, ignoredChannels: [], ignoredRoles: [] })]);
+  };
+
+  const removeBoard = (index: number) => {
+    if (boards.length <= 1) return;
+    const target = boards[index];
+    setBoards(prev => prev.filter((_, i) => i !== index));
+    if (selectedBoardId !== 'all' && selectedBoardId === target?.channelId) setSelectedBoardId('all');
+  };
+
+  const handleEmojiClick = (boardKey: string, emojiData: EmojiClickData) => {
+    const idx = boards.findIndex((b, i) => (b.channelId || `board-${i}`) === boardKey);
+    if (idx !== -1) updateBoard(idx, { emoji: emojiData.emoji });
+    setEmojiPickerFor(null);
+  };
+
+  const handleSave = () => {
+    const sanitized = boards
+      .map(makeBoard)
+      .map(b => ({
+        ...b,
+        threshold: Math.max(1, Math.min(100, b.threshold)),
+        ignoredChannels: (b.ignoredChannels || []).filter(Boolean),
+        ignoredRoles: (b.ignoredRoles || []).filter(Boolean),
+      }))
+      .slice(0, 3);
+
+    onSave({ starboards: sanitized, starboard: sanitized[0] ?? makeBoard() });
+  };
+
+  const boardFilterOptions = boards
+    .filter(b => b.channelId)
+    .map(b => ({ id: b.channelId!, label: channelName(guild.channels, b.channelId) }));
 
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Star className="h-4 w-4" /> Starboard</CardTitle>
-          <CardDescription>Highlight popular messages by automatically reposting them when they receive enough reactions</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2"><Star className="h-4 w-4" /> Starboards</CardTitle>
+            <CardDescription>Configure up to three boards to spotlight great messages</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={selectedBoardId} onValueChange={v => setSelectedBoardId(v)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filter board" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All boards</SelectItem>
+                {boardFilterOptions.map(opt => (
+                  <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={addBoard} disabled={boards.length >= 3}>
+              <Plus className="h-4 w-4 mr-1" /> Add board
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-white">Enabled</p>
-              <p className="text-xs text-gray-400">Turn the starboard system on or off</p>
-            </div>
-            <Switch checked={sb.enabled} onCheckedChange={v => update({ enabled: v })} />
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {boards.map((board, idx) => {
+              const key = board.channelId || `board-${idx}`;
+              const showPicker = emojiPickerFor === key;
+              return (
+                <Card key={key} className="border border-white/10 bg-[hsl(var(--muted))]">
+                  <CardHeader className="flex flex-row items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <CardTitle className="text-base">Board {idx + 1}</CardTitle>
+                      <p className="text-xs text-gray-400">{channelName(guild.channels, board.channelId)}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {boards.length > 1 && (
+                        <Button variant="ghost" size="icon" onClick={() => removeBoard(idx)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Switch checked={board.enabled} onCheckedChange={v => updateBoard(idx, { enabled: v })} />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Starboard Channel</Label>
+                        <ChannelSelect
+                          channels={guild.channels}
+                          value={board.channelId}
+                          onChange={v => updateBoard(idx, { channelId: v })}
+                          placeholder="Select starboard channel"
+                        />
+                        <p className="text-xs text-gray-500">Where starred messages are posted</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Threshold</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={board.threshold}
+                          onChange={e => {
+                            const v = parseInt(e.target.value, 10);
+                            if (!Number.isNaN(v)) updateBoard(idx, { threshold: Math.max(1, Math.min(100, v)) });
+                          }}
+                        />
+                        <p className="text-xs text-gray-500">Reactions needed before featuring</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Tracked Emoji</Label>
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl px-3 py-1 rounded-lg bg-black/30 border border-white/10">
+                          {board.emoji}
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => setEmojiPickerFor(showPicker ? null : key)}>
+                          <Smile className="h-4 w-4 mr-1" /> Change Emoji
+                        </Button>
+                      </div>
+                      {showPicker && (
+                        <div className="mt-2">
+                          <EmojiPicker theme={Theme.DARK} onEmojiClick={data => handleEmojiClick(key, data)} lazyLoadEmojis />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-white">Allow Self-Starring</p>
+                          <p className="text-xs text-gray-400">Let authors star their own messages</p>
+                        </div>
+                        <Switch checked={board.selfStarEnabled} onCheckedChange={v => updateBoard(idx, { selfStarEnabled: v })} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-white">Ignore Bot Messages</p>
+                          <p className="text-xs text-gray-400">Skip tracking bot-authored posts</p>
+                        </div>
+                        <Switch checked={board.ignoreBots} onCheckedChange={v => updateBoard(idx, { ignoreBots: v })} />
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <Label>Ignored Channels</Label>
+                      <p className="text-xs text-gray-500">Messages in these channels are skipped</p>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {board.ignoredChannels.map(id => (
+                          <Badge key={id} variant="secondary" className="gap-1">
+                            {channelName(guild.channels, id)}
+                            <X className="h-3 w-3 cursor-pointer" onClick={() =>
+                              updateBoard(idx, { ignoredChannels: board.ignoredChannels.filter(c => c !== id) })
+                            } />
+                          </Badge>
+                        ))}
+                      </div>
+                      <ChannelSelect
+                        channels={guild.channels.filter(c => !board.ignoredChannels.includes(c.id))}
+                        value={null}
+                        onChange={v => v && updateBoard(idx, { ignoredChannels: [...board.ignoredChannels, v] })}
+                        placeholder="Add ignored channel..."
+                      />
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <Label>Ignored Roles</Label>
+                      <p className="text-xs text-gray-500">Members with these roles can't add stars</p>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {board.ignoredRoles.map(id => {
+                          const role = guild.roles.find(r => r.id === id);
+                          return (
+                            <Badge key={id} variant="secondary" className="gap-1">
+                              @{role?.name || id}
+                              <X className="h-3 w-3 cursor-pointer" onClick={() =>
+                                updateBoard(idx, { ignoredRoles: board.ignoredRoles.filter(r => r !== id) })
+                              } />
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                      <RoleSelect
+                        roles={guild.roles.filter(r => !board.ignoredRoles.includes(r.id))}
+                        value={null}
+                        onChange={v => v && updateBoard(idx, { ignoredRoles: [...board.ignoredRoles, v] })}
+                        placeholder="Add ignored role..."
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-
-          {sb.enabled && (
-            <>
-              <Separator />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Starboard Channel</Label>
-                  <ChannelSelect channels={guild.channels} value={sb.channelId} onChange={v => update({ channelId: v })} placeholder="Select starboard channel" />
-                  <p className="text-xs text-gray-500">Where starred messages will be reposted</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Threshold</Label>
-                  <Input type="number" min={1} max={100} value={sb.threshold}
-                    onChange={e => {
-                      const v = parseInt(e.target.value, 10);
-                      if (!isNaN(v)) update({ threshold: Math.max(1, Math.min(100, v)) });
-                    }} />
-                  <p className="text-xs text-gray-500">Minimum reactions before a message is posted to the starboard</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tracked Emoji</Label>
-                <div className="flex items-center gap-3">
-                  <div className="text-2xl px-3 py-1 rounded-lg bg-[hsl(var(--muted))] border border-white/10">
-                    {sb.emoji}
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
-                    <Smile className="h-4 w-4 mr-1" /> Change Emoji
-                  </Button>
-                </div>
-                {showEmojiPicker && (
-                  <div className="mt-2">
-                    <EmojiPicker theme={Theme.DARK} onEmojiClick={handleEmojiClick} lazyLoadEmojis />
-                  </div>
-                )}
-              </div>
-            </>
-          )}
         </CardContent>
       </Card>
 
-      {sb.enabled && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Behavior</CardTitle>
-              <CardDescription>Control how the starboard handles different scenarios</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-white">Allow Self-Starring</p>
-                  <p className="text-xs text-gray-400">Let users star their own messages</p>
-                </div>
-                <Switch checked={sb.selfStarEnabled} onCheckedChange={v => update({ selfStarEnabled: v })} />
+      {stats && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Statistics</CardTitle>
+            <CardDescription>{selectedBoardId === 'all' ? 'Across all boards' : `Only ${channelName(guild.channels, selectedBoardId)}`}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="text-center p-4 rounded-lg bg-[hsl(var(--muted))]">
+                <p className="text-2xl font-bold text-white">{stats.totalEntries}</p>
+                <p className="text-xs text-gray-400">Tracked Messages</p>
               </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-white">Ignore Bot Messages</p>
-                  <p className="text-xs text-gray-400">Don't track stars on messages sent by bots</p>
-                </div>
-                <Switch checked={sb.ignoreBots} onCheckedChange={v => update({ ignoreBots: v })} />
+              <div className="text-center p-4 rounded-lg bg-[hsl(var(--muted))]">
+                <p className="text-2xl font-bold text-yellow-400">{stats.totalStars}</p>
+                <p className="text-xs text-gray-400">Total Stars</p>
               </div>
-            </CardContent>
-          </Card>
+              <div className="text-center p-4 rounded-lg bg-[hsl(var(--muted))]">
+                <p className="text-2xl font-bold text-white">{stats.postedCount}</p>
+                <p className="text-xs text-gray-400">Posted</p>
+              </div>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Exclusions</CardTitle>
-              <CardDescription>Channels and roles that are excluded from the starboard</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            {stats.boardBreakdown?.length ? (
               <div className="space-y-2">
-                <Label>Ignored Channels</Label>
-                <p className="text-xs text-gray-500">Messages in these channels won't be tracked</p>
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {sb.ignoredChannels.map(id => {
-                    const ch = guild.channels.find(c => c.id === id);
-                    return (
-                      <Badge key={id} variant="secondary" className="gap-1">
-                        #{ch?.name || id}
-                        <X className="h-3 w-3 cursor-pointer" onClick={() =>
-                          update({ ignoredChannels: sb.ignoredChannels.filter(c => c !== id) })
-                        } />
-                      </Badge>
-                    );
-                  })}
-                </div>
-                <ChannelSelect
-                  channels={guild.channels.filter(c => !sb.ignoredChannels.includes(c.id))}
-                  value={null}
-                  onChange={v => v && update({ ignoredChannels: [...sb.ignoredChannels, v] })}
-                  placeholder="Add ignored channel..."
-                />
-              </div>
-              <Separator />
-              <div className="space-y-2">
-                <Label>Ignored Roles</Label>
-                <p className="text-xs text-gray-500">Members with these roles can't contribute stars</p>
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {sb.ignoredRoles.map(id => {
-                    const role = guild.roles.find(r => r.id === id);
-                    return (
-                      <Badge key={id} variant="secondary" className="gap-1">
-                        @{role?.name || id}
-                        <X className="h-3 w-3 cursor-pointer" onClick={() =>
-                          update({ ignoredRoles: sb.ignoredRoles.filter(r => r !== id) })
-                        } />
-                      </Badge>
-                    );
-                  })}
-                </div>
-                <RoleSelect
-                  roles={guild.roles.filter(r => !sb.ignoredRoles.includes(r.id))}
-                  value={null}
-                  onChange={v => v && update({ ignoredRoles: [...sb.ignoredRoles, v] })}
-                  placeholder="Add ignored role..."
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {stats && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Statistics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 rounded-lg bg-[hsl(var(--muted))]">
-                    <p className="text-2xl font-bold text-white">{stats.totalEntries}</p>
-                    <p className="text-xs text-gray-400">Tracked Messages</p>
-                  </div>
-                  <div className="text-center p-4 rounded-lg bg-[hsl(var(--muted))]">
-                    <p className="text-2xl font-bold text-yellow-400">{stats.totalStars}</p>
-                    <p className="text-xs text-gray-400">Total Stars</p>
-                  </div>
-                  <div className="text-center p-4 rounded-lg bg-[hsl(var(--muted))]">
-                    <p className="text-2xl font-bold text-white">{stats.postedCount}</p>
-                    <p className="text-xs text-gray-400">Posted</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {leaderboard.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Leaderboard</CardTitle>
-                <CardDescription>Top starred messages in this server</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {leaderboard.map((entry: any, i: number) => (
-                  <div key={entry.messageId} className="flex items-center gap-3 p-3 rounded-lg bg-[hsl(var(--muted))]">
-                    <span className="text-lg font-bold text-gray-400 w-6">#{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-yellow-400">
-                          {entry.starCount >= 25 ? '💫' : entry.starCount >= 10 ? '🌟' : '⭐'}
-                        </span>
-                        <span className="text-sm font-medium text-white">{entry.starCount} stars</span>
-                      </div>
-                      <p className="text-xs text-gray-400 truncate">
-                        by &lt;@{entry.authorId}&gt; in #{guild.channels.find(c => c.id === entry.channelId)?.name || entry.channelId}
-                      </p>
+                <p className="text-xs uppercase tracking-wide text-gray-400">Boards</p>
+                <div className="space-y-1">
+                  {stats.boardBreakdown.map(b => (
+                    <div key={b._id ?? 'unknown'} className="flex items-center justify-between text-sm text-gray-300">
+                      <span>{b._id ? channelName(guild.channels, b._id) : 'Unknown board'}</span>
+                      <span className="text-gray-400">{b.stars} stars • {b.messages} messages</span>
                     </div>
-                    <a
-                      href={`https://fluxer.app/channels/${guildId}/${entry.channelId}/${entry.messageId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-400 hover:text-blue-300 shrink-0"
-                    >
-                      Jump →
-                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      )}
+
+      {leaderboard.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Leaderboard</CardTitle>
+            <CardDescription>Top starred messages for this filter</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {leaderboard.map((entry: any, i: number) => (
+              <div key={entry.messageId} className="flex items-center gap-3 p-3 rounded-lg bg-[hsl(var(--muted))]">
+                <span className="text-lg font-bold text-gray-400 w-6">#{i + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-yellow-400">
+                      {entry.starCount >= 25 ? '💫' : entry.starCount >= 10 ? '🌟' : '⭐'}
+                    </span>
+                    <span className="text-sm font-medium text-white">{entry.starCount} stars</span>
+                    {entry.starboardChannelId && (
+                      <span className="text-xs text-gray-400">· {channelName(guild.channels, entry.starboardChannelId)}</span>
+                    )}
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-        </>
+                  <p className="text-xs text-gray-400 truncate">
+                    by &lt;@{entry.authorId}&gt; in {channelName(guild.channels, entry.channelId)}
+                  </p>
+                </div>
+                <a
+                  href={`https://fluxer.app/channels/${guildId}/${entry.channelId}/${entry.messageId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-400 hover:text-blue-300 shrink-0"
+                >
+                  Jump →
+                </a>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       <SaveButton onClick={handleSave} saving={saving} />
