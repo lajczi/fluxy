@@ -221,6 +221,7 @@ const command: Command = {
         error?.message?.toLowerCase().includes('nsfw') ||
         error?.message?.toLowerCase().includes('age restricted')
       ) {
+        return;
       } else {
         console.error(`[${guildName}] Error in !help: ${error.message || error}`);
         try { await message.reply(t(lang, 'commands.help.errors.generic')); } catch {}

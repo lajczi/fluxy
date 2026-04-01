@@ -22,7 +22,7 @@ export function createPublicRouter(client: Client): Router {
     const online = hasBotUser && hasReadySession;
     const guilds = await getGuildCount(c);
     const gateway =
-      wsPing == null
+      wsPing === null || wsPing === undefined
         ? (online ? 'connected' : 'disconnected')
         : 'connected';
 

@@ -25,7 +25,7 @@ export function createModerationRouter(requireGuildAccess: RequestHandler): Rout
       const total = await ModerationLog.countDocuments({ guildId });
 
       res.json({ logs, total });
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -45,7 +45,7 @@ export function createModerationRouter(requireGuildAccess: RequestHandler): Rout
       }
 
       res.json(log);
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -55,7 +55,7 @@ export function createModerationRouter(requireGuildAccess: RequestHandler): Rout
       const days = Math.min(parseInt(req.query.days as string) || 30, 365);
       const stats = await ModerationLog.getGuildStats(req.params.guildId as string, days);
       res.json(stats);
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -69,7 +69,7 @@ export function createModerationRouter(requireGuildAccess: RequestHandler): Rout
         warnings: record.warnings,
         activeCount: record.getActiveCount(),
       });
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -79,7 +79,7 @@ export function createModerationRouter(requireGuildAccess: RequestHandler): Rout
       const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
       const history = await ModerationLog.getUserHistory(req.params.guildId as string, req.params.userId as string, limit);
       res.json(history);
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });

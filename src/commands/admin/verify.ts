@@ -29,7 +29,7 @@ async function save(settings: any, guildId: string): Promise<void> {
 }
 
 
-async function setupVerification(message: any, args: string[], guild: any, settings: any, client: any, prefix: string): Promise<any> {
+async function setupVerification(message: any, args: string[], guild: any, settings: any, client: any, _prefix: string): Promise<any> {
   const lang = normalizeLocale(settings.language);
   const verification = settings.verification;
   const botId = client.user?.id;

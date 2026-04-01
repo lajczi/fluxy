@@ -40,7 +40,7 @@ export function createHealthRouter(client: Client): Router {
         pid: process.pid,
         nodeVersion: process.version,
       });
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -85,7 +85,7 @@ export function createHealthRouter(client: Client): Router {
         hostTotalMemoryMB: +(totalMem / 1024 / 1024).toFixed(0),
         loadAvg: os.loadavg(),
       });
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });

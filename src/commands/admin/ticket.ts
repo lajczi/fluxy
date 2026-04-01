@@ -459,7 +459,7 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     return message.reply({ embeds: [embed] });
   },
 
-  async claim(message, args, guild, settings, client, prefix) {
+  async claim(message, args, guild, settings, _client, _prefix) {
     const lang = normalizeLocale(settings?.language);
     const access = await getMemberWithTicketAccess(message, guild, settings);
     if (!access.ok) return message.reply(access.reason);

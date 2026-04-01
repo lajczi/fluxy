@@ -187,7 +187,7 @@ export function createAuthRouter(): Router {
         isOwner: config.ownerId ? (user as any).id === config.ownerId : false,
       };
       res.json(responseData);
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });

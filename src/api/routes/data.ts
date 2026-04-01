@@ -15,7 +15,7 @@ export function createDataRouter(): Router {
     try {
       const data = await collectUserData(userId);
       res.json(data);
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Failed to collect user data' });
     }
   });
@@ -30,7 +30,7 @@ export function createDataRouter(): Router {
     try {
       const result = await deleteUserData(userId);
       res.json({ success: true, result });
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Failed to delete user data' });
     }
   });

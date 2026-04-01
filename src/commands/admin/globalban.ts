@@ -6,7 +6,7 @@ import settingsCache from '../../utils/settingsCache';
 import parseUserId from '../../utils/parseUserId';
 import isNetworkError from '../../utils/isNetworkError';
 import config from '../../config';
-import { EmbedBuilder, PermissionFlags } from '@fluxerjs/core';
+import { EmbedBuilder } from '@fluxerjs/core';
 import { Routes } from '@fluxerjs/types';
 import * as messageDeleteQueue from '../../utils/messageDeleteQueue';
 
@@ -275,7 +275,7 @@ const command: Command = {
       userId: string,
       reason: string,
       evidence: string | null,
-      addedBy: string
+      _addedBy: string
     ): Promise<{ notified: number; dmFallback: number; skipped: number; autoApplied: number }> {
       const optedInGuildIds = await getOptedInGuildIds(guildIds);
       let notified = 0;
@@ -319,7 +319,7 @@ const command: Command = {
           }
 
           const channelId = settings?.moderation?.logChannelId || settings?.logChannelId;
-          let channel = channelId ? (client.channels?.get(channelId) || await client.channels.fetch(channelId).catch(() => null)) : null;
+          const channel = channelId ? (client.channels?.get(channelId) || await client.channels.fetch(channelId).catch(() => null)) : null;
 
           if (channel && (channel as any).send) {
             const embed = buildPromptEmbed();

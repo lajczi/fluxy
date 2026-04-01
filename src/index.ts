@@ -63,7 +63,6 @@ const assignedShardIds = process.env.SHARD_IDS
 const assignedTotalShards = process.env.TOTAL_SHARDS
   ? parseInt(process.env.TOTAL_SHARDS, 10)
   : undefined;
-const workerId = process.env.WORKER_ID ? parseInt(process.env.WORKER_ID, 10) : undefined;
 const isManagedWorker = assignedShardIds !== undefined && assignedTotalShards !== undefined;
 
 if (isManagedWorker) {
@@ -502,10 +501,10 @@ client.on(Events.Ready, () => {
   setTimeout(() => {
     client.rest.get('/gateway/bot').then((gw: any) => {
       const limit = gw?.session_start_limit;
-      if (limit != null) {
+      if (limit !== null && limit !== undefined) {
         const { remaining, total, reset_after, max_concurrency } = limit;
         const resetSec = typeof reset_after === 'number' ? Math.round(reset_after / 1000) : '?';
-        log.info('Gateway', `Session limit: ${remaining}/${total} remaining, resets in ${resetSec}s` + (max_concurrency != null ? `, max_concurrency: ${max_concurrency}` : ''));
+        log.info('Gateway', `Session limit: ${remaining}/${total} remaining, resets in ${resetSec}s` + (max_concurrency !== null && max_concurrency !== undefined ? `, max_concurrency: ${max_concurrency}` : ''));
       }
     }).catch(() => { /* ignore */ });
   }, 30000);

@@ -42,7 +42,6 @@ const WORKER_SCRIPT = path.join(__dirname, 'index.js');
 const RESPAWN_DELAY = 5000;
 const MAX_RESPAWNS = 10;
 const STABLE_THRESHOLD = 30 * 60 * 1000;
-const SHARD_SPAWN_DELAY = 10000;
 
 interface WorkerInfo {
   process: ChildProcess | null;
@@ -204,7 +203,7 @@ async function broadcastGuildCount(requestingWorkerId: number, requestId: string
   let total = 0;
   const promises: Promise<number>[] = [];
 
-  for (const [id, worker] of workers) {
+  for (const [, worker] of workers) {
     if (!worker.process || !worker.ready) continue;
     promises.push(new Promise<number>((resolve) => {
       const timeout = setTimeout(() => resolve(0), 5000);
@@ -280,7 +279,7 @@ async function broadcastStats(requestingWorkerId: number, requestId: string): Pr
   let totalMemory = 0;
   let minUptime = Infinity;
 
-  for (const [id, worker] of workers) {
+  for (const [, worker] of workers) {
     if (!worker.process || !worker.ready) continue;
     const stats = await new Promise<{ guilds: number; members: number; memory: number; uptime: number }>((resolve) => {
       const timeout = setTimeout(() => resolve({ guilds: 0, members: 0, memory: 0, uptime: 0 }), 30000);
@@ -321,7 +320,7 @@ async function broadcastStats(requestingWorkerId: number, requestId: string): Pr
 async function broadcastGuildIds(requestingWorkerId: number, requestId: string): Promise<void> {
   const allGuildIds: string[] = [];
 
-  for (const [id, worker] of workers) {
+  for (const [, worker] of workers) {
     if (!worker.process || !worker.ready) continue;
     const ids = await new Promise<string[]>((resolve) => {
       const timeout = setTimeout(() => resolve([]), 5000);
@@ -347,7 +346,7 @@ async function broadcastGuildIds(requestingWorkerId: number, requestId: string):
 async function broadcastEval(requestingWorkerId: number, requestId: string, script: string): Promise<void> {
   const results: any[] = [];
 
-  for (const [id, worker] of workers) {
+  for (const [, worker] of workers) {
     if (!worker.process || !worker.ready) continue;
     const result = await new Promise<any>((resolve) => {
       const timeout = setTimeout(() => resolve({ error: 'timeout' }), 10000);

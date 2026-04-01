@@ -144,7 +144,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       result.sort((a, b) => (a.botPresent === b.botPresent ? 0 : a.botPresent ? -1 : 1));
 
       res.json(result);
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -266,7 +266,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
     try {
       const settings = await settingsCache.getOrCreate(req.params.id as string);
       res.json(settings);
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -677,9 +677,9 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
 
       const embed = new EmbedBuilder()
         .setColor(0x5865F2)
-        .setTitle(title != null && String(title).trim() ? String(title).trim() : 'Reaction Roles')
+        .setTitle(title !== null && title !== undefined && String(title).trim() ? String(title).trim() : 'Reaction Roles')
         .setDescription(
-          description != null && String(description).trim()
+          description !== null && description !== undefined && String(description).trim()
             ? String(description).trim()
             : 'React below to get a role.'
         )
@@ -742,7 +742,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
 
       const url = `/uploads/${guildId}/${filename}`;
       res.json({ url });
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -759,7 +759,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
         .limit(50)
         .lean();
       res.json(tickets);
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -794,7 +794,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       } catch { }
 
       res.json(ticket);
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -972,7 +972,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
         closedBy: (ticket as any).closedBy,
         closedAt: (ticket as any).closedAt,
       });
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -997,7 +997,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
         .lean();
 
       res.json(entries);
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1036,7 +1036,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       ]);
 
       res.json({ totalEntries, totalStars, postedCount, topUsers, boardBreakdown });
-    } catch (err: any) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
   });

@@ -1,14 +1,12 @@
 import { EmbedBuilder } from '@fluxerjs/core';
 import config from '../config';
 
-const SUSPECT_THRESHOLD = 50;
 const BATCH_SIZE = 3;
 const BATCH_WINDOW_MS = 60_000;
 
 const SINGLE_ALERT_COOLDOWN_MS = 2 * 60_000;
 const USER_DEDUP_MS = 10 * 60_000;
 
-const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 const FLUXER_EPOCH = 1_420_070_400_000;
 
@@ -26,7 +24,7 @@ interface SuspectEntry {
 const suspectBuffers = new Map<string, SuspectEntry[]>();
 const lastSingleAlert = new Map<string, number>();
 const recentlyAlerted = new Map<string, number>();
-let flushTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const flushTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 
 export function scoreMember(member: any): { score: number; reasons: string[]; accountAgeDays: number | null } {

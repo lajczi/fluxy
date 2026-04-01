@@ -1,10 +1,9 @@
 import type { Command } from '../../types';
-import parseUserId from '../../utils/parseUserId';
 import { canModerate } from '../../utils/permissions';
 import { logModAction } from '../../utils/logger';
 import ModerationLog from '../../models/ModerationLog';
 import isNetworkError from '../../utils/isNetworkError';
-import { isPermDenied, PERM_MESSAGES } from '../../utils/permError';
+import { isPermDenied } from '../../utils/permError';
 import { EmbedBuilder } from '@fluxerjs/core';
 import settingsCache from '../../utils/settingsCache';
 import { t, normalizeLocale } from '../../i18n';
@@ -112,7 +111,7 @@ const command: Command = {
         lastFetchedId = sortedMsgs[sortedMsgs.length - 1].id;
 
         if (msgs.length < 100) reachedEnd = true;
-      } catch (err) {
+      } catch {
         reachedEnd = true;
       }
     }

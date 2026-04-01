@@ -2,7 +2,7 @@ import * as memberCounter from './memberCounter';
 
 async function fetchGuildMemberCount(guild: any): Promise<number> {
   const cached = memberCounter.get(guild.id);
-  if (cached != null) return cached;
+  if (cached !== null && cached !== undefined) return cached;
 
   const count = await memberCounter.fetchAndSetMemberCount(guild.id, guild.client);
   return count ?? 0;

@@ -1,6 +1,5 @@
 import { EmbedBuilder } from '@fluxerjs/core';
 import type { Command } from '../../types';
-import config from '../../config';
 
 function formatUptime(seconds: number): string {
   const d = Math.floor(seconds / 86400);

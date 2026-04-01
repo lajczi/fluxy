@@ -91,7 +91,7 @@ const event: BotEvent = {
           if (!welcomeChannel) return;
 
           const user = newMember.user;
-          if (memberCounter.get(guild.id) == null) {
+          if (memberCounter.get(guild.id) === null) {
             await memberCounter.fetchAndSetMemberCount(guild.id, client);
           }
           const memberCount = memberCounter.get(guild.id) ?? 0;

@@ -14,10 +14,9 @@
     "declarationMap": true,
     "sourceMap": true,
     "skipLibCheck": true,
-    "moduleResolution": "node",
-    "baseUrl": ".",
+    "moduleResolution": "bundler",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
     "types": ["node"]
   },

@@ -32,7 +32,7 @@ export async function fetchAndSetMemberCount(guildId: string, client: any): Prom
     }
     counts.set(guildId, total);
     return total;
-  } catch (err: any) {
+  } catch {
     return null;
   }
 }

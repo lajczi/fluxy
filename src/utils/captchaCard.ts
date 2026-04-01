@@ -43,11 +43,6 @@ function randomCode(length: number): string {
   return code;
 }
 
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
-
 function randomLetterColor(): string {
   const hue = Math.floor(Math.random() * 360);
   const sat = 70 + Math.floor(Math.random() * 30); // 70-100%

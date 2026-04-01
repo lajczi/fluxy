@@ -1,6 +1,5 @@
 import { EmbedBuilder } from '@fluxerjs/core';
 import type { Command } from '../../types';
-import config from '../../config';
 import { getWorkerStats } from '../../utils/workerStats';
 
 const command: Command = {

@@ -1,4 +1,3 @@
-const DM_DEDUPE_TTL = 15_000;
 const pending = new Map<string, { resolve: (granted: boolean) => void; timeout: NodeJS.Timeout }>();
 
 function initListener(): void {

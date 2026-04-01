@@ -157,7 +157,7 @@ const event: BotEvent = {
         ? Math.floor((parseInt(user.id) / 4194304 + 1420070400000) / 1000)
         : null;
 
-      if (memberCounter.get(guild.id) == null) {
+      if (memberCounter.get(guild.id) === null) {
         await memberCounter.fetchAndSetMemberCount(guild.id, client);
       }
       const memberCount = memberCounter.increment(guild.id);
