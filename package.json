@@ -4,7 +4,7 @@
   "description": "fluxy - the awesomest bot for fluxer moderation, now with dashboard",
   "main": "build/index.js",
   "scripts": {
-    "build": "tsc && tsc-alias && cp -r src/assets build/",
+    "build": "tsc && tsc-alias && cp -r src/assets build/ && cp -r src/locales build/",
     "build:clean": "rimraf build/ && npm run build",
     "start": "node build/index.js",
     "start:sharded": "node build/shardManager.js",
@@ -14,6 +14,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "i18n:check": "tsx scripts/validate-locales.ts",
+    "crowdin:consolidate": "tsx scripts/consolidate-crowdin-locales.ts",
     "pm2:start": "pm2 start ecosystem.config.js --only fluxer-mod-bot",
     "pm2:start:sharded": "pm2 start ecosystem.config.js --only fluxer-sharded",
     "pm2:stop": "pm2 stop all",
