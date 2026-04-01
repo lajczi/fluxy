@@ -12,6 +12,7 @@ Instead:
 
 1. Open a **private vulnerability report** via GitHub: **Security** tab → **Report a vulnerability**, or
 2. Contact the maintainers through a private channel they publish for this project.
+3. You may also email the current maintainer (dogbonewish) with the same things to include at admin@dorcus.digital
 
 Include:
 
