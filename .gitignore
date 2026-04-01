@@ -1,6 +1,8 @@
 node_modules/
 coverage/
 build/
+dashboard/dist/
+dashboard/tsconfig.tsbuildinfo
 .env
 *.log
 .DS_Store

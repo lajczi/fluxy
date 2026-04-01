@@ -88,8 +88,6 @@ Strings live under [`src/locales/`](src/locales/): **`en.json`** is the source; 
 
 **Crowdin:** [Fluxy on Crowdin](https://crowdin.com/project/fluxy) — translations are synced from this repo via [`crowdin.yml`](crowdin.yml) (source `src/locales/en.json`, translations `src/locales/%locale%.json`). Replace the badge project slug in this README if your Crowdin project identifier differs.
 
-**Contributors:** After editing `en.json`, run `npm run i18n:check`. Add or update other locale files so checks stay green.
-
 ### Deployment
 
 Fluxy runs fine standalone or under PM2 which I personally do. There are `pm2:*` scripts in `package.json` for that. Don't commit your `.env`. If you're enabling the API, set a real `API_ADMIN_TOKEN`. (Dont be stupid.)

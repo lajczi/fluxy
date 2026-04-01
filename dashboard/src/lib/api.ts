@@ -63,7 +63,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   get: <T>(path: string, { skipCache = false }: { skipCache?: boolean } = {}) => {
-  starboards: Starboard[];
     if (!skipCache) {
       const cached = getCached<T>(path);
       if (cached !== undefined) return Promise.resolve(cached);
@@ -238,28 +237,6 @@ export interface Moderation {
 export interface CustomCommand {
   name: string;
   response: string;
-    starboards: (() => {
-      const normalizeBoard = (raw: any): Starboard => ({
-        enabled: !!raw?.enabled,
-        channelId: raw?.channelId ?? null,
-        threshold: typeof raw?.threshold === 'number' ? raw.threshold : 3,
-        emoji: typeof raw?.emoji === 'string' ? raw.emoji : '⭐',
-        selfStarEnabled: !!raw?.selfStarEnabled,
-        ignoreBots: raw?.ignoreBots === false ? false : true,
-        ignoredChannels: Array.isArray(raw?.ignoredChannels) ? raw.ignoredChannels : [],
-        ignoredRoles: Array.isArray(raw?.ignoredRoles) ? raw.ignoredRoles : [],
-      });
-
-      const rawBoards = Array.isArray((s as any).starboards) ? (s as any).starboards : [];
-      const boards = rawBoards.map(normalizeBoard).slice(0, 3);
-      const primary = boards[0] ?? normalizeBoard((s as any).starboard ?? {});
-      const starboards = boards.length > 0 ? boards : [primary];
-
-      return {
-        starboards,
-        starboard: primary,
-      };
-    })(),
   embed: boolean;
   color: string | null;
   title: string | null;
