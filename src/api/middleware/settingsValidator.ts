@@ -1,3 +1,10 @@
+import {
+  RSS_DEFAULT_POLL_INTERVAL_MINUTES,
+  RSS_MAX_FEEDS_PER_GUILD,
+  RSS_MAX_ITEMS_PER_POLL,
+  RSS_MIN_POLL_INTERVAL_MINUTES,
+} from '../../utils/rssDefaults';
+
 const SNOWFLAKE_RE = /^\d{17,20}$/;
 const MAX_STRING_LENGTH = 2000;
 const MAX_ARRAY_LENGTH = 100;
@@ -63,6 +70,16 @@ function isBoundedInt(v: unknown, min: number, max: number): v is number {
   return typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
 }
 
+function isHttpUrl(v: unknown): v is string {
+  if (typeof v !== 'string' || v.trim().length === 0) return false;
+  try {
+    const parsed = new URL(v.trim());
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function validateStarboardEntry(value: unknown): true | string {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return 'starboard must be an object';
   const sb = value as Record<string, unknown>;
@@ -74,6 +91,67 @@ function validateStarboardEntry(value: unknown): true | string {
   if (sb.ignoreBots !== undefined && typeof sb.ignoreBots !== 'boolean') return 'starboard.ignoreBots must be boolean';
   if (sb.ignoredChannels !== undefined && !isSnowflakeArray(sb.ignoredChannels, 50)) return 'starboard.ignoredChannels must be channel IDs';
   if (sb.ignoredRoles !== undefined && !isSnowflakeArray(sb.ignoredRoles, 50)) return 'starboard.ignoredRoles must be role IDs';
+  return true;
+}
+
+function validateRssFeedEntry(value: unknown): true | string {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return 'rss.feeds entries must be objects';
+  }
+
+  const feed = value as Record<string, unknown>;
+
+  if (feed.id !== undefined && !isBoundedString(feed.id, 128)) {
+    return 'rss.feeds[].id must be under 128 characters';
+  }
+
+  if (feed.name !== undefined && feed.name !== null && !isBoundedString(feed.name, 120)) {
+    return 'rss.feeds[].name must be under 120 characters';
+  }
+
+  if (feed.sourceType !== undefined && feed.sourceType !== 'rss' && feed.sourceType !== 'rsshub') {
+    return 'rss.feeds[].sourceType must be either rss or rsshub';
+  }
+
+  const sourceType = (feed.sourceType === 'rsshub' ? 'rsshub' : 'rss') as 'rss' | 'rsshub';
+  if (sourceType === 'rss') {
+    if (!isHttpUrl(feed.url)) {
+      return 'rss.feeds[].url must be a valid http(s) URL';
+    }
+  } else {
+    if (!isBoundedString(feed.route, 500) || !(feed.route as string).startsWith('/')) {
+      return 'rss.feeds[].route must start with / for rsshub sources';
+    }
+  }
+
+  if (!isSnowflake(feed.channelId)) {
+    return 'rss.feeds[].channelId must be a valid channel ID';
+  }
+
+  if (feed.mentionRoleId !== undefined && !isSnowflakeOrNull(feed.mentionRoleId)) {
+    return 'rss.feeds[].mentionRoleId must be a valid role ID';
+  }
+
+  if (feed.enabled !== undefined && typeof feed.enabled !== 'boolean') {
+    return 'rss.feeds[].enabled must be boolean';
+  }
+
+  if (feed.maxItemsPerPoll !== undefined && !isBoundedInt(feed.maxItemsPerPoll, 1, RSS_MAX_ITEMS_PER_POLL)) {
+    return `rss.feeds[].maxItemsPerPoll must be between 1 and ${RSS_MAX_ITEMS_PER_POLL}`;
+  }
+
+  if (feed.includeSummary !== undefined && typeof feed.includeSummary !== 'boolean') {
+    return 'rss.feeds[].includeSummary must be boolean';
+  }
+
+  if (feed.includeImage !== undefined && typeof feed.includeImage !== 'boolean') {
+    return 'rss.feeds[].includeImage must be boolean';
+  }
+
+  if (feed.format !== undefined && feed.format !== 'embed' && feed.format !== 'text') {
+    return 'rss.feeds[].format must be embed or text';
+  }
+
   return true;
 }
 
@@ -333,6 +411,42 @@ const fieldValidators: Record<string, (value: unknown) => true | string> = {
 
   verification(v) {
     if (typeof v !== 'object' || v === null || Array.isArray(v)) return 'verification must be an object';
+    return true;
+  },
+
+  rss(v) {
+    if (typeof v !== 'object' || v === null || Array.isArray(v)) return 'rss must be an object';
+    const rss = v as Record<string, unknown>;
+
+    if (rss.enabled !== undefined && typeof rss.enabled !== 'boolean') {
+      return 'rss.enabled must be boolean';
+    }
+
+    if (
+      rss.pollIntervalMinutes !== undefined &&
+      !isBoundedInt(rss.pollIntervalMinutes, RSS_MIN_POLL_INTERVAL_MINUTES, 1440)
+    ) {
+      return `rss.pollIntervalMinutes must be between ${RSS_MIN_POLL_INTERVAL_MINUTES} and 1440`;
+    }
+
+    if (rss.feeds !== undefined) {
+      if (!Array.isArray(rss.feeds)) return 'rss.feeds must be an array';
+      if (rss.feeds.length > RSS_MAX_FEEDS_PER_GUILD) {
+        return `rss.feeds can contain at most ${RSS_MAX_FEEDS_PER_GUILD} feeds`;
+      }
+
+      for (const entry of rss.feeds) {
+        const feedRes = validateRssFeedEntry(entry);
+        if (feedRes !== true) return feedRes;
+      }
+    }
+
+    if (rss.pollIntervalMinutes === undefined && rss.feeds !== undefined && rss.enabled === true) {
+      if (!isBoundedInt(RSS_DEFAULT_POLL_INTERVAL_MINUTES, RSS_MIN_POLL_INTERVAL_MINUTES, 1440)) {
+        return 'rss.pollIntervalMinutes default is invalid';
+      }
+    }
+
     return true;
   },
 

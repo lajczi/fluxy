@@ -169,6 +169,29 @@ export interface IVerification {
   maxAttempts: number;
 }
 
+export type RssSourceType = 'rss' | 'rsshub';
+
+export interface IRssFeed {
+  id: string;
+  name: string | null;
+  sourceType: RssSourceType;
+  url: string | null;
+  route: string | null;
+  channelId: string;
+  mentionRoleId: string | null;
+  enabled: boolean;
+  maxItemsPerPoll: number;
+  includeSummary: boolean;
+  includeImage: boolean;
+  format: 'embed' | 'text';
+}
+
+export interface IRssSettings {
+  enabled: boolean;
+  pollIntervalMinutes: number;
+  feeds: IRssFeed[];
+}
+
 export interface IGuildSettings {
   guildId: string;
   prefixes: string[];
@@ -231,6 +254,8 @@ export interface IGuildSettings {
   disabledCommands: string[];
 
   verification: IVerification;
+
+  rss: IRssSettings;
 
   starboards: IStarboardBoard[];
   starboard?: IStarboardBoard;

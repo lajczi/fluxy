@@ -23,6 +23,17 @@ export interface BotConfig {
     clientSecret: string | null;
     redirectUri: string | null;
   };
+  rss: {
+    enabled: boolean;
+    defaultPollIntervalMinutes: number;
+    minPollIntervalMinutes: number;
+    maxFeedsPerGuild: number;
+    fetchTimeoutMs: number;
+    maxBodyBytes: number;
+    maxConcurrentFetches: number;
+    rsshubBaseUrl: string;
+    rsshubAccessKey: string | null;
+  };
   glitchtip: {
     dsn: string | null;
     environment: string;

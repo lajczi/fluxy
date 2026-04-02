@@ -306,6 +306,29 @@ export interface Verification {
   maxAttempts: number;
 }
 
+export type RssSourceType = 'rss' | 'rsshub';
+
+export interface RssFeed {
+  id: string;
+  name: string | null;
+  sourceType: RssSourceType;
+  url: string | null;
+  route: string | null;
+  channelId: string;
+  mentionRoleId: string | null;
+  enabled: boolean;
+  maxItemsPerPoll: number;
+  includeSummary: boolean;
+  includeImage: boolean;
+  format: 'embed' | 'text';
+}
+
+export interface RssSettings {
+  enabled: boolean;
+  pollIntervalMinutes: number;
+  feeds: RssFeed[];
+}
+
 export interface Starboard {
   enabled: boolean;
   channelId: string | null;
@@ -358,6 +381,7 @@ export interface GuildSettings {
   commandAllowedRoles: string[];
   disabledCommands: string[];
   verification: Verification;
+  rss: RssSettings;
   starboards: Starboard[];
   starboard: Starboard;
 }
@@ -368,6 +392,7 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
   const mod = (s.moderation ?? {}) as Partial<Moderation>;
   const kw = (s.keywordWarnings ?? {}) as Partial<KeywordWarnings>;
   const gm = (s.goodbyeMessage ?? {}) as Partial<GoodbyeMessage>;
+  const rss = ((s as any).rss ?? {}) as Partial<RssSettings>;
   const normalizeBoard = (raw: any): Starboard => ({
     enabled: !!raw?.enabled,
     channelId: raw?.channelId ?? null,
@@ -383,6 +408,28 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
   const boards = rawBoards.map(normalizeBoard).slice(0, 3);
   const primaryBoard = boards[0] ?? normalizeBoard((s as any).starboard ?? {});
   const starboards = boards.length > 0 ? boards : [primaryBoard];
+  const rssFeeds = Array.isArray(rss.feeds) ? rss.feeds : [];
+
+  const normalizedRssFeeds: RssFeed[] = rssFeeds.slice(0, 5).map((feed: any, idx: number) => ({
+    id: typeof feed?.id === 'string' && feed.id.trim().length > 0
+      ? feed.id
+      : `feed-${idx + 1}`,
+    name: typeof feed?.name === 'string' && feed.name.trim().length > 0
+      ? feed.name.trim()
+      : null,
+    sourceType: feed?.sourceType === 'rsshub' ? 'rsshub' : 'rss',
+    url: typeof feed?.url === 'string' ? feed.url : null,
+    route: typeof feed?.route === 'string' ? feed.route : null,
+    channelId: typeof feed?.channelId === 'string' ? feed.channelId : '',
+    mentionRoleId: typeof feed?.mentionRoleId === 'string' ? feed.mentionRoleId : null,
+    enabled: feed?.enabled !== false,
+    maxItemsPerPoll: typeof feed?.maxItemsPerPoll === 'number'
+      ? Math.max(1, Math.min(10, Math.floor(feed.maxItemsPerPoll)))
+      : 3,
+    includeSummary: feed?.includeSummary !== false,
+    includeImage: feed?.includeImage !== false,
+    format: feed?.format === 'text' ? 'text' : 'embed',
+  }));
 
   return {
     guildId: s.guildId,
@@ -524,6 +571,14 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
       panelMessageId: (s as any).verification?.panelMessageId ?? null,
       logChannelId: (s as any).verification?.logChannelId ?? null,
       maxAttempts: (s as any).verification?.maxAttempts ?? 2,
+    },
+
+    rss: {
+      enabled: rss.enabled ?? false,
+      pollIntervalMinutes: typeof rss.pollIntervalMinutes === 'number'
+        ? Math.max(10, Math.min(1440, Math.floor(rss.pollIntervalMinutes)))
+        : 15,
+      feeds: normalizedRssFeeds,
     },
 
     starboards,

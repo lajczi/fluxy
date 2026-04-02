@@ -1,5 +1,10 @@
 import dotenv from 'dotenv';
 import type { BotConfig } from './types';
+import {
+  RSS_DEFAULT_POLL_INTERVAL_MINUTES,
+  RSS_MAX_FEEDS_PER_GUILD,
+  RSS_MIN_POLL_INTERVAL_MINUTES,
+} from './utils/rssDefaults';
 
 dotenv.config();
 
@@ -27,6 +32,17 @@ const config: BotConfig = {
     clientId: process.env.FLUXER_OAUTH_CLIENT_ID || null,
     clientSecret: process.env.FLUXER_OAUTH_CLIENT_SECRET || null,
     redirectUri: process.env.FLUXER_OAUTH_REDIRECT_URI || null,
+  },
+  rss: {
+    enabled: process.env.RSS_ENABLED !== 'false',
+    defaultPollIntervalMinutes: parseInt(process.env.RSS_DEFAULT_POLL_INTERVAL_MINUTES || String(RSS_DEFAULT_POLL_INTERVAL_MINUTES), 10),
+    minPollIntervalMinutes: parseInt(process.env.RSS_MIN_POLL_INTERVAL_MINUTES || String(RSS_MIN_POLL_INTERVAL_MINUTES), 10),
+    maxFeedsPerGuild: parseInt(process.env.RSS_MAX_FEEDS_PER_GUILD || String(RSS_MAX_FEEDS_PER_GUILD), 10),
+    fetchTimeoutMs: parseInt(process.env.RSS_FETCH_TIMEOUT_MS || '10000', 10),
+    maxBodyBytes: parseInt(process.env.RSS_MAX_BODY_BYTES || String(1024 * 1024), 10),
+    maxConcurrentFetches: parseInt(process.env.RSS_MAX_CONCURRENT_FETCHES || '8', 10),
+    rsshubBaseUrl: process.env.RSSHUB_BASE_URL || 'https://rsshub.app',
+    rsshubAccessKey: process.env.RSSHUB_ACCESS_KEY || null,
   },
   glitchtip: {
     dsn: process.env.GLITCHTIP_DSN || null,

@@ -9,6 +9,7 @@ import * as messageDeleteQueue from '../utils/messageDeleteQueue';
 import settingsCache from '../utils/settingsCache';
 import GuildSettings from '../models/GuildSettings';
 import log from '../utils/consoleLogger';
+import rssPollerService from '../services/RssPollerService';
 import guildCreate from './guildCreate';
 
 async function warmSettingsCache(client: any): Promise<void> {
@@ -95,6 +96,7 @@ const event: BotEvent = {
       roleQueue.start(client);
       moderationQueue.start(client);
       messageDeleteQueue.start(client);
+      rssPollerService.start(client);
       log.ok('Startup', `Queues started`);
 
       warmSettingsCache(client).catch((err: any) => {

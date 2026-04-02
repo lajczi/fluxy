@@ -15,7 +15,7 @@ import EmojiPicker, { type EmojiClickData, Theme } from 'emoji-picker-react';
 import {
   ArrowLeft, Settings, Shield, MessageSquare, Gavel,
   Terminal, Ticket, Bug, Save, Loader2,
-  Plus, Trash2, X, Lock, Smile, UserMinus, ShieldCheck, Star,
+  Plus, Trash2, X, Lock, Smile, UserMinus, ShieldCheck, Star, Rss,
 } from 'lucide-react';
 import type {
   GuildSettings as GuildSettingsType,
@@ -27,6 +27,7 @@ import type {
   Starboard,
 } from '../lib/api';
 import { api } from '../lib/api';
+import { buildRssSavePayload } from '../lib/rssSettings';
 import WelcomeEditor from '../components/WelcomeEditor';
 
 function roleName(name: string): string {
@@ -746,7 +747,7 @@ const COMMAND_MODULES = [
 const INDIVIDUAL_COMMANDS = [
   'ban', 'kick', 'warn', 'mute', 'unmute', 'timeout', 'clear', 'slowmode', 'massban',
   'lockdown', 'automod', 'welcome', 'goodbye', 'ticket', 'honeypot',
-  'reactionrole', 'setlog', 'setserverlog', 'setprefix', 'clearprefix',
+  'reactionrole', 'setlog', 'setserverlog', 'setprefix', 'clearprefix', 'rss',
   'setstaff', 'autorole', 'roleall', 'roleclear', 'blacklist', 'keywords',
   'customcommand', 'commandperms', 'slowmodeperms', 'globalban',
   'help', 'ping', 'report', 'invite-me',
@@ -860,6 +861,425 @@ function CustomCommandsTab({ settings, onSave, saving }: TabProps) {
           <p className="text-xs text-gray-500 mt-3">Click a command to toggle it. Red = disabled.</p>
         </CardContent>
       </Card>
+
+      <SaveButton onClick={handleSave} saving={saving} />
+    </div>
+  );
+}
+
+type DashboardRssFeed = GuildSettingsType['rss']['feeds'][number];
+
+interface DashboardRssStatusRow {
+  feedId: string;
+  lastCheckedAt: string | null;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+  consecutiveFailures: number;
+}
+
+interface DashboardRssTestResult {
+  title: string;
+  description: string | null;
+  link: string;
+  publishedAt: string | null;
+  author: string | null;
+}
+
+const RSS_MIN_INTERVAL_MINUTES = 10;
+const RSS_MAX_INTERVAL_MINUTES = 1440;
+const RSS_MIN_ITEMS_PER_POLL = 1;
+const RSS_MAX_ITEMS_PER_POLL = 10;
+const RSS_MAX_FEEDS = 5;
+
+const clampNumber = (value: number, min: number, max: number): number => {
+  return Math.min(max, Math.max(min, value));
+};
+
+const createDashboardRssFeed = (): DashboardRssFeed => ({
+  id: Math.random().toString(36).slice(2, 10),
+  name: null,
+  sourceType: 'rss',
+  url: '',
+  route: null,
+  channelId: '',
+  mentionRoleId: null,
+  enabled: true,
+  maxItemsPerPoll: 3,
+  includeSummary: true,
+  includeImage: true,
+  format: 'embed',
+});
+
+function RssTab({ settings, guild, onSave, saving }: TabProps) {
+  const [enabled, setEnabled] = useState(settings.rss.enabled ?? false);
+  const [pollIntervalMinutes, setPollIntervalMinutes] = useState(settings.rss.pollIntervalMinutes ?? 15);
+  const [feeds, setFeeds] = useState<DashboardRssFeed[]>(
+    (settings.rss.feeds || []).slice(0, RSS_MAX_FEEDS).map(feed => ({
+      id: typeof feed.id === 'string' && feed.id.trim().length > 0
+        ? feed.id
+        : Math.random().toString(36).slice(2, 10),
+      name: feed.name ?? null,
+      sourceType: feed.sourceType === 'rsshub' ? 'rsshub' : 'rss',
+      url: feed.url ?? null,
+      route: feed.route ?? null,
+      channelId: feed.channelId ?? '',
+      mentionRoleId: feed.mentionRoleId ?? null,
+      enabled: feed.enabled !== false,
+      maxItemsPerPoll: clampNumber(
+        typeof feed.maxItemsPerPoll === 'number' ? feed.maxItemsPerPoll : 3,
+        RSS_MIN_ITEMS_PER_POLL,
+        RSS_MAX_ITEMS_PER_POLL,
+      ),
+      includeSummary: feed.includeSummary !== false,
+      includeImage: feed.includeImage !== false,
+      format: feed.format === 'text' ? 'text' : 'embed',
+    })),
+  );
+  const [statusRows, setStatusRows] = useState<DashboardRssStatusRow[]>([]);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [tabError, setTabError] = useState<string | null>(null);
+  const [testLoadingByFeedId, setTestLoadingByFeedId] = useState<Record<string, boolean>>({});
+  const [testResultByFeedId, setTestResultByFeedId] = useState<Record<string, DashboardRssTestResult | null>>({});
+
+  const updateFeed = (feedId: string, patch: Partial<DashboardRssFeed>) => {
+    setFeeds(prev => prev.map(feed => (feed.id === feedId ? { ...feed, ...patch } : feed)));
+  };
+
+  const addFeed = () => {
+    if (feeds.length >= RSS_MAX_FEEDS) return;
+    setFeeds(prev => [...prev, createDashboardRssFeed()]);
+  };
+
+  const removeFeed = (feedId: string) => {
+    setFeeds(prev => prev.filter(feed => feed.id !== feedId));
+    setTestResultByFeedId(prev => {
+      const next = { ...prev };
+      delete next[feedId];
+      return next;
+    });
+  };
+
+  const fetchStatus = useCallback(async () => {
+    setStatusLoading(true);
+    setStatusError(null);
+    try {
+      const res = await fetch(`/api/guilds/${settings.guildId}/rss/status`, { credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch RSS status');
+      setStatusRows(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setStatusError(error instanceof Error ? error.message : 'Failed to fetch RSS status');
+    } finally {
+      setStatusLoading(false);
+    }
+  }, [settings.guildId]);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
+
+  const runTest = async (feed: DashboardRssFeed) => {
+    setTabError(null);
+    setTestResultByFeedId(prev => ({ ...prev, [feed.id]: null }));
+    setTestLoadingByFeedId(prev => ({ ...prev, [feed.id]: true }));
+
+    try {
+      const res = await fetch(`/api/guilds/${settings.guildId}/rss/test`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceType: feed.sourceType,
+          url: feed.sourceType === 'rss' ? (feed.url || '').trim() : null,
+          route: feed.sourceType === 'rsshub' ? (feed.route || '').trim() : null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Feed test failed');
+
+      const item = Array.isArray(data.items) && data.items.length > 0 ? data.items[0] : null;
+      setTestResultByFeedId(prev => ({
+        ...prev,
+        [feed.id]: {
+          title: item?.title || data.title || 'Untitled item',
+          description: data.description || null,
+          link: item?.link || data.link || '',
+          publishedAt: item?.publishedAt || null,
+          author: item?.author || null,
+        },
+      }));
+    } catch (error) {
+      setTabError(error instanceof Error ? error.message : 'Feed test failed');
+    } finally {
+      setTestLoadingByFeedId(prev => ({ ...prev, [feed.id]: false }));
+    }
+  };
+
+  const handleSave = () => {
+    setTabError(null);
+    const result = buildRssSavePayload({
+      enabled,
+      pollIntervalMinutes,
+      feeds,
+    });
+
+    if (!result.ok) {
+      setTabError(result.error);
+      return;
+    }
+
+    onSave({
+      rss: result.payload,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>RSS Settings</CardTitle>
+          <CardDescription>Configure RSS/Atom URLs or RSSHub routes and post updates into your channels.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-sm font-medium text-white">Enable RSS Polling</Label>
+              <p className="text-xs text-gray-400">When disabled, feeds stay saved but no updates are posted.</p>
+            </div>
+            <Switch checked={enabled} onCheckedChange={setEnabled} />
+          </div>
+
+          <div className="max-w-xs space-y-2">
+            <Label>Poll Interval (minutes)</Label>
+            <Input
+              type="number"
+              min={RSS_MIN_INTERVAL_MINUTES}
+              max={RSS_MAX_INTERVAL_MINUTES}
+              value={pollIntervalMinutes}
+              onChange={e => setPollIntervalMinutes(
+                clampNumber(Number(e.target.value || 15), RSS_MIN_INTERVAL_MINUTES, RSS_MAX_INTERVAL_MINUTES),
+              )}
+            />
+            <p className="text-xs text-gray-500">Allowed range: {RSS_MIN_INTERVAL_MINUTES}-{RSS_MAX_INTERVAL_MINUTES}.</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle>Feeds</CardTitle>
+              <CardDescription>You can add up to {RSS_MAX_FEEDS} feeds per server.</CardDescription>
+            </div>
+            <Button size="sm" onClick={addFeed} disabled={feeds.length >= RSS_MAX_FEEDS}>
+              <Plus className="h-4 w-4 mr-1" /> Add Feed
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {feeds.length === 0 && (
+            <div className="text-sm text-gray-400 rounded-md border border-dashed border-white/20 p-4">
+              No feeds configured yet.
+            </div>
+          )}
+
+          {feeds.map((feed, index) => {
+            const sourceValue = feed.sourceType === 'rss' ? (feed.url || '') : (feed.route || '');
+            const status = statusRows.find(row => row.feedId === feed.id);
+
+            return (
+              <div key={feed.id} className="rounded-lg border border-white/10 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-white">Feed {index + 1}</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={feed.enabled ? 'secondary' : 'destructive'}>{feed.enabled ? 'Enabled' : 'Paused'}</Badge>
+                    <Button variant="ghost" size="icon" onClick={() => removeFeed(feed.id)}>
+                      <Trash2 className="h-4 w-4 text-red-400" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Source Type</Label>
+                    <Select
+                      value={feed.sourceType}
+                      onValueChange={value => {
+                        const sourceType = value === 'rsshub' ? 'rsshub' : 'rss';
+                        updateFeed(feed.id, {
+                          sourceType,
+                          url: sourceType === 'rss' ? (feed.url || '') : null,
+                          route: sourceType === 'rsshub' ? (feed.route || '') : null,
+                        });
+                      }}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="rss">RSS / Atom URL</SelectItem>
+                        <SelectItem value="rsshub">RSSHub Route</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Destination Channel</Label>
+                    <ChannelSelect
+                      channels={guild.channels.filter(c => c.type === 0 || c.type === 5)}
+                      value={feed.channelId}
+                      onChange={value => updateFeed(feed.id, { channelId: value || '' })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{feed.sourceType === 'rss' ? 'Feed URL' : 'RSSHub Route'}</Label>
+                  <Input
+                    value={sourceValue}
+                    onChange={e => updateFeed(feed.id, feed.sourceType === 'rss'
+                      ? { url: e.target.value }
+                      : { route: e.target.value })}
+                    placeholder={feed.sourceType === 'rss' ? 'https://example.com/feed.xml' : '/github/issue/user/repo'}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label>Feed Name (optional)</Label>
+                    <Input
+                      value={feed.name || ''}
+                      onChange={e => updateFeed(feed.id, { name: e.target.value || null })}
+                      placeholder="Engineering Blog"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Mention Role (optional)</Label>
+                    <RoleSelect
+                      roles={guild.roles}
+                      value={feed.mentionRoleId}
+                      onChange={value => updateFeed(feed.id, { mentionRoleId: value || null })}
+                      placeholder="No role mention"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Items Per Poll</Label>
+                    <Input
+                      type="number"
+                      min={RSS_MIN_ITEMS_PER_POLL}
+                      max={RSS_MAX_ITEMS_PER_POLL}
+                      value={feed.maxItemsPerPoll}
+                      onChange={e => updateFeed(feed.id, {
+                        maxItemsPerPoll: clampNumber(Number(e.target.value || 3), RSS_MIN_ITEMS_PER_POLL, RSS_MAX_ITEMS_PER_POLL),
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="flex items-center justify-between rounded-md bg-[hsl(var(--muted))] px-3 py-2">
+                    <Label className="text-xs">Feed Enabled</Label>
+                    <Switch checked={feed.enabled} onCheckedChange={value => updateFeed(feed.id, { enabled: value })} />
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-md bg-[hsl(var(--muted))] px-3 py-2">
+                    <Label className="text-xs">Use Embeds</Label>
+                    <Switch
+                      checked={feed.format !== 'text'}
+                      onCheckedChange={value => updateFeed(feed.id, { format: value ? 'embed' : 'text' })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-md bg-[hsl(var(--muted))] px-3 py-2">
+                    <Label className="text-xs">Include Summary</Label>
+                    <Switch checked={feed.includeSummary} onCheckedChange={value => updateFeed(feed.id, { includeSummary: value })} />
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-md bg-[hsl(var(--muted))] px-3 py-2">
+                    <Label className="text-xs">Include Image</Label>
+                    <Switch checked={feed.includeImage} onCheckedChange={value => updateFeed(feed.id, { includeImage: value })} />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => runTest(feed)}
+                    disabled={!sourceValue.trim() || !!testLoadingByFeedId[feed.id]}
+                  >
+                    {testLoadingByFeedId[feed.id] ? 'Testing...' : 'Test Feed'}
+                  </Button>
+
+                  {status && (
+                    <p className="text-xs text-gray-400">
+                      Last check: {status.lastCheckedAt ? new Date(status.lastCheckedAt).toLocaleString() : 'never'}
+                      {' • '}
+                      Last success: {status.lastSuccessAt ? new Date(status.lastSuccessAt).toLocaleString() : 'never'}
+                      {' • '}
+                      Failures: {status.consecutiveFailures}
+                    </p>
+                  )}
+                </div>
+
+                {status?.lastError && (
+                  <div className="text-xs text-red-300 bg-red-950/30 border border-red-900/40 rounded-md px-3 py-2">
+                    {status.lastError}
+                  </div>
+                )}
+
+                {testResultByFeedId[feed.id] && (
+                  <div className="text-xs text-gray-200 bg-[hsl(var(--muted))] rounded-md px-3 py-2">
+                    <p className="font-medium text-white">{testResultByFeedId[feed.id]?.title}</p>
+                    {testResultByFeedId[feed.id]?.description && (
+                      <p className="mt-1 text-xs text-gray-300 line-clamp-2">{testResultByFeedId[feed.id]?.description}</p>
+                    )}
+                    {testResultByFeedId[feed.id]?.author && (
+                      <p className="mt-1 text-xs text-gray-400">By {testResultByFeedId[feed.id]?.author}</p>
+                    )}
+                    {testResultByFeedId[feed.id]?.publishedAt && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        Published {new Date(testResultByFeedId[feed.id]!.publishedAt!).toLocaleString()}
+                      </p>
+                    )}
+                    {testResultByFeedId[feed.id]?.link && (
+                      <a
+                        href={testResultByFeedId[feed.id]?.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-blue-300 hover:text-blue-200 underline mt-1 inline-block"
+                      >
+                        Open article
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {statusError && (
+            <div className="text-xs text-red-300 bg-red-950/30 border border-red-900/40 rounded-md px-3 py-2">
+              {statusError}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {tabError && (
+        <div className="text-sm text-red-300 bg-red-950/30 border border-red-900/40 rounded-md px-3 py-2">
+          {tabError}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <Button variant="outline" onClick={fetchStatus} disabled={statusLoading}>
+          {statusLoading ? 'Refreshing...' : 'Refresh Status'}
+        </Button>
+      </div>
 
       <SaveButton onClick={handleSave} saving={saving} />
     </div>
@@ -2423,6 +2843,7 @@ export function GuildSettings() {
           <TabsTrigger value="welcome" className="gap-1.5"><MessageSquare className="h-3.5 w-3.5" />Welcome</TabsTrigger>
           <TabsTrigger value="moderation" className="gap-1.5"><Gavel className="h-3.5 w-3.5" />Moderation</TabsTrigger>
           <TabsTrigger value="commands" className="gap-1.5"><Terminal className="h-3.5 w-3.5" />Commands</TabsTrigger>
+          <TabsTrigger value="rss" className="gap-1.5"><Rss className="h-3.5 w-3.5" />RSS</TabsTrigger>
           <TabsTrigger value="tickets" className="gap-1.5"><Ticket className="h-3.5 w-3.5" />Tickets</TabsTrigger>
           <TabsTrigger value="reactionroles" className="gap-1.5"><Smile className="h-3.5 w-3.5" />Reaction Roles</TabsTrigger>
           <TabsTrigger value="lockdown" className="gap-1.5"><Lock className="h-3.5 w-3.5" />Lockdown</TabsTrigger>
@@ -2437,6 +2858,7 @@ export function GuildSettings() {
         <TabsContent value="welcome"><WelcomeTab {...tabProps} /></TabsContent>
         <TabsContent value="moderation"><ModerationTab {...tabProps} /></TabsContent>
         <TabsContent value="commands"><CustomCommandsTab {...tabProps} /></TabsContent>
+        <TabsContent value="rss"><RssTab {...tabProps} /></TabsContent>
         <TabsContent value="tickets"><TicketsTab {...tabProps} /></TabsContent>
         <TabsContent value="reactionroles"><ReactionRolesTab {...tabProps} /></TabsContent>
         <TabsContent value="lockdown"><LockdownTab {...tabProps} /></TabsContent>

@@ -4,6 +4,7 @@ import { EmbedBuilder, PermissionFlags } from '@fluxerjs/core';
 import { Routes } from '@fluxerjs/types';
 import type { AuthRequest } from '../middleware/auth';
 import GuildSettings from '../../models/GuildSettings';
+import config from '../../config';
 import log from '../../utils/consoleLogger';
 import settingsCache from '../../utils/settingsCache';
 import { broadcastSettingsUpdate } from '../ws/settingsWs';
@@ -11,6 +12,8 @@ import { generateTranscriptHtml } from '../../utils/transcriptGenerator';
 import { validateSettingsUpdate } from '../middleware/settingsValidator';
 import { t, normalizeLocale } from '../../i18n';
 import { encodeReactionForRoute } from '../../utils/encodeReactionForRoute';
+import RssFeedState from '../../models/RssFeedState';
+import { fetchFeed } from '../../utils/rssFeed';
 
 const ALLOWED_SETTINGS_FIELDS = new Set([
   'prefixes',
@@ -61,6 +64,7 @@ const ALLOWED_SETTINGS_FIELDS = new Set([
   'onboardingComplete',
   'onboardingStep',
   'verification',
+  'rss',
   'starboard',
   'starboards',
 ]);
@@ -972,6 +976,103 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
         closedBy: (ticket as any).closedBy,
         closedAt: (ticket as any).closedAt,
       });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  router.post('/:id/rss/test', requireGuildAccess, async (req: AuthRequest, res) => {
+    try {
+      const guildId = req.params.id as string;
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const sourceType = body.sourceType === 'rsshub' ? 'rsshub' : 'rss';
+      const url = typeof body.url === 'string' ? body.url : null;
+      const route = typeof body.route === 'string' ? body.route : null;
+
+      if (sourceType === 'rss' && !url) {
+        res.status(400).json({ error: 'url is required for rss sourceType' });
+        return;
+      }
+
+      if (sourceType === 'rsshub' && !route) {
+        res.status(400).json({ error: 'route is required for rsshub sourceType' });
+        return;
+      }
+
+      const parsed = await fetchFeed(
+        {
+          sourceType,
+          url,
+          route,
+        },
+        {
+          timeoutMs: config.rss.fetchTimeoutMs,
+          maxBodyBytes: config.rss.maxBodyBytes,
+          rsshubBaseUrl: config.rss.rsshubBaseUrl,
+          rsshubAccessKey: config.rss.rsshubAccessKey,
+        },
+      );
+
+      res.json({
+        guildId,
+        feedUrl: parsed.feedUrl,
+        title: parsed.title,
+        link: parsed.link,
+        description: parsed.description,
+        itemCount: parsed.items.length,
+        items: parsed.items.slice(0, 5).map((item) => ({
+          key: item.key,
+          title: item.title,
+          link: item.link,
+          publishedAt: item.publishedAt,
+          author: item.author,
+        })),
+      });
+    } catch (err: any) {
+      res.status(400).json({ error: err?.message || 'Failed to fetch feed' });
+    }
+  });
+
+  router.get('/:id/rss/status', requireGuildAccess, async (req: AuthRequest, res) => {
+    try {
+      const guildId = req.params.id as string;
+      const settings = await settingsCache.getOrCreate(guildId);
+      const rss = (settings as any)?.rss;
+      const feeds = Array.isArray(rss?.feeds) ? rss.feeds : [];
+
+      if (feeds.length === 0) {
+        res.json([]);
+        return;
+      }
+
+      const feedIds = feeds
+        .map((feed: any) => (typeof feed?.id === 'string' ? feed.id : null))
+        .filter((id: string | null): id is string => !!id);
+
+      const states = await RssFeedState.find({
+        guildId,
+        feedId: { $in: feedIds },
+      }).lean();
+
+      const stateByFeedId = new Map(states.map((state) => [state.feedId, state]));
+
+      res.json(
+        feeds.map((feed: any) => {
+          const state = stateByFeedId.get(feed.id);
+          return {
+            feedId: feed.id,
+            name: feed.name ?? null,
+            channelId: feed.channelId,
+            enabled: feed.enabled !== false,
+            sourceType: feed.sourceType,
+            lastCheckedAt: state?.lastCheckedAt ?? null,
+            lastSuccessAt: state?.lastSuccessAt ?? null,
+            lastError: state?.lastError ?? null,
+            consecutiveFailures: state?.consecutiveFailures ?? 0,
+            seenCount: Array.isArray(state?.seenItemIds) ? state!.seenItemIds.length : 0,
+          };
+        }),
+      );
     } catch {
       res.status(500).json({ error: 'Internal server error' });
     }

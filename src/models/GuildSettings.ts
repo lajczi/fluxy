@@ -1,11 +1,19 @@
 import { Schema, model, Document, Model } from 'mongoose';
+import { randomUUID } from 'crypto';
 import type {
   IGuildSettings, IKeywordEntry, IKeywordWarnings, IHoneypotEntry,
   IWelcomeCard, IWelcomeEmbed, IWelcomeDM, IWelcomeMessage,
   IReactionRole, IReactionRoleEntry, IModeration, ICustomCommand,
   IAutomodSpam, IAutomodRaid, IAutomod, IGoodbyeEmbed, IGoodbyeMessage,
-  ILogChannelOverrides, IVerification, IStarboardBoard,
+  ILogChannelOverrides, IVerification, IStarboardBoard, IRssSettings, IRssFeed,
 } from '../types';
+import {
+  RSS_DEFAULT_ITEMS_PER_POLL,
+  RSS_DEFAULT_POLL_INTERVAL_MINUTES,
+  RSS_MAX_FEEDS_PER_GUILD,
+  RSS_MAX_ITEMS_PER_POLL,
+  RSS_MIN_POLL_INTERVAL_MINUTES,
+} from '../utils/rssDefaults';
 
 const keywordEntrySchema = new Schema<IKeywordEntry>({
   pattern: { type: String, required: true },
@@ -146,6 +154,46 @@ const verificationSchema = new Schema<IVerification>({
   panelMessageId: { type: String, default: null },
   logChannelId: { type: String, default: null },
   maxAttempts: { type: Number, default: 2, min: 1, max: 5 },
+}, { _id: false });
+
+const rssFeedSchema = new Schema<IRssFeed>({
+  id: { type: String, default: () => randomUUID(), required: true },
+  name: { type: String, default: null },
+  sourceType: { type: String, enum: ['rss', 'rsshub'], default: 'rss' },
+  url: { type: String, default: null },
+  route: { type: String, default: null },
+  channelId: { type: String, required: true },
+  mentionRoleId: { type: String, default: null },
+  enabled: { type: Boolean, default: true },
+  maxItemsPerPoll: {
+    type: Number,
+    default: RSS_DEFAULT_ITEMS_PER_POLL,
+    min: 1,
+    max: RSS_MAX_ITEMS_PER_POLL,
+  },
+  includeSummary: { type: Boolean, default: true },
+  includeImage: { type: Boolean, default: true },
+  format: { type: String, enum: ['embed', 'text'], default: 'embed' },
+}, { _id: false });
+
+const rssSettingsSchema = new Schema<IRssSettings>({
+  enabled: { type: Boolean, default: false },
+  pollIntervalMinutes: {
+    type: Number,
+    default: RSS_DEFAULT_POLL_INTERVAL_MINUTES,
+    min: RSS_MIN_POLL_INTERVAL_MINUTES,
+    max: 1440,
+  },
+  feeds: {
+    type: [rssFeedSchema],
+    default: [],
+    validate: {
+      validator: function (v: IRssFeed[]) {
+        return v.length <= RSS_MAX_FEEDS_PER_GUILD;
+      },
+      message: `Cannot have more than ${RSS_MAX_FEEDS_PER_GUILD} RSS feeds`,
+    },
+  },
 }, { _id: false });
 
 const starboardSchema = new Schema<IStarboardBoard>({
@@ -295,6 +343,8 @@ const settingsSchema = new Schema<GuildSettingsDocument, GuildSettingsModel>({
   disabledCommands: { type: [String], default: [] },
 
   verification: { type: verificationSchema, default: () => ({}) },
+
+  rss: { type: rssSettingsSchema, default: () => ({}) },
 
   starboards: {
     type: [starboardSchema],
