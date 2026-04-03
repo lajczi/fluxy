@@ -64,7 +64,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !setlog (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !setlog: ${error.message || error}`);
-        const cached: any = guild ? await settingsCache.get(guild.id).catch(() => null) : null;
+        const cached: any = await settingsCache.get(guild.id).catch(() => null);
         const lang = normalizeLocale(cached?.language);
         message.reply(t(lang, 'commands.admin.setlog.errors.generic')).catch(() => {});
       }

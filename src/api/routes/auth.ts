@@ -162,7 +162,6 @@ export function createAuthRouter(): Router {
       if (!userRes.ok && userRes.status === 401) {
         const newToken = await tryRefreshToken(req);
         if (newToken) {
-          token = newToken;
           res.cookie('fluxy_token', newToken, {
             httpOnly: true,
             secure: true,

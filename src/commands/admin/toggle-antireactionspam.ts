@@ -45,7 +45,7 @@ const command: Command = {
         console.warn(`[${guild?.name || 'Unknown Server'}] Fluxer API unreachable during !toggle-antireactionspam (ECONNRESET)`);
       } else {
         console.error(`[${guild?.name || 'Unknown Server'}] Error in !toggle-antireactionspam: ${error.message || error}`);
-        const cached: any = guild ? await settingsCache.get(guild.id).catch(() => null) : null;
+        const cached: any = await settingsCache.get(guild.id).catch(() => null);
         const lang = normalizeLocale(cached?.language);
         message.reply(t(lang, 'commands.admin.toggleAntireactionspam.errors.generic')).catch(() => {});
       }

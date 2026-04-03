@@ -208,7 +208,6 @@ const command: Command = {
           saveBoards(settings, boards);
           await settings.save();
           settingsCache.invalidate(guild.id);
-          boards = normalizeBoards(settings);
           return void await message.reply(t(lang, 'commands.admin.starboard.threshold.setDone', { threshold: num }));
         }
 
@@ -241,7 +240,6 @@ const command: Command = {
           saveBoards(settings, boards);
           await settings.save();
           settingsCache.invalidate(guild.id);
-          boards = normalizeBoards(settings);
           return void await message.reply(t(lang, 'commands.admin.starboard.emoji.setDone', { emoji: board.emoji }));
         }
 
@@ -262,7 +260,6 @@ const command: Command = {
           saveBoards(settings, boards);
           await settings.save();
           settingsCache.invalidate(guild.id);
-          boards = normalizeBoards(settings);
           return void await message.reply(t(lang, 'commands.admin.starboard.toggle.setDone', { status: board.enabled ? 'enabled' : 'disabled' }));
         }
 
@@ -278,7 +275,6 @@ const command: Command = {
           saveBoards(settings, boards);
           await settings.save();
           settingsCache.invalidate(guild.id);
-          boards = normalizeBoards(settings);
           return void await message.reply(t(lang, 'commands.admin.starboard.selfstar.setDone', { status: board.selfStarEnabled ? 'enabled' : 'disabled' }));
         }
 
@@ -301,14 +297,12 @@ const command: Command = {
             saveBoards(settings, boards);
             await settings.save();
             settingsCache.invalidate(guild.id);
-            boards = normalizeBoards(settings);
             return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.nowIgnored', { channelId: targetChannelId }));
           } else {
             board.ignoredChannels.splice(idx, 1);
             saveBoards(settings, boards);
             await settings.save();
             settingsCache.invalidate(guild.id);
-            boards = normalizeBoards(settings);
             return void await message.reply(t(lang, 'commands.admin.starboard.ignorechannel.noLongerIgnored', { channelId: targetChannelId }));
           }
         }
@@ -336,14 +330,12 @@ const command: Command = {
             saveBoards(settings, boards);
             await settings.save();
             settingsCache.invalidate(guild.id);
-            boards = normalizeBoards(settings);
             return void await message.reply(t(lang, 'commands.admin.starboard.ignorerole.nowExcluded', { roleId }));
           } else {
             board.ignoredRoles.splice(idx, 1);
             saveBoards(settings, boards);
             await settings.save();
             settingsCache.invalidate(guild.id);
-            boards = normalizeBoards(settings);
             return void await message.reply(t(lang, 'commands.admin.starboard.ignorerole.canStarAgain', { roleId }));
           }
         }

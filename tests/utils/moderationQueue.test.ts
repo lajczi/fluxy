@@ -55,7 +55,6 @@ describe('enqueue', () => {
   });
 
   test('drops oldest when queue is full (200)', () => {
-    const freshFs = require('fs');
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     for (let i = 0; i < 200; i++) {
       moderationQueue.enqueue('g1', `u${i}`, 'ban');

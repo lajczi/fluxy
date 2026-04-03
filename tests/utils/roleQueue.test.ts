@@ -69,7 +69,6 @@ describe('enqueue', () => {
   });
 
   test('drops oldest entry when queue is full (500)', () => {
-    const freshFs = require('fs');
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     for (let i = 0; i < 500; i++) {
       roleQueue.enqueue('g1', `u${i}`, 'r1', 'add');

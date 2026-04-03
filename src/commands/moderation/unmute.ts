@@ -37,11 +37,6 @@ const command: Command = {
       return void await message.reply(t(lang, 'commands.moderation.unmute.invalidUser'));
     }
 
-    let moderator: any = guild.members?.get((message as any).author.id);
-    if (!moderator) {
-      moderator = await guild.fetchMember((message as any).author.id);
-    }
-
     let targetMember: any = guild.members?.get(userId);
     if (!targetMember) {
       try {

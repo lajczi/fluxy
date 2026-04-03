@@ -786,7 +786,7 @@ const command: Command = {
       } else {
         console.error(`[${guildName}] Error in !ticket: ${error.message || error}`);
       }
-      message.reply(t('en', 'commands.admin.ticket.processingError')).catch(() => { });
+      message.reply(t(lang, 'commands.admin.ticket.processingError')).catch(() => { });
       return;
     }
 

@@ -9,7 +9,7 @@ import rssPollerService from '../../services/RssPollerService';
 import isNetworkError from '../../utils/isNetworkError';
 import settingsCache from '../../utils/settingsCache';
 import { fetchFeed } from '../../utils/rssFeed';
-import { clampItemsPerPoll, clampPollIntervalMinutes } from '../../utils/rssDefaults';
+import { clampPollIntervalMinutes } from '../../utils/rssDefaults';
 
 const OWNER_ONLY_SUBCOMMANDS = new Set(['debug', 'forcepoll', 'force', 'pollnow']);
 
