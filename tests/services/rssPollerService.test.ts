@@ -286,6 +286,61 @@ describe('RssPollerService', () => {
     expect(mockLogWarn).toHaveBeenCalled();
   });
 
+  test('treats not-modified as successful check and updates lastSuccessAt', async () => {
+    const sendMock = jest.fn().mockResolvedValue(undefined);
+    const client = makeClient(sendMock);
+
+    mockSettingsGet.mockResolvedValue({
+      guildId: 'g1',
+      rss: {
+        enabled: true,
+        pollIntervalMinutes: 15,
+        feeds: [makeFeed()],
+      },
+    });
+
+    mockRssFind.mockReturnValue({
+      lean: jest.fn().mockResolvedValue([
+        {
+          guildId: 'g1',
+          feedId: 'feed-1',
+          seenItemIds: ['item-1'],
+          consecutiveFailures: 1,
+          lastCheckedAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+      ]),
+    });
+
+    mockFetchFeed.mockResolvedValue({
+      feedUrl: 'https://example.com/feed.xml',
+      title: null,
+      link: null,
+      description: null,
+      etag: 'etag-304',
+      lastModified: 'Thu, 03 Apr 2026 00:00:00 GMT',
+      notModified: true,
+      items: [],
+    });
+
+    mockRssFindOneAndUpdate.mockResolvedValue(null);
+
+    (rssPollerService as any).client = client;
+    await (rssPollerService as any).pollTick();
+
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(mockRssFindOneAndUpdate).toHaveBeenCalledWith(
+      { guildId: 'g1', feedId: 'feed-1' },
+      expect.objectContaining({
+        $set: expect.objectContaining({
+          lastSuccessAt: expect.any(Date),
+          consecutiveFailures: 0,
+          lastError: null,
+        }),
+      }),
+      expect.objectContaining({ upsert: true }),
+    );
+  });
+
   test('forcePollGuild returns busy while poller is running', async () => {
     const client = makeClient(jest.fn().mockResolvedValue(undefined));
     (rssPollerService as any).running = true;

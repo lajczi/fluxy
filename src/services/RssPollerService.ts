@@ -326,6 +326,7 @@ class RssPollerService {
           {
             $set: {
               lastCheckedAt: now,
+              lastSuccessAt: now,
               lastError: null,
               etag: parsed.etag,
               lastModified: parsed.lastModified,
