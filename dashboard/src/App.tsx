@@ -14,6 +14,7 @@ const GuildSettings = lazy(() => import('./pages/GuildSettings').then(m => ({ de
 const Stats = lazy(() => import('./pages/Stats').then(m => ({ default: m.Stats })));
 const Health = lazy(() => import('./pages/Health').then(m => ({ default: m.Health })));
 const MyData = lazy(() => import('./pages/MyData').then(m => ({ default: m.MyData })));
+const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
 
 function PageSpinner() {
   return (
@@ -43,6 +44,7 @@ function ProtectedRoute({ children, ownerOnly = false }: { children: React.React
 function HomeRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
+  if (MOCK_MODE) return <Navigate to="/guilds/mock" replace />;
   if (user?.isOwner) return <ErrorBoundary><Suspense fallback={<PageSpinner />}><Dashboard /></Suspense></ErrorBoundary>;
   return <Navigate to="/guilds" replace />;
 }

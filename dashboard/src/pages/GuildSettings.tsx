@@ -28,6 +28,13 @@ import type {
 } from '../lib/api';
 import { api } from '../lib/api';
 import { buildRssSavePayload } from '../lib/rssSettings';
+import {
+  buildCustomCommandsSavePayload,
+  createCustomCommandDraft,
+  CUSTOM_COMMAND_MAX_COUNT,
+  CUSTOM_COMMAND_ACTION_OPTIONS,
+  CUSTOM_COMMAND_PERMISSION_OPTIONS,
+} from '../lib/customCommands';
 import WelcomeEditor from '../components/WelcomeEditor';
 
 function roleName(name: string): string {
@@ -754,67 +761,415 @@ const INDIVIDUAL_COMMANDS = [
   'serverinfo', 'userinfo', 'botinfo', 'roleinfo', 'rolelist', 'inrole', 'uptime', 'warnings',
 ];
 
-function CustomCommandsTab({ settings, onSave, saving }: TabProps) {
-  const [commands, setCommands] = useState<CustomCommand[]>(settings.customCommands || []);
+function CustomCommandsTab({ settings, guild, onSave, saving }: TabProps) {
+  const [commands, setCommands] = useState<CustomCommand[]>(() => {
+    const initial = Array.isArray(settings.customCommands)
+      ? settings.customCommands.slice(0, CUSTOM_COMMAND_MAX_COUNT)
+      : [];
+    const payload = buildCustomCommandsSavePayload(initial);
+    return payload.ok ? payload.payload : initial;
+  });
   const [disabled, setDisabled] = useState<string[]>(settings.disabledCommands || []);
-  const [draft, setDraft] = useState<CustomCommand>({ name: '', response: '', embed: false, color: null, title: null });
+  const [draft, setDraft] = useState<CustomCommand>(createCustomCommandDraft());
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [tabError, setTabError] = useState<string | null>(null);
 
-  const addCommand = () => {
-    if (!draft.name.trim() || !draft.response.trim()) return;
-    setCommands(prev => [...prev, { ...draft, name: draft.name.toLowerCase().trim() }]);
-    setDraft({ name: '', response: '', embed: false, color: null, title: null });
+  const resetDraft = () => {
+    setDraft(createCustomCommandDraft());
+    setEditingIndex(null);
   };
 
-  const removeCommand = (i: number) => setCommands(prev => prev.filter((_, idx) => idx !== i));
+  const startEdit = (index: number) => {
+    const command = commands[index];
+    if (!command) return;
+
+    setDraft({
+      ...createCustomCommandDraft(),
+      ...command,
+      actionType: command.actionType ?? 'reply',
+      targetRoleId: command.targetRoleId ?? null,
+      requiredRoleIds: command.requiredRoleIds ?? [],
+      allowedChannelIds: command.allowedChannelIds ?? [],
+      requiredPermission: command.requiredPermission ?? null,
+      cooldownSeconds: command.cooldownSeconds ?? 0,
+      enabled: command.enabled !== false,
+      deleteTrigger: !!command.deleteTrigger,
+    });
+    setEditingIndex(index);
+    setTabError(null);
+  };
+
+  const removeCommand = (index: number) => {
+    setCommands(prev => prev.filter((_, idx) => idx !== index));
+
+    if (editingIndex === index) {
+      resetDraft();
+      return;
+    }
+
+    if (editingIndex !== null && editingIndex > index) {
+      setEditingIndex(editingIndex - 1);
+    }
+  };
+
+  const upsertCommand = () => {
+    setTabError(null);
+
+    if (editingIndex === null && commands.length >= CUSTOM_COMMAND_MAX_COUNT) {
+      setTabError(`You can only create up to ${CUSTOM_COMMAND_MAX_COUNT} custom commands per server.`);
+      return;
+    }
+
+    const candidate = editingIndex === null
+      ? [...commands, draft]
+      : commands.map((cmd, idx) => (idx === editingIndex ? draft : cmd));
+
+    const payload = buildCustomCommandsSavePayload(candidate);
+    if (!payload.ok) {
+      setTabError(payload.error);
+      return;
+    }
+
+    setCommands(payload.payload);
+    resetDraft();
+  };
 
   const toggleDisabled = (name: string) => {
     setDisabled(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
   };
 
-  const handleSave = () => onSave({ customCommands: commands, disabledCommands: disabled });
+  const handleSave = () => {
+    const payload = buildCustomCommandsSavePayload(commands);
+    if (!payload.ok) {
+      setTabError(payload.error);
+      return;
+    }
+
+    onSave({ customCommands: payload.payload, disabledCommands: disabled });
+  };
+
+  const limitReached = commands.length >= CUSTOM_COMMAND_MAX_COUNT && editingIndex === null;
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Custom Commands</CardTitle>
-          <CardDescription>Make your own commands that reply with a message or embed when someone types them</CardDescription>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle>Custom Commands</CardTitle>
+            <Badge variant={limitReached ? 'destructive' : 'secondary'}>
+              {commands.length}/{CUSTOM_COMMAND_MAX_COUNT}
+            </Badge>
+          </div>
+          <CardDescription>
+            Build advanced command workflows with role and permission gates, channel constraints, cooldowns, and response rendering.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {tabError && (
+            <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+              {tabError}
+            </div>
+          )}
+
+          {commands.length === 0 && (
+            <p className="text-sm text-gray-400">No custom commands configured yet. Use the workflow builder below to add one.</p>
+          )}
+
           {commands.map((cmd, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-[hsl(var(--muted))]">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-mono text-white">!{cmd.name}</p>
-                <p className="text-xs text-gray-400 truncate">{cmd.response}</p>
+            <div key={`${cmd.name}-${i}`} className="space-y-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-3">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-mono text-white">!{cmd.name}</p>
+                  <p className="text-xs text-gray-400 truncate">{cmd.response}</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  {!cmd.enabled && <Badge variant="destructive">Disabled</Badge>}
+                  {cmd.embed && <Badge variant="secondary">Embed</Badge>}
+                  <Button variant="ghost" size="sm" onClick={() => startEdit(i)}>Edit</Button>
+                  <Button variant="ghost" size="icon" onClick={() => removeCommand(i)}>
+                    <Trash2 className="h-4 w-4 text-red-400" />
+                  </Button>
+                </div>
               </div>
-              {cmd.embed && <Badge variant="secondary">Embed</Badge>}
-              <Button variant="ghost" size="icon" onClick={() => removeCommand(i)}>
-                <Trash2 className="h-4 w-4 text-red-400" />
-              </Button>
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="secondary">Action: {cmd.actionType === 'toggleRole' ? 'Toggle Role' : 'Reply'}</Badge>
+                {cmd.actionType === 'toggleRole' && cmd.targetRoleId && (
+                  <Badge variant="secondary">
+                    Target Role: {roleName(guild.roles.find(r => r.id === cmd.targetRoleId)?.name || cmd.targetRoleId)}
+                  </Badge>
+                )}
+                {cmd.requiredPermission && <Badge variant="secondary">Perm: {cmd.requiredPermission}</Badge>}
+                {cmd.requiredRoleIds.length > 0 && <Badge variant="secondary">Roles: {cmd.requiredRoleIds.length}</Badge>}
+                {cmd.allowedChannelIds.length > 0 && <Badge variant="secondary">Channels: {cmd.allowedChannelIds.length}</Badge>}
+                {cmd.cooldownSeconds > 0 && <Badge variant="secondary">Cooldown: {cmd.cooldownSeconds}s</Badge>}
+                {cmd.deleteTrigger && <Badge variant="secondary">Delete Trigger</Badge>}
+              </div>
             </div>
           ))}
 
           <Separator />
 
-          <div className="space-y-3">
-            <p className="text-sm font-medium text-white">Add Command</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Input value={draft.name} onChange={e => setDraft(p => ({ ...p, name: e.target.value }))} placeholder="Command name" />
-              <div className="flex items-center gap-2">
-                <Label className="text-xs">Send as embed?</Label>
-                <Switch checked={draft.embed} onCheckedChange={v => setDraft(p => ({ ...p, embed: v }))} />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-white">
+                {editingIndex === null ? 'Workflow Builder' : `Editing !${commands[editingIndex]?.name || ''}`}
+              </p>
+              {editingIndex !== null && (
+                <Button variant="ghost" size="sm" onClick={resetDraft}>Cancel Edit</Button>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-3 space-y-3">
+              <p className="text-xs text-gray-300">Visual flow: Trigger -&gt; Access Gate -&gt; Context Gate -&gt; Action</p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
+                <div className="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2">
+                  <p className="font-medium text-white">Trigger</p>
+                  <p className="text-gray-400 font-mono">!{draft.name.trim().toLowerCase() || 'command-name'}</p>
+                </div>
+                <div className="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2">
+                  <p className="font-medium text-white">Access Gate</p>
+                  <p className="text-gray-400">{draft.requiredPermission || 'No permission gate'}</p>
+                  <p className="text-gray-400">{draft.requiredRoleIds.length} required role(s)</p>
+                </div>
+                <div className="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2">
+                  <p className="font-medium text-white">Context Gate</p>
+                  <p className="text-gray-400">{draft.allowedChannelIds.length} channel scope(s)</p>
+                  <p className="text-gray-400">Cooldown: {draft.cooldownSeconds || 0}s</p>
+                </div>
+                <div className="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2">
+                  <p className="font-medium text-white">Action</p>
+                  <p className="text-gray-400">{draft.actionType === 'toggleRole' ? 'Toggle role for mentioned user' : 'Reply only'}</p>
+                  {draft.actionType === 'toggleRole' && (
+                    <p className="text-gray-400">
+                      Role: {draft.targetRoleId ? roleName(guild.roles.find(r => r.id === draft.targetRoleId)?.name || draft.targetRoleId) : 'Not set'}
+                    </p>
+                  )}
+                  <p className="text-gray-400">{draft.embed ? 'Embed response' : 'Text response'}</p>
+                  <p className="text-gray-400">{draft.deleteTrigger ? 'Delete trigger message' : 'Keep trigger message'}</p>
+                </div>
               </div>
             </div>
-            <Textarea value={draft.response} onChange={e => setDraft(p => ({ ...p, response: e.target.value }))} placeholder="Response text..." rows={2} />
-            {draft.embed && (
-              <div className="grid grid-cols-2 gap-3">
-                <Input value={draft.title || ''} onChange={e => setDraft(p => ({ ...p, title: e.target.value }))} placeholder="Embed title" />
-                <Input value={draft.color || ''} onChange={e => setDraft(p => ({ ...p, color: e.target.value }))} placeholder="Color (#hex)" />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label>Command Name</Label>
+                <Input
+                  value={draft.name}
+                  onChange={e => setDraft(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="status-check"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Command Action</Label>
+                <Select
+                  value={draft.actionType}
+                  onValueChange={value => setDraft(prev => ({
+                    ...prev,
+                    actionType: value as CustomCommand['actionType'],
+                    targetRoleId: value === 'toggleRole' ? prev.targetRoleId : null,
+                  }))}
+                >
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CUSTOM_COMMAND_ACTION_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Permission Gate (Optional)</Label>
+                <Select
+                  value={draft.requiredPermission ?? '__none__'}
+                  onValueChange={value => setDraft(prev => ({
+                    ...prev,
+                    requiredPermission: value === '__none__' ? null : value as CustomCommand['requiredPermission'],
+                  }))}
+                >
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No extra permission requirement</SelectItem>
+                    {CUSTOM_COMMAND_PERMISSION_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {draft.actionType === 'toggleRole' && (
+              <div className="space-y-2 max-w-xl">
+                <Label>Role To Toggle On Mentioned User</Label>
+                <RoleSelect
+                  roles={guild.roles}
+                  value={draft.targetRoleId}
+                  onChange={value => setDraft(prev => ({ ...prev, targetRoleId: value }))}
+                  placeholder="Select role to add/remove"
+                />
+                <p className="text-xs text-gray-500">
+                  This command expects a mention or user ID argument, for example: !{draft.name || 'perms'} @user
+                </p>
               </div>
             )}
-            <Button size="sm" onClick={addCommand} disabled={!draft.name.trim() || !draft.response.trim()}>
-              <Plus className="h-4 w-4 mr-1" /> Add Command
-            </Button>
+
+            <div className="space-y-2">
+              <Label>Response</Label>
+              <Textarea
+                value={draft.response}
+                onChange={e => setDraft(prev => ({ ...prev, response: e.target.value }))}
+                placeholder="Welcome {user}, this is {server}."
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label>Enabled</Label>
+                <div className="flex items-center gap-2">
+                  <Switch checked={draft.enabled} onCheckedChange={v => setDraft(prev => ({ ...prev, enabled: v }))} />
+                  <span className="text-xs text-gray-400">Toggle command availability</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Embed Response</Label>
+                <div className="flex items-center gap-2">
+                  <Switch checked={draft.embed} onCheckedChange={v => setDraft(prev => ({ ...prev, embed: v }))} />
+                  <span className="text-xs text-gray-400">Use rich embed format</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Delete Trigger Message</Label>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={draft.deleteTrigger}
+                    onCheckedChange={v => setDraft(prev => ({ ...prev, deleteTrigger: v }))}
+                  />
+                  <span className="text-xs text-gray-400">Clean chat after command</span>
+                </div>
+              </div>
+            </div>
+
+            {draft.embed && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Embed Title</Label>
+                  <Input
+                    value={draft.title || ''}
+                    onChange={e => setDraft(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Command Output"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Embed Color (Hex)</Label>
+                  <Input
+                    value={draft.color || ''}
+                    onChange={e => setDraft(prev => ({ ...prev, color: e.target.value }))}
+                    placeholder="#5865F2"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Required Roles (Optional)</Label>
+                <div className="flex flex-wrap gap-1 min-h-6">
+                  {draft.requiredRoleIds.map(id => {
+                    const role = guild.roles.find(r => r.id === id);
+                    return (
+                      <Badge key={id} variant="secondary" className="gap-1">
+                        {roleName(role?.name || id)}
+                        <X
+                          className="h-3 w-3 cursor-pointer"
+                          onClick={() => setDraft(prev => ({
+                            ...prev,
+                            requiredRoleIds: prev.requiredRoleIds.filter(roleId => roleId !== id),
+                          }))}
+                        />
+                      </Badge>
+                    );
+                  })}
+                </div>
+                <RoleSelect
+                  roles={guild.roles.filter(role => !draft.requiredRoleIds.includes(role.id))}
+                  value={null}
+                  onChange={value => {
+                    if (!value || draft.requiredRoleIds.includes(value)) return;
+                    setDraft(prev => ({
+                      ...prev,
+                      requiredRoleIds: [...prev.requiredRoleIds, value],
+                    }));
+                  }}
+                  placeholder="Add required role..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Allowed Channels (Optional)</Label>
+                <div className="flex flex-wrap gap-1 min-h-6">
+                  {draft.allowedChannelIds.map(id => (
+                    <Badge key={id} variant="secondary" className="gap-1">
+                      {channelName(guild.channels, id)}
+                      <X
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() => setDraft(prev => ({
+                          ...prev,
+                          allowedChannelIds: prev.allowedChannelIds.filter(channelId => channelId !== id),
+                        }))}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+                <ChannelSelect
+                  channels={guild.channels}
+                  value={null}
+                  onChange={value => {
+                    if (!value || draft.allowedChannelIds.includes(value)) return;
+                    setDraft(prev => ({
+                      ...prev,
+                      allowedChannelIds: [...prev.allowedChannelIds, value],
+                    }));
+                  }}
+                  placeholder="Add allowed channel..."
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 max-w-xs">
+              <Label>Cooldown (Seconds)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={3600}
+                value={draft.cooldownSeconds}
+                onChange={e => {
+                  const raw = Number.parseInt(e.target.value, 10);
+                  setDraft(prev => ({
+                    ...prev,
+                    cooldownSeconds: Number.isFinite(raw) ? raw : 0,
+                  }));
+                }}
+                placeholder="0"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={upsertCommand} disabled={limitReached && editingIndex === null}>
+                <Plus className="h-4 w-4 mr-1" />
+                {editingIndex === null ? 'Add Command' : 'Update Command'}
+              </Button>
+              {editingIndex !== null && (
+                <Button size="sm" variant="outline" onClick={resetDraft}>Cancel</Button>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Variables supported in response: {'{user}'}, {'{server}'}, {'{channel}'}, {'{target}'}, {'{role}'}, {'{action}'}
+            </p>
           </div>
         </CardContent>
       </Card>

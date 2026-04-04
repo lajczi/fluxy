@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { api, normalizeSettings, type GuildDetail, type GuildSettings } from '../lib/api';
+import { createMockGuild, createMockSettings } from '../lib/mockDashboardData';
+
+const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
 
 export function useGuildData(guildId: string | undefined) {
   const [guild, setGuild] = useState<GuildDetail | null>(null);
@@ -11,6 +14,11 @@ export function useGuildData(guildId: string | undefined) {
   const savingRef = useRef(false);
 
   const fetchSettings = useCallback((id: string) => {
+    if (MOCK_MODE) {
+      setSettings(prev => normalizeSettings({ ...(prev ?? createMockSettings(id)), guildId: id }));
+      return;
+    }
+
     api.get<GuildSettings>(`/guilds/${id}/settings`)
       .then(s => setSettings(normalizeSettings(s)))
       .catch(() => { });
@@ -18,6 +26,15 @@ export function useGuildData(guildId: string | undefined) {
 
   useEffect(() => {
     if (!guildId) return;
+
+    if (MOCK_MODE) {
+      setGuild(createMockGuild(guildId));
+      setSettings(createMockSettings(guildId));
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -35,6 +52,7 @@ export function useGuildData(guildId: string | undefined) {
 
   useEffect(() => {
     if (!guildId) return;
+    if (MOCK_MODE) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const token = localStorage.getItem('fluxy_token');
@@ -69,6 +87,22 @@ export function useGuildData(guildId: string | undefined) {
   const updateSettings = useCallback(
     async (patch: Partial<GuildSettings>) => {
       if (!guildId) return;
+
+      if (MOCK_MODE) {
+        setSaving(true);
+        savingRef.current = true;
+        setSaveError(null);
+
+        setSettings(prev => {
+          const base = prev ?? createMockSettings(guildId);
+          return normalizeSettings({ ...base, ...patch, guildId });
+        });
+
+        setSaving(false);
+        setTimeout(() => { savingRef.current = false; }, 200);
+        return;
+      }
+
       setSaving(true);
       savingRef.current = true;
       setSaveError(null);

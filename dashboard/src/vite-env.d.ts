@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_GLITCHTIP_DSN: string;
   readonly VITE_GLITCHTIP_ENVIRONMENT: string;
+  readonly VITE_MOCK_MODE?: string;
 }
 
 interface ImportMeta {

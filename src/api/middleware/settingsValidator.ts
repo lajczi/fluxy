@@ -9,6 +9,20 @@ const SNOWFLAKE_RE = /^\d{17,20}$/;
 const MAX_STRING_LENGTH = 2000;
 const MAX_ARRAY_LENGTH = 100;
 const MAX_OBJECT_DEPTH = 5;
+const CUSTOM_COMMAND_MAX_PER_GUILD = 5;
+const CUSTOM_COMMAND_NAME_RE = /^[a-z0-9_-]{1,32}$/;
+const CUSTOM_COMMAND_COLOR_RE = /^#?[0-9a-fA-F]{6}$/;
+const CUSTOM_COMMAND_PERMISSION_VALUES = new Set([
+  'Administrator',
+  'ManageGuild',
+  'ManageRoles',
+  'ManageChannels',
+  'ManageMessages',
+  'KickMembers',
+  'BanMembers',
+  'ModerateMembers',
+]);
+const CUSTOM_COMMAND_ACTION_VALUES = new Set(['reply', 'toggleRole']);
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
@@ -458,20 +472,137 @@ const fieldValidators: Record<string, (value: unknown) => true | string> = {
 
   customCommands(v) {
     if (!Array.isArray(v)) return 'customCommands must be an array';
-    if (v.length > 100) return 'Maximum 100 custom commands';
+    if (v.length > CUSTOM_COMMAND_MAX_PER_GUILD) {
+      return `Maximum ${CUSTOM_COMMAND_MAX_PER_GUILD} custom commands`;
+    }
+
+    const names = new Set<string>();
+
     for (const cmd of v) {
       if (typeof cmd !== 'object' || cmd === null) return 'Each custom command must be an object';
       const c = cmd as Record<string, unknown>;
-      if (typeof c.name !== 'string' || c.name.length > 50) return 'Custom command name must be under 50 characters';
-      if (c.response !== undefined && typeof c.response !== 'string') return 'Custom command response must be a string';
-      if (typeof c.response === 'string' && c.response.length > 2000) return 'Custom command response must be under 2000 characters';
+
+      if (typeof c.name !== 'string' || !CUSTOM_COMMAND_NAME_RE.test(c.name.trim().toLowerCase())) {
+        return 'Custom command name must be 1-32 chars and use a-z, 0-9, - or _';
+      }
+
+      const normalizedName = c.name.trim().toLowerCase();
+      if (names.has(normalizedName)) {
+        return 'Custom command names must be unique';
+      }
+      names.add(normalizedName);
+
+      if (typeof c.response !== 'string' || c.response.trim().length === 0) {
+        return 'Custom command response must be a non-empty string';
+      }
+
+      if (c.response.length > 2000) return 'Custom command response must be under 2000 characters';
+
+      if (c.embed !== undefined && typeof c.embed !== 'boolean') {
+        return 'customCommands[].embed must be boolean';
+      }
+
+      if (c.color !== undefined && c.color !== null) {
+        if (typeof c.color !== 'string' || !CUSTOM_COMMAND_COLOR_RE.test(c.color)) {
+          return 'customCommands[].color must be a valid 6-digit hex color';
+        }
+      }
+
+      if (c.title !== undefined && c.title !== null && !isBoundedString(c.title, 256)) {
+        return 'customCommands[].title must be under 256 characters';
+      }
+
+      if (c.enabled !== undefined && typeof c.enabled !== 'boolean') {
+        return 'customCommands[].enabled must be boolean';
+      }
+
+      const actionType = typeof c.actionType === 'string' ? c.actionType : 'reply';
+      if (c.actionType !== undefined && !CUSTOM_COMMAND_ACTION_VALUES.has(actionType)) {
+        return 'customCommands[].actionType is invalid';
+      }
+
+      if (c.targetRoleId !== undefined && !isSnowflakeOrNull(c.targetRoleId)) {
+        return 'customCommands[].targetRoleId must be a valid role ID';
+      }
+
+      if (actionType === 'toggleRole' && !isSnowflake(c.targetRoleId)) {
+        return 'customCommands[].targetRoleId is required for toggleRole action';
+      }
+
+      if (c.requiredRoleIds !== undefined && !isSnowflakeArray(c.requiredRoleIds, 10)) {
+        return 'customCommands[].requiredRoleIds must be an array of up to 10 role IDs';
+      }
+
+      if (c.allowedChannelIds !== undefined && !isSnowflakeArray(c.allowedChannelIds, 25)) {
+        return 'customCommands[].allowedChannelIds must be an array of up to 25 channel IDs';
+      }
+
+      if (c.requiredPermission !== undefined && c.requiredPermission !== null) {
+        if (typeof c.requiredPermission !== 'string' || !CUSTOM_COMMAND_PERMISSION_VALUES.has(c.requiredPermission)) {
+          return 'customCommands[].requiredPermission is invalid';
+        }
+      }
+
+      if (c.cooldownSeconds !== undefined && !isBoundedInt(c.cooldownSeconds, 0, 3600)) {
+        return 'customCommands[].cooldownSeconds must be between 0 and 3600';
+      }
+
+      if (c.deleteTrigger !== undefined && typeof c.deleteTrigger !== 'boolean') {
+        return 'customCommands[].deleteTrigger must be boolean';
+      }
     }
     return true;
   },
 
   keywordWarnings(v) {
-    if (!Array.isArray(v)) return 'keywordWarnings must be an array';
-    if (v.length > 50) return 'Maximum 50 keyword warnings';
+    if (typeof v !== 'object' || v === null || Array.isArray(v)) {
+      return 'keywordWarnings must be an object';
+    }
+
+    const kw = v as Record<string, unknown>;
+
+    if (kw.enabled !== undefined && typeof kw.enabled !== 'boolean') {
+      return 'keywordWarnings.enabled must be boolean';
+    }
+
+    if (
+      kw.action !== undefined &&
+      kw.action !== 'delete' &&
+      kw.action !== 'warn' &&
+      kw.action !== 'delete+warn'
+    ) {
+      return 'keywordWarnings.action must be delete, warn, or delete+warn';
+    }
+
+    if (kw.keywords !== undefined) {
+      if (!Array.isArray(kw.keywords)) return 'keywordWarnings.keywords must be an array';
+      if (kw.keywords.length > 50) return 'Maximum 50 keyword warnings';
+
+      for (const entry of kw.keywords) {
+        if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+          return 'Each keyword warning must be an object';
+        }
+
+        const keyword = entry as Record<string, unknown>;
+
+        if (!isBoundedString(keyword.pattern, 200) || (keyword.pattern as string).trim().length === 0) {
+          return 'keywordWarnings.keywords[].pattern must be a non-empty string under 200 characters';
+        }
+
+        if (keyword.isRegex !== undefined && typeof keyword.isRegex !== 'boolean') {
+          return 'keywordWarnings.keywords[].isRegex must be boolean';
+        }
+
+        if (keyword.label !== undefined && keyword.label !== null && !isBoundedString(keyword.label, 100)) {
+          return 'keywordWarnings.keywords[].label must be under 100 characters';
+        }
+
+        if (keyword.addedBy !== undefined && keyword.addedBy !== null && !isBoundedString(keyword.addedBy, 64)) {
+          return 'keywordWarnings.keywords[].addedBy must be under 64 characters';
+        }
+      }
+    }
+
     return true;
   },
 

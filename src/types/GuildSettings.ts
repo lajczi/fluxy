@@ -86,12 +86,32 @@ export interface IModeration {
   muteMethod: 'auto' | 'timeout' | 'mute_role';
 }
 
+export type CustomCommandPermission =
+  | 'Administrator'
+  | 'ManageGuild'
+  | 'ManageRoles'
+  | 'ManageChannels'
+  | 'ManageMessages'
+  | 'KickMembers'
+  | 'BanMembers'
+  | 'ModerateMembers';
+
+export type CustomCommandActionType = 'reply' | 'toggleRole';
+
 export interface ICustomCommand {
   name: string;
   response: string;
   embed: boolean;
   color: string | null;
   title: string | null;
+  enabled: boolean;
+  actionType: CustomCommandActionType;
+  targetRoleId: string | null;
+  requiredRoleIds: string[];
+  requiredPermission: CustomCommandPermission | null;
+  allowedChannelIds: string[];
+  cooldownSeconds: number;
+  deleteTrigger: boolean;
 }
 
 export interface IAutomodSpam {

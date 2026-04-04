@@ -11,13 +11,16 @@ import settingsCache from '../utils/settingsCache';
 import isNetworkError from '../utils/isNetworkError';
 import statsService from '../services/StatsService';
 import UserSettings from '../models/UserSettings';
+import parseUserId from '../utils/parseUserId';
 
 const DEFAULT_PREFIXES = [config.prefix];
+const MAX_CUSTOM_COMMANDS_PER_GUILD = 5;
 
 export default class CommandHandler {
   client: Client;
   commands = new Map<string, Command>();
   private cooldowns = new Map<string, number>();
+  private customCommandCooldowns = new Map<string, number>();
   prefix: string;
 
   constructor(client: Client) {
@@ -139,23 +142,218 @@ export default class CommandHandler {
       if (guildId) {
         try {
           const settings = await settingsCache.get(guildId);
-          const customCmd = settings?.customCommands?.find(c => c.name === commandName);
-          if (customCmd) {
-            const response = customCmd.response
-              .replace(/\{user\}/gi, `<@${(message as any).author.id}>`)
+          const customCommands = Array.isArray(settings?.customCommands)
+            ? settings.customCommands.slice(0, MAX_CUSTOM_COMMANDS_PER_GUILD)
+            : [];
+          const customCmd = customCommands.find(c => c.name === commandName);
+
+          if (customCmd && customCmd.enabled !== false) {
+            const disabled = (settings as any)?.disabledCommands ?? [];
+            if (disabled.includes(commandName) || disabled.includes('customcommand')) {
+              return;
+            }
+
+            const channelId = (message as any).channelId || (message as any).channel?.id;
+
+            if (settings?.blacklistedChannels?.includes(channelId)) {
+              const member = await this.getMember(message);
+              const memberRoleIds = (member as any)?.roles?.roleIds ?? [];
+
+              const isStaff = settings.staffRoleId && memberRoleIds.includes(settings.staffRoleId);
+              const isAdmin = (member as any)?.permissions?.has((PermissionFlags as any).Administrator) ||
+                              (member as any)?.permissions?.has((PermissionFlags as any).ManageGuild);
+
+              if (!isStaff && !isAdmin) {
+                return;
+              }
+            }
+
+            if (Array.isArray(customCmd.allowedChannelIds) && customCmd.allowedChannelIds.length > 0) {
+              if (!channelId || !customCmd.allowedChannelIds.includes(channelId)) {
+                return;
+              }
+            }
+
+            const needsRoleGate = Array.isArray(customCmd.requiredRoleIds) && customCmd.requiredRoleIds.length > 0;
+            const needsPermissionGate = typeof customCmd.requiredPermission === 'string' && customCmd.requiredPermission.length > 0;
+
+            if (needsRoleGate || needsPermissionGate) {
+              const member = await this.getMember(message);
+              if (!member) return;
+
+              const memberRoleIds = (member as any)?.roles?.roleIds ?? [];
+
+              if (needsRoleGate) {
+                const hasRole = customCmd.requiredRoleIds.some(roleId => memberRoleIds.includes(roleId));
+                if (!hasRole) {
+                  return;
+                }
+              }
+
+              if (needsPermissionGate) {
+                const permissionName = customCmd.requiredPermission;
+                if (typeof permissionName !== 'string') {
+                  return;
+                }
+
+                const flag = (PermissionFlags as unknown as Record<string, bigint>)[permissionName];
+                if (!flag || !(member as any)?.permissions?.has(flag)) {
+                  return;
+                }
+              }
+            }
+
+            const cooldownSeconds = typeof customCmd.cooldownSeconds === 'number'
+              ? Math.max(0, Math.min(3600, Math.floor(customCmd.cooldownSeconds)))
+              : 0;
+
+            if (cooldownSeconds > 0 && (message as any).author?.id) {
+              const customCooldown = this.checkCustomCommandCooldown(
+                (message as any).author.id,
+                guildId,
+                customCmd.name,
+                cooldownSeconds,
+              );
+
+              if (!customCooldown.ready) {
+                await message.reply(
+                  `Please wait ${customCooldown.remaining} second(s) before using !${customCmd.name} again.`,
+                ).catch(() => {});
+                return;
+              }
+            }
+
+            const actionType = customCmd.actionType === 'toggleRole' ? 'toggleRole' : 'reply';
+            const authorMention = `<@${(message as any).author.id}>`;
+            let targetMention = authorMention;
+            let roleMention = 'configured role';
+            let actionWord = 'sent';
+
+            if (actionType === 'toggleRole') {
+              let guild = (message as any).guild;
+              if (!guild && guildId) {
+                guild = await this.client.guilds.fetch(guildId).catch(() => null);
+              }
+
+              if (!guild) {
+                await message.reply('This custom action can only be used in a server.').catch(() => {});
+                return;
+              }
+
+              const targetRoleId = typeof customCmd.targetRoleId === 'string' && customCmd.targetRoleId.length > 0
+                ? customCmd.targetRoleId
+                : null;
+
+              if (!targetRoleId) {
+                await message.reply(`Custom command !${customCmd.name} is missing its target role.`).catch(() => {});
+                return;
+              }
+
+              const invokingMember = await this.getMember(message);
+              const memberHasManageRoles = (invokingMember as any)?.permissions?.has((PermissionFlags as any).ManageRoles) ||
+                (invokingMember as any)?.permissions?.has((PermissionFlags as any).Administrator);
+
+              if (!memberHasManageRoles) {
+                await message.reply('You need Manage Roles permission to use this custom action command.').catch(() => {});
+                return;
+              }
+
+              const targetUserId = parseUserId(args[0]);
+              if (!targetUserId) {
+                await message.reply(`Usage: ${usedPrefix}${customCmd.name} @user`).catch(() => {});
+                return;
+              }
+
+              let targetMember = guild.members?.get(targetUserId);
+              if (!targetMember) {
+                targetMember = await guild.fetchMember(targetUserId).catch(() => null);
+              }
+
+              if (!targetMember) {
+                await message.reply('Could not find that user in this server.').catch(() => {});
+                return;
+              }
+
+              let targetRole = guild.roles?.get(targetRoleId);
+              if (!targetRole && typeof guild.fetchRole === 'function') {
+                targetRole = await guild.fetchRole(targetRoleId).catch(() => null);
+              }
+
+              if (!targetRole) {
+                await message.reply(`The configured role for !${customCmd.name} no longer exists.`).catch(() => {});
+                return;
+              }
+
+              const botUserId = this.client.user?.id;
+              let botMember = botUserId ? (guild.members?.get(botUserId) ?? null) : null;
+              if (!botMember && botUserId) {
+                botMember = await guild.fetchMember(botUserId).catch(() => null);
+              }
+
+              const botHasManageRoles = (botMember as any)?.permissions?.has((PermissionFlags as any).ManageRoles) ||
+                (botMember as any)?.permissions?.has((PermissionFlags as any).Administrator);
+
+              if (!botHasManageRoles) {
+                await message.reply('I need Manage Roles permission to run this custom action command.').catch(() => {});
+                return;
+              }
+
+              const targetRoleIds = (targetMember as any)?.roles?.roleIds ?? [];
+              const hasRoleAlready = Array.isArray(targetRoleIds) && targetRoleIds.includes(targetRoleId);
+
+              try {
+                if (hasRoleAlready) {
+                  await targetMember.removeRole(targetRoleId);
+                  actionWord = 'removed';
+                } else {
+                  await targetMember.addRole(targetRoleId);
+                  actionWord = 'added';
+                }
+              } catch {
+                await message.reply('I could not update that role (likely due to role hierarchy).').catch(() => {});
+                return;
+              }
+
+              targetMention = `<@${targetMember.id || targetUserId}>`;
+              roleMention = `<@&${targetRoleId}>`;
+            }
+
+            const responseTemplate = typeof customCmd.response === 'string' && customCmd.response.trim().length > 0
+              ? customCmd.response
+              : actionType === 'toggleRole'
+                ? '{target}: role {role} was {action}.'
+                : '{user}';
+
+            const response = responseTemplate
+              .replace(/\{user\}/gi, authorMention)
               .replace(/\{server\}/gi, (message as any).guild?.name || 'this server')
-              .replace(/\{channel\}/gi, `<#${(message as any).channelId || (message as any).channel?.id}>`);
+              .replace(/\{channel\}/gi, channelId ? `<#${channelId}>` : '#unknown-channel')
+              .replace(/\{target\}/gi, targetMention)
+              .replace(/\{role\}/gi, roleMention)
+              .replace(/\{action\}/gi, actionWord);
 
             if (customCmd.embed) {
+              const parsedColor = typeof customCmd.color === 'string'
+                ? parseInt(customCmd.color.replace('#', ''), 16)
+                : NaN;
+
               const embed = new EmbedBuilder()
                 .setDescription(response)
-                .setColor(customCmd.color ? parseInt(customCmd.color.replace('#', ''), 16) : 0x5865F2);
+                .setColor(Number.isFinite(parsedColor) ? parsedColor : 0x5865F2);
+
               if (customCmd.title) embed.setTitle(customCmd.title);
-              statsService.recordCommand(`custom:${customCmd.name}`, guildId ?? undefined, (message as any).author?.id).catch(() => {});
-              return void await message.reply({ embeds: [embed] }).catch(() => {});
+              await message.reply({ embeds: [embed] }).catch(() => {});
+            } else {
+              await message.reply(response).catch(() => {});
             }
+
             statsService.recordCommand(`custom:${customCmd.name}`, guildId ?? undefined, (message as any).author?.id).catch(() => {});
-            return void await message.reply(response).catch(() => {});
+
+            if (customCmd.deleteTrigger && typeof (message as any).delete === 'function') {
+              await (message as any).delete().catch(() => {});
+            }
+
+            return;
           }
         } catch {}
       }
@@ -326,6 +524,38 @@ export default class CommandHandler {
 
     setTimeout(() => {
       this.cooldowns.delete(key);
+    }, cooldownAmount);
+
+    return { ready: true, remaining: 0 };
+  }
+
+  checkCustomCommandCooldown(
+    userId: string,
+    guildId: string,
+    commandName: string,
+    cooldownSeconds: number,
+  ): { ready: boolean; remaining: number } {
+    if (cooldownSeconds <= 0) {
+      return { ready: true, remaining: 0 };
+    }
+
+    const key = `${guildId}:${userId}:custom:${commandName}`;
+    const now = Date.now();
+    const cooldownAmount = cooldownSeconds * 1000;
+
+    if (this.customCommandCooldowns.has(key)) {
+      const expirationTime = this.customCommandCooldowns.get(key)! + cooldownAmount;
+
+      if (now < expirationTime) {
+        const remaining = Math.ceil((expirationTime - now) / 1000);
+        return { ready: false, remaining };
+      }
+    }
+
+    this.customCommandCooldowns.set(key, now);
+
+    setTimeout(() => {
+      this.customCommandCooldowns.delete(key);
     }, cooldownAmount);
 
     return { ready: true, remaining: 0 };

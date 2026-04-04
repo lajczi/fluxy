@@ -15,6 +15,19 @@ import {
   RSS_MIN_POLL_INTERVAL_MINUTES,
 } from '../utils/rssDefaults';
 
+const CUSTOM_COMMAND_MAX_PER_GUILD = 5;
+const CUSTOM_COMMAND_PERMISSION_VALUES = [
+  'Administrator',
+  'ManageGuild',
+  'ManageRoles',
+  'ManageChannels',
+  'ManageMessages',
+  'KickMembers',
+  'BanMembers',
+  'ModerateMembers',
+] as const;
+const CUSTOM_COMMAND_ACTION_VALUES = ['reply', 'toggleRole'] as const;
+
 const keywordEntrySchema = new Schema<IKeywordEntry>({
   pattern: { type: String, required: true },
   isRegex: { type: Boolean, default: false },
@@ -113,6 +126,22 @@ const customCommandSchema = new Schema<ICustomCommand>({
   embed: { type: Boolean, default: false },
   color: { type: String, default: null },
   title: { type: String, default: null },
+  enabled: { type: Boolean, default: true },
+  actionType: {
+    type: String,
+    enum: CUSTOM_COMMAND_ACTION_VALUES,
+    default: 'reply',
+  },
+  targetRoleId: { type: String, default: null },
+  requiredRoleIds: { type: [String], default: [] },
+  requiredPermission: {
+    type: String,
+    enum: CUSTOM_COMMAND_PERMISSION_VALUES,
+    default: null,
+  },
+  allowedChannelIds: { type: [String], default: [] },
+  cooldownSeconds: { type: Number, default: 0, min: 0, max: 3600 },
+  deleteTrigger: { type: Boolean, default: false },
 }, { _id: false });
 
 const automodSpamSchema = new Schema<IAutomodSpam>({
@@ -306,8 +335,8 @@ const settingsSchema = new Schema<GuildSettingsDocument, GuildSettingsModel>({
     type: [customCommandSchema],
     default: [],
     validate: {
-      validator: function (v: ICustomCommand[]) { return v.length <= 50; },
-      message: 'Cannot have more than 50 custom commands',
+      validator: function (v: ICustomCommand[]) { return v.length <= CUSTOM_COMMAND_MAX_PER_GUILD; },
+      message: `Cannot have more than ${CUSTOM_COMMAND_MAX_PER_GUILD} custom commands`,
     },
   },
 
@@ -363,6 +392,12 @@ const settingsSchema = new Schema<GuildSettingsDocument, GuildSettingsModel>({
   onboardingStep: { type: Number, default: 0, min: 0 },
 }, {
   timestamps: true,
+});
+
+settingsSchema.pre('validate', function () {
+  if (Array.isArray(this.customCommands) && this.customCommands.length > CUSTOM_COMMAND_MAX_PER_GUILD) {
+    this.customCommands = this.customCommands.slice(0, CUSTOM_COMMAND_MAX_PER_GUILD);
+  }
 });
 
 

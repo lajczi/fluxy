@@ -234,12 +234,32 @@ export interface Moderation {
   muteMethod: 'auto' | 'timeout' | 'mute_role';
 }
 
+export type CustomCommandPermission =
+  | 'Administrator'
+  | 'ManageGuild'
+  | 'ManageRoles'
+  | 'ManageChannels'
+  | 'ManageMessages'
+  | 'KickMembers'
+  | 'BanMembers'
+  | 'ModerateMembers';
+
+export type CustomCommandActionType = 'reply' | 'toggleRole';
+
 export interface CustomCommand {
   name: string;
   response: string;
   embed: boolean;
   color: string | null;
   title: string | null;
+  enabled: boolean;
+  actionType: CustomCommandActionType;
+  targetRoleId: string | null;
+  requiredRoleIds: string[];
+  requiredPermission: CustomCommandPermission | null;
+  allowedChannelIds: string[];
+  cooldownSeconds: number;
+  deleteTrigger: boolean;
 }
 
 export interface AutomodSpam {
@@ -409,6 +429,7 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
   const primaryBoard = boards[0] ?? normalizeBoard((s as any).starboard ?? {});
   const starboards = boards.length > 0 ? boards : [primaryBoard];
   const rssFeeds = Array.isArray(rss.feeds) ? rss.feeds : [];
+  const rawCustomCommands = Array.isArray(s.customCommands) ? s.customCommands : [];
 
   const normalizedRssFeeds: RssFeed[] = rssFeeds.slice(0, 5).map((feed: any, idx: number) => ({
     id: typeof feed?.id === 'string' && feed.id.trim().length > 0
@@ -429,6 +450,24 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
     includeSummary: feed?.includeSummary !== false,
     includeImage: feed?.includeImage !== false,
     format: feed?.format === 'text' ? 'text' : 'embed',
+  }));
+
+  const normalizedCustomCommands: CustomCommand[] = rawCustomCommands.slice(0, 5).map((cmd: any) => ({
+    name: typeof cmd?.name === 'string' ? cmd.name.trim().toLowerCase() : '',
+    response: typeof cmd?.response === 'string' ? cmd.response : '',
+    embed: !!cmd?.embed,
+    color: typeof cmd?.color === 'string' ? cmd.color : null,
+    title: typeof cmd?.title === 'string' ? cmd.title : null,
+    enabled: cmd?.enabled !== false,
+    actionType: cmd?.actionType === 'toggleRole' ? 'toggleRole' : 'reply',
+    targetRoleId: typeof cmd?.targetRoleId === 'string' ? cmd.targetRoleId : null,
+    requiredRoleIds: Array.isArray(cmd?.requiredRoleIds) ? cmd.requiredRoleIds.filter((id: unknown) => typeof id === 'string') : [],
+    requiredPermission: typeof cmd?.requiredPermission === 'string' ? cmd.requiredPermission : null,
+    allowedChannelIds: Array.isArray(cmd?.allowedChannelIds) ? cmd.allowedChannelIds.filter((id: unknown) => typeof id === 'string') : [],
+    cooldownSeconds: typeof cmd?.cooldownSeconds === 'number'
+      ? Math.max(0, Math.min(3600, Math.floor(cmd.cooldownSeconds)))
+      : 0,
+    deleteTrigger: !!cmd?.deleteTrigger,
   }));
 
   return {
@@ -458,7 +497,7 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
     honeypotAlertRoleId: s.honeypotAlertRoleId ?? null,
     reactionRoles: s.reactionRoles ?? [],
     reactionRoleDMEnabled: s.reactionRoleDMEnabled ?? false,
-    customCommands: s.customCommands ?? [],
+    customCommands: normalizedCustomCommands,
     goodbyeMessage: {
       enabled: gm.enabled ?? false,
       channelId: gm.channelId ?? null,

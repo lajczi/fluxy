@@ -16,7 +16,7 @@ const RESERVED_NAMES = [
   'warnings', 'slowmode', 'nick'
 ];
 
-const MAX_COMMANDS = 50;
+const MAX_COMMANDS = 5;
 const MAX_RESPONSE_LENGTH = 2000;
 
 function parseColor(str?: string): string | null {
@@ -63,7 +63,21 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       return message.reply(`You've reached the maximum of ${MAX_COMMANDS} custom commands. Remove one first.`);
     }
 
-    settings.customCommands.push({ name, response: response.replace(/\\n/g, '\n') });
+    settings.customCommands.push({
+      name,
+      response: response.replace(/\\n/g, '\n'),
+      embed: false,
+      color: null,
+      title: null,
+      enabled: true,
+      actionType: 'reply',
+      targetRoleId: null,
+      requiredRoleIds: [],
+      requiredPermission: null,
+      allowedChannelIds: [],
+      cooldownSeconds: 0,
+      deleteTrigger: false,
+    });
     settings.markModified('customCommands');
     await settings.save();
     settingsCache.invalidate(guild.id);
@@ -213,7 +227,7 @@ function showHelp(message: any) {
       { name: '!customcommand list', value: 'List all custom commands' },
       { name: '!customcommand info <name>', value: 'Show details of a specific command' }
     )
-    .setFooter({ text: 'Use \\n in responses for line breaks. Max 50 commands, 2000 chars each.' });
+    .setFooter({ text: 'Use \\n in responses for line breaks. Max 5 commands, 2000 chars each.' });
 
   return message.reply({ embeds: [embed] });
 }
