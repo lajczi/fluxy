@@ -79,6 +79,12 @@ function sanitizeUpdates(body: Record<string, unknown>): Record<string, unknown>
   return clean;
 }
 
+function asArray<T>(value: T[] | Record<string, T> | null | undefined): T[] {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') return Object.values(value);
+  return [];
+}
+
 export function createGuildsRouter(client: Client, requireGuildAccess: RequestHandler): Router {
   const router = Router();
 
@@ -217,23 +223,28 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       }
     }
 
-    const hasMissingNames = channels.length > 0 && channels.some((ch: any) => !ch.name);
+    const cachedChannels = channels;
+    try {
+      const fetched = asArray(await client.rest.get(Routes.guildChannels(guildId)) as any);
+      if (fetched.length > 0) channels = fetched;
+    } catch { }
+    const hasMissingNames = channels.length > 0 && channels.some((ch: any) => !ch?.name);
     if (channels.length === 0 || hasMissingNames) {
-      try {
-        const fetched = await client.rest.get(Routes.guildChannels(guildId)) as any[];
-        if (Array.isArray(fetched) && fetched.length > 0) channels = fetched;
-      } catch { }
+      channels = cachedChannels;
     }
+
+    const cachedRoles = roles;
+    try {
+      const fetched = asArray(await client.rest.get(Routes.guildRoles(guildId)) as any);
+      if (fetched.length > 0) roles = fetched;
+    } catch { }
     if (roles.length === 0) {
-      try {
-        const fetched = await client.rest.get(Routes.guildRoles(guildId)) as any[];
-        if (Array.isArray(fetched)) roles = fetched;
-      } catch { }
+      roles = cachedRoles;
     }
     if (emojis.length === 0) {
       try {
-        const fetched = await client.rest.get(`/guilds/${guildId}/emojis`) as any[];
-        if (Array.isArray(fetched)) emojis = fetched;
+        const fetched = asArray(await client.rest.get(`/guilds/${guildId}/emojis`) as any);
+        if (fetched.length > 0) emojis = fetched;
       } catch { }
     }
 

@@ -10,6 +10,7 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Save, Loader2, Upload, X, Eye, Palette, Image as ImageIcon, MessageSquare, Mail } from 'lucide-react';
 import type { WelcomeMessage, GuildDetail } from '../lib/api';
+import { buildWelcomeChannelSelectData } from '../lib/welcomeChannelSelect';
 
 const PRESETS: Record<string, { bg: [string, string, string]; accent: string; text: string; subtext: string; count: string }> = {
   default:  { bg: ['#0f0c29', '#1a1a3e', '#24243e'], accent: '#6c72f8', text: '#ffffff', subtext: '#9999bb', count: '#666688' },
@@ -61,8 +62,8 @@ function ChannelSelect({ channels, value, onChange, placeholder = 'Select channe
   onChange: (v: string | null) => void;
   placeholder?: string;
 }) {
-  const categories = channels.filter(c => c.type === 4).sort((a, b) => a.position - b.position);
-  const textChannels = channels.filter(c => c.type === 0 || c.type === 5);
+  const { options, selectableIds } = buildWelcomeChannelSelectData(channels);
+  const needsFallback = !!value && value !== '__none__' && !selectableIds.includes(value);
 
   return (
     <Select value={value ?? '__none__'} onValueChange={v => onChange(v === '__none__' ? null : v)}>
@@ -71,17 +72,18 @@ function ChannelSelect({ channels, value, onChange, placeholder = 'Select channe
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="__none__">None</SelectItem>
-        {categories.map(cat => {
-          const children = textChannels.filter(c => c.parent_id === cat.id).sort((a, b) => a.position - b.position);
-          return [
-            <div key={`cat-${cat.id}`} className="px-2 py-1.5 text-xs font-semibold text-muted-foreground select-none">
-              {cat.name.toUpperCase()}
-            </div>,
-            ...children.map(ch => (
-              <SelectItem key={ch.id} value={ch.id}>  # {ch.name}</SelectItem>
-            ))
-          ];
-        })}
+        {needsFallback && (
+          <SelectItem key={value} value={value!}>#{channels.find(c => c.id === value)?.name || value}</SelectItem>
+        )}
+        {options.map(item =>
+          item.isCategory ? (
+            <div key={item.id} className="px-2 py-1.5 text-xs font-semibold text-muted-foreground select-none">
+              {item.label}
+            </div>
+          ) : (
+            <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>
+          )
+        )}
       </SelectContent>
     </Select>
   );
