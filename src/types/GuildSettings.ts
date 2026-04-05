@@ -199,6 +199,9 @@ export interface IRssFeed {
   route: string | null;
   channelId: string;
   mentionRoleId: string | null;
+  webhookId?: string | null;
+  webhookToken?: string | null;
+  webhookName?: string | null;
   enabled: boolean;
   maxItemsPerPoll: number;
   includeSummary: boolean;

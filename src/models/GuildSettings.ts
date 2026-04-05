@@ -193,6 +193,9 @@ const rssFeedSchema = new Schema<IRssFeed>({
   route: { type: String, default: null },
   channelId: { type: String, required: true },
   mentionRoleId: { type: String, default: null },
+  webhookId: { type: String, default: null },
+  webhookToken: { type: String, default: null },
+  webhookName: { type: String, default: null },
   enabled: { type: Boolean, default: true },
   maxItemsPerPoll: {
     type: Number,

@@ -336,6 +336,9 @@ export interface RssFeed {
   route: string | null;
   channelId: string;
   mentionRoleId: string | null;
+  webhookId: string | null;
+  webhookToken: string | null;
+  webhookName: string | null;
   enabled: boolean;
   maxItemsPerPoll: number;
   includeSummary: boolean;
@@ -443,6 +446,9 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
     route: typeof feed?.route === 'string' ? feed.route : null,
     channelId: typeof feed?.channelId === 'string' ? feed.channelId : '',
     mentionRoleId: typeof feed?.mentionRoleId === 'string' ? feed.mentionRoleId : null,
+    webhookId: typeof feed?.webhookId === 'string' ? feed.webhookId : null,
+    webhookToken: typeof feed?.webhookToken === 'string' ? feed.webhookToken : null,
+    webhookName: typeof feed?.webhookName === 'string' ? feed.webhookName : null,
     enabled: feed?.enabled !== false,
     maxItemsPerPoll: typeof feed?.maxItemsPerPoll === 'number'
       ? Math.max(1, Math.min(10, Math.floor(feed.maxItemsPerPoll)))

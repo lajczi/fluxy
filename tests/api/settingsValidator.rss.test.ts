@@ -113,4 +113,23 @@ describe('validateSettingsUpdate rss validation', () => {
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('rss.pollIntervalMinutes must be between 10 and 1440');
   });
+
+  test('accepts webhook metadata on feed payload', () => {
+    const result = validateSettingsUpdate({
+      rss: {
+        enabled: true,
+        pollIntervalMinutes: 15,
+        feeds: [
+          makeRssFeed({
+            webhookId: '32345678901234567',
+            webhookToken: 'token-abc',
+            webhookName: 'Fluxy RSS',
+          }),
+        ],
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
 });

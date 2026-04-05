@@ -146,6 +146,18 @@ function validateRssFeedEntry(value: unknown): true | string {
     return 'rss.feeds[].mentionRoleId must be a valid role ID';
   }
 
+  if (feed.webhookId !== undefined && !isSnowflakeOrNull(feed.webhookId)) {
+    return 'rss.feeds[].webhookId must be a valid webhook ID';
+  }
+
+  if (feed.webhookToken !== undefined && feed.webhookToken !== null && !isBoundedString(feed.webhookToken, 300)) {
+    return 'rss.feeds[].webhookToken must be under 300 characters';
+  }
+
+  if (feed.webhookName !== undefined && feed.webhookName !== null && !isBoundedString(feed.webhookName, 80)) {
+    return 'rss.feeds[].webhookName must be under 80 characters';
+  }
+
   if (feed.enabled !== undefined && typeof feed.enabled !== 'boolean') {
     return 'rss.feeds[].enabled must be boolean';
   }

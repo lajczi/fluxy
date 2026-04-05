@@ -1,7 +1,9 @@
 import type { Client } from '@fluxerjs/core';
 import { EmbedBuilder } from '@fluxerjs/core';
+import { Routes } from '@fluxerjs/types';
 import type { IRssFeed, IRssSettings } from '../types';
 import config from '../config';
+import GuildSettings from '../models/GuildSettings';
 import RssFeedState, { type IRssFeedState } from '../models/RssFeedState';
 import log from '../utils/consoleLogger';
 import settingsCache from '../utils/settingsCache';
@@ -23,6 +25,11 @@ interface ProcessFeedResult {
   status: 'not_modified' | 'bootstrapped' | 'published' | 'no_new_items' | 'failed';
   publishedCount: number;
   error: string | null;
+}
+
+interface WebhookTarget {
+  id: string;
+  token: string;
 }
 
 export interface ForcePollResult {
@@ -110,6 +117,104 @@ function normalizeRssSettings(settings: unknown): IRssSettings | null {
       : config.rss.defaultPollIntervalMinutes,
     feeds: rss.feeds as IRssFeed[],
   };
+}
+
+function isHttpUrl(value: string | null | undefined): value is string {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function normalizeHost(hostname: string): string {
+  return hostname.toLowerCase().replace(/^www\./, '');
+}
+
+function extractTwitterHandleFromUrl(value: string | null): string | null {
+  if (!value) return null;
+
+  try {
+    const parsed = new URL(value);
+    const host = normalizeHost(parsed.hostname);
+    if (host !== 'x.com' && host !== 'twitter.com') return null;
+
+    const [first, second] = parsed.pathname.split('/').filter(Boolean);
+    if (!first) return null;
+    if (first.toLowerCase() === 'i') return null;
+    if (second && second.toLowerCase() !== 'status') return null;
+
+    if (!/^[A-Za-z0-9_]{1,15}$/.test(first)) return null;
+    return `@${first}`;
+  } catch {
+    return null;
+  }
+}
+
+function extractTwitterHandleFromText(value: string | null): string | null {
+  if (!value) return null;
+  const match = value.match(/@([A-Za-z0-9_]{1,15})/);
+  if (!match) return null;
+  return `@${match[1]}`;
+}
+
+function toRichPreviewLink(value: string): string {
+  try {
+    const parsed = new URL(value);
+    const host = normalizeHost(parsed.hostname);
+    if (host === 'x.com' || host === 'twitter.com') {
+      parsed.hostname = 'fxtwitter.com';
+      return parsed.toString();
+    }
+  } catch {
+    return value;
+  }
+
+  return value;
+}
+
+function pickWebhookDisplayName(feed: IRssFeed, parsedTitle: string | null, itemAuthor: string | null, itemLink: string): string {
+  const configured = typeof feed.name === 'string' ? feed.name.trim() : '';
+  if (configured) return truncate(configured, 80);
+
+  const linkedHandle = extractTwitterHandleFromUrl(itemLink);
+  if (linkedHandle) return linkedHandle;
+
+  const authorHandle = extractTwitterHandleFromText(itemAuthor);
+  if (authorHandle) return authorHandle;
+
+  if (itemAuthor && itemAuthor.trim().length > 0) {
+    return truncate(itemAuthor.trim(), 80);
+  }
+
+  if (parsedTitle && parsedTitle.trim().length > 0) {
+    return truncate(parsedTitle.trim(), 80);
+  }
+
+  return 'Fluxy RSS';
+}
+
+function pickWebhookAvatarUrl(sourceImageUrl: string | null, itemLink: string): string | null {
+  if (isHttpUrl(sourceImageUrl)) return sourceImageUrl;
+
+  const handle = extractTwitterHandleFromUrl(itemLink);
+  if (!handle) return null;
+
+  const name = handle.replace(/^@/, '');
+  return `https://unavatar.io/x/${name}`;
+}
+
+function serializeEmbed(embed: EmbedBuilder): unknown {
+  const asAny = embed as any;
+  if (typeof asAny.toJSON === 'function') {
+    return asAny.toJSON();
+  }
+  if (asAny.data && typeof asAny.data === 'object') {
+    return asAny.data;
+  }
+  return embed;
 }
 
 class RssPollerService {
@@ -347,6 +452,105 @@ class RssPollerService {
     return dueFeeds;
   }
 
+  private async persistWebhookTarget(
+    guildId: string,
+    feed: IRssFeed,
+    target: WebhookTarget,
+    webhookName: string | null,
+  ): Promise<void> {
+    feed.webhookId = target.id;
+    feed.webhookToken = target.token;
+    feed.webhookName = webhookName;
+
+    try {
+      await GuildSettings.updateOne(
+        { guildId, 'rss.feeds.id': feed.id },
+        {
+          $set: {
+            'rss.feeds.$.webhookId': target.id,
+            'rss.feeds.$.webhookToken': target.token,
+            'rss.feeds.$.webhookName': webhookName,
+          },
+        },
+      );
+      (settingsCache as any).invalidate?.(guildId);
+    } catch (err: any) {
+      log.warn('RSS', `[${guildId}] failed to persist webhook for feed ${feed.id}: ${err?.message || err}`);
+    }
+  }
+
+  private async createWebhookTarget(client: Client, feed: IRssFeed, name: string): Promise<WebhookTarget | null> {
+    const rest = (client as any)?.rest;
+    if (!rest || typeof rest.post !== 'function') return null;
+
+    try {
+      const created = await rest.post(
+        Routes.channelWebhooks(feed.channelId),
+        {
+          auth: true,
+          body: {
+            name: truncate(name || 'Fluxy RSS', 80),
+          },
+        },
+      ) as { id?: string; token?: string | null };
+
+      if (typeof created?.id !== 'string' || !created.id) return null;
+      if (typeof created?.token !== 'string' || !created.token) return null;
+
+      return {
+        id: created.id,
+        token: created.token,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async resolveWebhookTarget(
+    client: Client,
+    guildId: string,
+    feed: IRssFeed,
+    parsedTitle: string | null,
+  ): Promise<WebhookTarget | null> {
+    if (typeof feed.webhookId === 'string' && feed.webhookId && typeof feed.webhookToken === 'string' && feed.webhookToken) {
+      return {
+        id: feed.webhookId,
+        token: feed.webhookToken,
+      };
+    }
+
+    const webhookName = truncate(
+      (typeof feed.webhookName === 'string' && feed.webhookName.trim().length > 0
+        ? feed.webhookName
+        : typeof feed.name === 'string' && feed.name.trim().length > 0
+          ? feed.name
+          : parsedTitle || 'Fluxy RSS').trim(),
+      80,
+    );
+
+    const created = await this.createWebhookTarget(client, feed, webhookName);
+    if (!created) return null;
+
+    await this.persistWebhookTarget(guildId, feed, created, webhookName);
+    return created;
+  }
+
+  private async executeWebhookPayload(
+    client: Client,
+    target: WebhookTarget,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    const rest = (client as any)?.rest;
+    if (!rest || typeof rest.post !== 'function') {
+      throw new Error('Client REST transport unavailable for webhook execution');
+    }
+
+    await rest.post(Routes.webhookExecute(target.id, target.token), {
+      auth: false,
+      body: payload,
+    });
+  }
+
   private async processFeed(client: Client, due: DueFeed): Promise<ProcessFeedResult> {
     const now = new Date();
     const { guildId, feed, state } = due;
@@ -423,26 +627,98 @@ class RssPollerService {
       const toPublish = unseen.slice(0, maxItems).reverse();
 
       if (toPublish.length > 0) {
-        let channel: any = client.channels.get(feed.channelId);
-        if (!channel) {
-          channel = await client.channels.fetch(feed.channelId).catch(() => null);
-        }
-        if (!channel || typeof channel.send !== 'function') {
-          throw new Error(`Channel ${feed.channelId} is unavailable for feed ${feed.id}`);
-        }
+        let fallbackChannel: any = null;
+        const resolveFallbackChannel = async (): Promise<any> => {
+          if (fallbackChannel && typeof fallbackChannel.send === 'function') {
+            return fallbackChannel;
+          }
+
+          let channel: any = client.channels.get(feed.channelId);
+          if (!channel) {
+            channel = await client.channels.fetch(feed.channelId).catch(() => null);
+          }
+
+          if (!channel || typeof channel.send !== 'function') {
+            throw new Error(`Channel ${feed.channelId} is unavailable for feed ${feed.id}`);
+          }
+
+          fallbackChannel = channel;
+          return channel;
+        };
+
+        let webhookTarget = await this.resolveWebhookTarget(client, guildId, feed, parsed.title);
+        let webhookRetryAttempted = false;
+
+        const sendWithFallback = async (
+          webhookName: string,
+          webhookPayload: Record<string, unknown>,
+          fallbackPayload: unknown,
+        ): Promise<void> => {
+          if (webhookTarget) {
+            try {
+              await this.executeWebhookPayload(client, webhookTarget, webhookPayload);
+              return;
+            } catch {
+              if (!webhookRetryAttempted) {
+                webhookRetryAttempted = true;
+                const recreated = await this.createWebhookTarget(client, feed, webhookName);
+                if (recreated) {
+                  webhookTarget = recreated;
+                  await this.persistWebhookTarget(guildId, feed, recreated, webhookName);
+                  try {
+                    await this.executeWebhookPayload(client, webhookTarget, webhookPayload);
+                    return;
+                  } catch {
+                    webhookTarget = null;
+                  }
+                } else {
+                  webhookTarget = null;
+                }
+              } else {
+                webhookTarget = null;
+              }
+            }
+          }
+
+          const channel = await resolveFallbackChannel();
+          await channel.send(fallbackPayload as any);
+        };
+
+        const sourceTitle = feed.name || parsed.title || 'RSS Feed';
 
         for (const item of toPublish) {
           const mention = feed.mentionRoleId ? `<@&${feed.mentionRoleId}>` : null;
+          const richPreviewLink = toRichPreviewLink(item.link);
+          const webhookName = pickWebhookDisplayName(feed, parsed.title, item.author, item.link);
+          const webhookAvatarUrl = pickWebhookAvatarUrl(parsed.sourceImageUrl, item.link);
+
+          const webhookBasePayload: Record<string, unknown> = {
+            username: webhookName,
+            allowed_mentions: mention
+              ? { parse: [], roles: [feed.mentionRoleId as string] }
+              : { parse: [] },
+          };
+
+          if (webhookAvatarUrl) {
+            webhookBasePayload.avatar_url = webhookAvatarUrl;
+          }
 
           if (feed.format === 'text') {
-            const lines = [
-              item.title,
-              item.link,
-            ];
-            const content = `${mention ? `${mention}\n` : ''}${lines.join('\n')}`;
-            await channel.send(content);
+            const lines: string[] = [];
+            if (mention) lines.push(mention);
+            lines.push(item.title);
+            lines.push(richPreviewLink);
+
+            const content = lines.join('\n');
+            await sendWithFallback(
+              webhookName,
+              {
+                ...webhookBasePayload,
+                content,
+              },
+              content,
+            );
           } else {
-            const sourceTitle = feed.name || parsed.title || 'RSS Feed';
             const title = truncate(item.title || sourceTitle, 256);
             const summary = buildEmbedSummary(item, feed.includeSummary);
             const description = summary
@@ -460,9 +736,13 @@ class RssPollerService {
             }
 
             if (item.author) {
-              embed.setAuthor({
+              const authorPayload: Record<string, unknown> = {
                 name: truncate(item.author, 200),
-              });
+              };
+              if (webhookAvatarUrl) {
+                authorPayload.icon_url = webhookAvatarUrl;
+              }
+              embed.setAuthor(authorPayload as any);
             }
 
             if (summary) {
@@ -477,10 +757,28 @@ class RssPollerService {
               embed.setImage(item.imageUrl);
             }
 
-            const payload = mention
-              ? { content: mention, embeds: [embed] }
-              : { embeds: [embed] };
-            await channel.send(payload);
+            const contentLines: string[] = [];
+            if (mention) contentLines.push(mention);
+            contentLines.push(richPreviewLink);
+
+            const webhookPayload: Record<string, unknown> = {
+              ...webhookBasePayload,
+              embeds: [serializeEmbed(embed)],
+            };
+
+            const content = contentLines.join('\n').trim();
+            if (content) {
+              webhookPayload.content = content;
+            }
+
+            const fallbackPayload: Record<string, unknown> = {
+              embeds: [embed],
+            };
+            if (content) {
+              fallbackPayload.content = content;
+            }
+
+            await sendWithFallback(webhookName, webhookPayload, fallbackPayload);
           }
         }
       }

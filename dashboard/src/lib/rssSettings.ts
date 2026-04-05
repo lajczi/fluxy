@@ -8,6 +8,9 @@ export interface RssFeedPayload {
   route: string | null;
   channelId: string;
   mentionRoleId: string | null;
+  webhookId: string | null;
+  webhookToken: string | null;
+  webhookName: string | null;
   enabled: boolean;
   maxItemsPerPoll: number;
   includeSummary: boolean;
@@ -45,6 +48,9 @@ function normalizeFeed(feed: RssFeedPayload): RssFeedPayload {
     route: route || null,
     channelId: (feed.channelId || '').trim(),
     mentionRoleId: feed.mentionRoleId || null,
+    webhookId: typeof feed.webhookId === 'string' ? (feed.webhookId.trim() || null) : null,
+    webhookToken: typeof feed.webhookToken === 'string' ? (feed.webhookToken.trim() || null) : null,
+    webhookName: typeof feed.webhookName === 'string' ? (feed.webhookName.trim() || null) : null,
     maxItemsPerPoll: clampNumber(feed.maxItemsPerPoll, RSS_MIN_ITEMS_PER_POLL, RSS_MAX_ITEMS_PER_POLL),
     format,
   };

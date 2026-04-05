@@ -2,6 +2,7 @@ const mockSettingsGet = jest.fn();
 const mockFetchFeed = jest.fn();
 const mockRssFind = jest.fn();
 const mockRssFindOneAndUpdate = jest.fn();
+const mockGuildSettingsUpdateOne = jest.fn();
 const mockLogWarn = jest.fn();
 const mockLogInfo = jest.fn();
 const mockLogOk = jest.fn();
@@ -40,6 +41,13 @@ jest.mock('../../src/models/RssFeedState', () => ({
   },
 }));
 
+jest.mock('../../src/models/GuildSettings', () => ({
+  __esModule: true,
+  default: {
+    updateOne: (...args: any[]) => mockGuildSettingsUpdateOne(...args),
+  },
+}));
+
 jest.mock('../../src/utils/consoleLogger', () => ({
   __esModule: true,
   default: {
@@ -70,6 +78,7 @@ jest.mock('@fluxerjs/core', () => {
 });
 
 import rssPollerService from '../../src/services/RssPollerService';
+import { Routes } from '@fluxerjs/types';
 
 function makeFeed(overrides: Record<string, unknown> = {}) {
   return {
@@ -493,5 +502,117 @@ describe('RssPollerService', () => {
       ]),
     );
     expect(embed.author).toEqual(expect.objectContaining({ name: 'bone' }));
+  });
+
+  test('uses channel webhook with source profile metadata when rest is available', async () => {
+    const sendMock = jest.fn().mockResolvedValue(undefined);
+    const webhookPayloads: Array<Record<string, unknown>> = [];
+
+    const restPost = jest.fn(async (route: string, options: any) => {
+      if (route === Routes.channelWebhooks('12345678901234567')) {
+        return { id: 'wh-1', token: 'tok-1' };
+      }
+
+      if (route === Routes.webhookExecute('wh-1', 'tok-1')) {
+        webhookPayloads.push(options?.body ?? {});
+        return { id: 'msg-1' };
+      }
+
+      throw new Error(`Unexpected route: ${route}`);
+    });
+
+    const client = {
+      ...makeClient(sendMock),
+      rest: {
+        post: restPost,
+      },
+    } as any;
+
+    mockSettingsGet.mockResolvedValue({
+      guildId: 'g1',
+      rss: {
+        enabled: true,
+        pollIntervalMinutes: 15,
+        feeds: [makeFeed({ name: null, mentionRoleId: null })],
+      },
+    });
+
+    mockRssFind.mockReturnValue({
+      lean: jest.fn().mockResolvedValue([
+        {
+          guildId: 'g1',
+          feedId: 'feed-1',
+          seenItemIds: ['item-1'],
+          consecutiveFailures: 0,
+          lastCheckedAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+      ]),
+    });
+
+    mockFetchFeed.mockResolvedValue({
+      feedUrl: 'https://example.com/feed.xml',
+      title: 'Twitter @HELLDIVERS2',
+      link: 'https://x.com/helldivers2',
+      description: null,
+      sourceImageUrl: 'https://pbs.twimg.com/profile_images/hd2.jpg',
+      etag: 'etag-4',
+      lastModified: 'Thu, 03 Apr 2026 00:00:00 GMT',
+      notModified: false,
+      items: [
+        {
+          key: 'item-2',
+          title: 'HELlDIVERS 2',
+          link: 'https://x.com/helldivers2/status/2040444809219916065',
+          description: 'New stratagem report',
+          publishedAt: null,
+          author: 'HELLDIVERS 2',
+          imageUrl: null,
+        },
+        {
+          key: 'item-1',
+          title: 'First item',
+          link: 'https://example.com/1',
+          description: null,
+          publishedAt: null,
+          author: null,
+          imageUrl: null,
+        },
+      ],
+    });
+
+    mockRssFindOneAndUpdate.mockResolvedValue(null);
+    mockGuildSettingsUpdateOne.mockResolvedValue({ modifiedCount: 1 });
+
+    (rssPollerService as any).client = client;
+    await (rssPollerService as any).pollTick();
+
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(restPost).toHaveBeenCalledWith(
+      Routes.channelWebhooks('12345678901234567'),
+      expect.objectContaining({
+        auth: true,
+        body: expect.objectContaining({ name: expect.any(String) }),
+      }),
+    );
+    expect(restPost).toHaveBeenCalledWith(
+      Routes.webhookExecute('wh-1', 'tok-1'),
+      expect.objectContaining({ auth: false, body: expect.any(Object) }),
+    );
+
+    expect(webhookPayloads).toHaveLength(1);
+    expect(webhookPayloads[0]).toMatchObject({
+      username: '@helldivers2',
+      avatar_url: 'https://pbs.twimg.com/profile_images/hd2.jpg',
+    });
+    expect(String(webhookPayloads[0].content)).toContain('https://fxtwitter.com/helldivers2/status/2040444809219916065');
+    expect(mockGuildSettingsUpdateOne).toHaveBeenCalledWith(
+      { guildId: 'g1', 'rss.feeds.id': 'feed-1' },
+      expect.objectContaining({
+        $set: expect.objectContaining({
+          'rss.feeds.$.webhookId': 'wh-1',
+          'rss.feeds.$.webhookToken': 'tok-1',
+        }),
+      }),
+    );
   });
 });

@@ -17,6 +17,9 @@ function makeFeed(overrides: Partial<RssFeedPayload> = {}): RssFeedPayload {
     route: null,
     channelId: '12345678901234567',
     mentionRoleId: '22345678901234567',
+    webhookId: null,
+    webhookToken: null,
+    webhookName: null,
     enabled: true,
     maxItemsPerPoll: 3,
     includeSummary: true,
@@ -52,6 +55,29 @@ describe('buildRssSavePayload', () => {
       mentionRoleId: null,
       maxItemsPerPoll: RSS_MAX_ITEMS_PER_POLL,
       format: 'text',
+    });
+  });
+
+  test('preserves webhook metadata fields', () => {
+    const result = buildRssSavePayload({
+      enabled: true,
+      pollIntervalMinutes: 15,
+      feeds: [
+        makeFeed({
+          webhookId: '32345678901234567',
+          webhookToken: 'token-abc',
+          webhookName: 'Fluxy RSS',
+        }),
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.payload.feeds[0]).toMatchObject({
+      webhookId: '32345678901234567',
+      webhookToken: 'token-abc',
+      webhookName: 'Fluxy RSS',
     });
   });
 

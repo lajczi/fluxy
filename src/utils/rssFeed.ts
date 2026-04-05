@@ -35,6 +35,7 @@ export interface FetchedFeed {
   title: string | null;
   link: string | null;
   description: string | null;
+  sourceImageUrl: string | null;
   etag: string | null;
   lastModified: string | null;
   notModified: boolean;
@@ -344,6 +345,7 @@ function parseRss2(xml: Record<string, unknown>): {
   title: string | null;
   link: string | null;
   description: string | null;
+  sourceImageUrl: string | null;
   items: FeedItem[];
 } {
   const channel = (xml.rss as Record<string, unknown>)?.channel as Record<string, unknown> | undefined;
@@ -384,6 +386,11 @@ function parseRss2(xml: Record<string, unknown>): {
     title: readString(channel.title),
     link: extractLink(channel.link),
     description: stripHtml(readString(channel.description)),
+    sourceImageUrl:
+      extractLink(channel.image) ||
+      extractLink(channel['itunes:image']) ||
+      extractLink(channel['media:thumbnail']) ||
+      null,
     items,
   };
 }
@@ -392,6 +399,7 @@ function parseAtom(xml: Record<string, unknown>): {
   title: string | null;
   link: string | null;
   description: string | null;
+  sourceImageUrl: string | null;
   items: FeedItem[];
 } {
   const feed = xml.feed as Record<string, unknown> | undefined;
@@ -457,6 +465,7 @@ function parseAtom(xml: Record<string, unknown>): {
     title: readString(feed.title),
     link: feedLink,
     description: stripHtml(readString(feed.subtitle)),
+    sourceImageUrl: extractLink(feed.icon) || extractLink(feed.logo) || null,
     items,
   };
 }
@@ -465,6 +474,7 @@ function parseXmlFeed(xmlString: string): {
   title: string | null;
   link: string | null;
   description: string | null;
+  sourceImageUrl: string | null;
   items: FeedItem[];
 } {
   let parsed: Record<string, unknown>;
@@ -515,6 +525,7 @@ export async function fetchFeed(target: FeedTarget, options: FetchFeedOptions): 
         title: null,
         link: null,
         description: null,
+        sourceImageUrl: null,
         etag,
         lastModified,
         notModified: true,
@@ -541,6 +552,7 @@ export async function fetchFeed(target: FeedTarget, options: FetchFeedOptions): 
       title: parsed.title,
       link: parsed.link,
       description: parsed.description,
+      sourceImageUrl: parsed.sourceImageUrl,
       etag,
       lastModified,
       notModified: false,
