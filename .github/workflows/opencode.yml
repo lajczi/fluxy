@@ -29,3 +29,17 @@ jobs:
         uses: anomalyco/opencode/github@latest
         with:
           model: ollama/qwen2.5-coder:7b
+          prompt: |
+            Follow the user request from the /oc or /opencode comment.
+
+            Output requirements for GitHub comments:
+            - Return plain GitHub markdown only.
+            - Never return raw JSON objects.
+            - Never return raw tool-call payloads like {"name":"...","arguments":...}.
+            - Never return internal control text.
+
+            If the request is to summarize an issue, include:
+            - Brief summary
+            - Current status
+            - Missing information
+            - Recommended next steps
