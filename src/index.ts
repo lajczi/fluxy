@@ -11,6 +11,7 @@ import isNetworkError from './utils/isNetworkError';
 import log from './utils/consoleLogger';
 import GuildSettings from './models/GuildSettings';
 import { getWorkerStats } from './utils/workerStats';
+import { startInvitePollFallback, stopInvitePollFallback } from './utils/invitePollFallback';
 
 
 const origHandleHello = (WebSocketShard.prototype as any).handleHello;
@@ -95,6 +96,7 @@ const GUILD_ID_IN_ROOT = new Set([
 
 function extractGuildId(d: any, t: string | undefined): string | undefined {
   if (d?.guild_id) return String(d.guild_id);
+  if (d?.guild?.id) return String(d.guild.id);
   if (t && GUILD_ID_IN_ROOT.has(t)) {
     return String(d?.id ?? d?.properties?.id ?? '');
   }
@@ -498,6 +500,8 @@ client.on(Events.Ready, () => {
     }
   }, 15000);
 
+  startInvitePollFallback(client, ownsGuild);
+
   setTimeout(() => {
     client.rest.get('/gateway/bot').then((gw: any) => {
       const limit = gw?.session_start_limit;
@@ -596,6 +600,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
   log.info('Shutdown', `Received ${signal}`);
 
   try {
+    stopInvitePollFallback();
     client.destroy();
     log.step('Client destroyed', null);
 
