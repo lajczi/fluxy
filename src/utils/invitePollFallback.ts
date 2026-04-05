@@ -8,8 +8,8 @@ const permissionWarned = new Set<string>();
 function parsePollMs(): number {
   const raw = process.env.INVITE_POLL_MS;
   if (raw === '0' || raw === 'false') return 0;
-  const n = parseInt(raw ?? '60000', 10);
-  return Number.isFinite(n) && n >= 5000 ? n : 60000;
+  const n = parseInt(raw ?? '0', 10);
+  return Number.isFinite(n) && n >= 5000 ? n : 0;
 }
 
 export function startInvitePollFallback(
@@ -22,7 +22,7 @@ export function startInvitePollFallback(
     return;
   }
 
-  async function pollPass(label: 'baseline' | 'delta'): Promise<void> {
+  async function pollPass(): Promise<void> {
     for (const guild of client.guilds?.values?.() ?? []) {
       const gid = guild?.id as string;
       if (!gid || !shouldProcessGuild(gid)) continue;
@@ -42,10 +42,10 @@ export function startInvitePollFallback(
   }
 
   void (async () => {
-    await pollPass('baseline');
+    await pollPass();
     log.info('Invites', `Invite poll fallback active (every ${ms}ms)`);
     pollTimer = setInterval(() => {
-      pollPass('delta').catch((e) => log.error('Invites', e?.message || e));
+      pollPass().catch((e) => log.error('Invites', e?.message || e));
     }, ms);
   })();
 }
