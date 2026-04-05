@@ -28,7 +28,7 @@ jobs:
       - name: Run opencode
         uses: anomalyco/opencode/github@latest
         with:
-          model: ollama/qwen2.5-coder:7b
+          model: ${{ (contains(github.event.comment.body, 'summarize') || contains(github.event.comment.body, 'summary') || contains(github.event.comment.body, 'explain') || contains(github.event.comment.body, 'triage')) && 'ollama/qwen2.5:7b' || 'ollama/qwen2.5-coder:7b' }}
           prompt: |
             Follow the user request from the /oc or /opencode comment.
 
@@ -37,9 +37,10 @@ jobs:
             - Never return raw JSON objects.
             - Never return raw tool-call payloads like {"name":"...","arguments":...}.
             - Never return internal control text.
+            - Do not wrap your entire response in a fenced code block unless the user explicitly asks.
 
-            If the request is to summarize an issue, include:
-            - Brief summary
+            For summarize or explain requests, include concise sections for:
+            - Summary
             - Current status
             - Missing information
-            - Recommended next steps
+            - Next steps
