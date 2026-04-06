@@ -1,4 +1,4 @@
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder } from '@erinjs/core';
 import config from '../config';
 import { logServerEvent } from './logger';
 

@@ -3,7 +3,7 @@ import GuildSettings from '../../models/GuildSettings';
 import StarboardMessage from '../../models/StarboardMessage';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
-import { EmbedBuilder, PermissionFlags } from '@fluxerjs/core';
+import { EmbedBuilder, PermissionFlags } from '@erinjs/core';
 import { t, normalizeLocale } from '../../i18n';
 import { getStarboards, getStarEmoji, getStarColor } from '../../utils/starboardBoards';
 
@@ -514,7 +514,7 @@ const command: Command = {
           if (!board || !board.channelId) return void await message.reply(t(lang, 'commands.admin.starboard.force.noStarboardChannel', { prefix }));
 
           try {
-            const { Routes } = await import('@fluxerjs/types');
+            const { Routes } = await import('@erinjs/types');
             const msgData = await client.rest.get(Routes.channelMessage(targetChannelId, targetMessageId)) as any;
             if (!msgData?.id) return void await message.reply(t(lang, 'commands.admin.starboard.force.couldNotFetchMessage'));
 
@@ -590,7 +590,7 @@ const command: Command = {
             const channelId = entry.starboardChannelId || boardChannelId || boards[0]?.channelId;
             if (entry.starboardMessageId && channelId) {
               try {
-                const { Routes } = await import('@fluxerjs/types');
+                const { Routes } = await import('@erinjs/types');
                 await client.rest.delete(Routes.channelMessage(channelId, entry.starboardMessageId));
               } catch {}
             }

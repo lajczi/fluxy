@@ -1,4 +1,4 @@
-import { Routes } from '@fluxerjs/types';
+import { Routes } from '@erinjs/types';
 
 const counts = new Map<string, number>();
 

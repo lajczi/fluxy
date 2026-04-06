@@ -1,5 +1,5 @@
 import { Router, type RequestHandler } from 'express';
-import type { Client } from '@fluxerjs/core';
+import type { Client } from '@erinjs/core';
 import type CommandHandler from '../../handlers/CommandHandler';
 import type { AuthRequest } from '../middleware/auth';
 

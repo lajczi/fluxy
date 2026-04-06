@@ -3,7 +3,7 @@ import { logServerEvent } from '../utils/logger';
 import settingsCache from '../utils/settingsCache';
 import * as memberCounter from '../utils/memberCounter';
 import { generateWelcomeCard } from '../utils/welcomeCard';
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder } from '@erinjs/core';
 
 const event: BotEvent = {
   name: 'guildMemberUpdate',

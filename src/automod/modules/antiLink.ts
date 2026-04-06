@@ -1,4 +1,4 @@
-import { Routes } from '@fluxerjs/types';
+import { Routes } from '@erinjs/types';
 import isNetworkError from '../../utils/isNetworkError';
 import * as messageDeleteQueue from '../../utils/messageDeleteQueue';
 import * as embedQueue from '../../utils/embedQueue';

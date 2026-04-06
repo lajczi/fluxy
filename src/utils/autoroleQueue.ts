@@ -2,7 +2,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import type { Client } from '@fluxerjs/core';
+import type { Client } from '@erinjs/core';
 import isNetworkError from './isNetworkError';
 
 const QUEUE_FILE      = path.join(__dirname, '../../data/autorole-queue.json');

@@ -5,7 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import path from 'path';
-import type { Client } from '@fluxerjs/core';
+import type { Client } from '@erinjs/core';
 import type CommandHandler from '../handlers/CommandHandler';
 import config from '../config';
 import { errorHandler } from './middleware/errorHandler';

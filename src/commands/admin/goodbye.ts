@@ -2,7 +2,7 @@ import type { Command } from '../../types';
 import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder } from '@erinjs/core';
 
 const HEX_RE = /^#[0-9a-f]{6}$/i;
 

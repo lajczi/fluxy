@@ -1,4 +1,4 @@
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder } from '@erinjs/core';
 import type { Command } from '../../types';
 import parseUserId from '../../utils/parseUserId';
 import Warning from '../../models/Warning';

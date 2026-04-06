@@ -1,6 +1,6 @@
 import isNetworkError from '../../utils/isNetworkError';
 import * as embedQueue from '../../utils/embedQueue';
-import { Routes } from '@fluxerjs/types';
+import { Routes } from '@erinjs/types';
 
 
 export const DEFAULT_USER_THRESHOLD = 5;

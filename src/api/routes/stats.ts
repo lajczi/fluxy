@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { Client } from '@fluxerjs/core';
+import type { Client } from '@erinjs/core';
 import Stat from '../../models/Stat';
 import ModerationLog from '../../models/ModerationLog';
 

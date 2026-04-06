@@ -1,6 +1,6 @@
-import type { Client } from '@fluxerjs/core';
-import { EmbedBuilder } from '@fluxerjs/core';
-import { Routes } from '@fluxerjs/types';
+import type { Client } from '@erinjs/core';
+import { EmbedBuilder } from '@erinjs/core';
+import { Routes } from '@erinjs/types';
 import type { IRssFeed, IRssSettings } from '../types';
 import config from '../config';
 import GuildSettings from '../models/GuildSettings';

@@ -39,7 +39,7 @@ export function useGuildData(guildId: string | undefined) {
     setError(null);
 
     Promise.all([
-      api.get<GuildDetail>(`/guilds/${guildId}`),
+      api.get<GuildDetail>(`/guilds/${guildId}`, { skipCache: true }),
       api.get<GuildSettings>(`/guilds/${guildId}/settings`),
     ])
       .then(([g, s]) => {

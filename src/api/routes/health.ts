@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import os from 'os';
-import type { Client } from '@fluxerjs/core';
+import type { Client } from '@erinjs/core';
 import pidusage from 'pidusage';
 import logBuffer from '../../services/LogBuffer';
 

@@ -1,4 +1,4 @@
-import type { Client, Message } from '@fluxerjs/core';
+import type { Client, Message } from '@erinjs/core';
 
 export interface Command {
   name: string;

@@ -1,4 +1,4 @@
-import { EmbedBuilder, Routes } from '@fluxerjs/core';
+import { EmbedBuilder, Routes } from '@erinjs/core';
 import type { Command } from '../../types';
 import isNetworkError from '../../utils/isNetworkError';
 import settingsCache from '../../utils/settingsCache';

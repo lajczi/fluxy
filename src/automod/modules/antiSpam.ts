@@ -1,5 +1,5 @@
-import { Routes } from '@fluxerjs/types';
-import { PermissionFlags } from '@fluxerjs/core';
+import { Routes } from '@erinjs/types';
+import { PermissionFlags } from '@erinjs/core';
 import isNetworkError from '../../utils/isNetworkError';
 import * as moderationQueue from '../../utils/moderationQueue';
 import * as messageDeleteQueue from '../../utils/messageDeleteQueue';

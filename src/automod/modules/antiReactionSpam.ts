@@ -1,8 +1,8 @@
 import isNetworkError from '../../utils/isNetworkError';
-import { PermissionFlags } from '@fluxerjs/core';
+import { PermissionFlags } from '@erinjs/core';
 import * as moderationQueue from '../../utils/moderationQueue';
 import * as embedQueue from '../../utils/embedQueue';
-import { Routes } from '@fluxerjs/types';
+import { Routes } from '@erinjs/types';
 
 const reactionTracker = new Map<string, { timestamps: number[] }>();
 const violationTracker = new Map<string, { violations: number[] }>();

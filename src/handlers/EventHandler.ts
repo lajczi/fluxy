@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import * as GlitchTip from '@sentry/node';
-import type { Client } from '@fluxerjs/core';
+import type { Client } from '@erinjs/core';
 import type { BotEvent } from '../types';
 
 export default class EventHandler {

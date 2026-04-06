@@ -3,7 +3,7 @@ import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import isNetworkError from '../../utils/isNetworkError';
 import { generateCaptcha } from '../../utils/captchaCard';
-import { EmbedBuilder, PermissionFlags } from '@fluxerjs/core';
+import { EmbedBuilder, PermissionFlags } from '@erinjs/core';
 import { t, normalizeLocale } from '../../i18n';
 
 export const verificationSessions = new Map<string, {

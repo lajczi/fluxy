@@ -1,5 +1,5 @@
 import type { Command } from '../../types';
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder } from '@erinjs/core';
 import GuildSettings from '../../models/GuildSettings';
 import isNetworkError from '../../utils/isNetworkError';
 import { t, normalizeLocale } from '../../i18n';

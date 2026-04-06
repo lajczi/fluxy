@@ -4,8 +4,8 @@ import { logServerEvent } from '../utils/logger';
 import isNetworkError from '../utils/isNetworkError';
 import * as roleQueue from '../utils/roleQueue';
 import StarboardMessage from '../models/StarboardMessage';
-import { Routes } from '@fluxerjs/types';
-import { EmbedBuilder } from '@fluxerjs/core';
+import { Routes } from '@erinjs/types';
+import { EmbedBuilder } from '@erinjs/core';
 import { getActiveStarboards, getStarEmoji, getStarColor } from '../utils/starboardBoards';
 import { isReactionOnBotMessage } from '../utils/reactionLogFilter';
 

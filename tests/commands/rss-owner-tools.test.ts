@@ -3,7 +3,7 @@ const mockRssStateFind = jest.fn();
 const mockForcePollGuild = jest.fn();
 const mockGetRuntimeState = jest.fn();
 
-jest.mock('@fluxerjs/core', () => ({
+jest.mock('@erinjs/core', () => ({
   EmbedBuilder: jest.fn().mockImplementation(() => {
     const embed: any = {
       data: {

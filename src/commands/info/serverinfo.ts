@@ -1,5 +1,5 @@
-import { EmbedBuilder } from '@fluxerjs/core';
-import { Routes } from '@fluxerjs/types';
+import { EmbedBuilder } from '@erinjs/core';
+import { Routes } from '@erinjs/types';
 import type { Command } from '../../types';
 import isNetworkError from '../../utils/isNetworkError';
 import * as memberCounter from '../../utils/memberCounter';

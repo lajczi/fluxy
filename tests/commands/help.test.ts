@@ -1,4 +1,4 @@
-jest.mock('@fluxerjs/core', () => ({
+jest.mock('@erinjs/core', () => ({
   EmbedBuilder: jest.fn().mockImplementation(() => {
     const embed: any = {
       data: {

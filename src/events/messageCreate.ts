@@ -1,7 +1,7 @@
 // i lwk want to remove this entire thing but people want it instead of tickets for some reason 🥀
 
 import type { BotEvent } from '../types';
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder } from '@erinjs/core';
 import automod from '../automod';
 import ghostPing from '../automod/modules/ghostPing';
 import honeypot from '../automod/modules/honeypot';
@@ -251,7 +251,7 @@ const event: BotEvent = {
 
                 if (session.panelChannelId && session.panelMessageId) {
                   try {
-                    const { Routes } = await import('@fluxerjs/types');
+                    const { Routes } = await import('@erinjs/types');
                     await client.rest.delete(
                       `${Routes.channelMessageReaction(session.panelChannelId, session.panelMessageId, '✅')}/${message.author.id}`
                     );

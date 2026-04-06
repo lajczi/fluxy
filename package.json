@@ -68,7 +68,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@fluxerjs/core": "^1.2.4",
+    "@erinjs/core": "^1.2.4",
+    "@erinjs/types": "^1.2.4",
+    "@erinjs/ws": "^1.2.4",
     "@napi-rs/canvas": "^0.1.97",
     "@sentry/node": "^10.47.0",
     "@types/compression": "^1.8.1",

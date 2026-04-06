@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder } from '@erinjs/core';
 import type { Command } from '../../types';
 import type { IRssFeed, IRssSettings } from '../../types';
 import GuildSettings from '../../models/GuildSettings';

@@ -4,7 +4,7 @@ import { logModAction } from '../../utils/logger';
 import ModerationLog from '../../models/ModerationLog';
 import isNetworkError from '../../utils/isNetworkError';
 import { isPermDenied } from '../../utils/permError';
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder } from '@erinjs/core';
 import settingsCache from '../../utils/settingsCache';
 import { t, normalizeLocale } from '../../i18n';
 

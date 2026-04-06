@@ -1,4 +1,4 @@
-import type { Client } from '@fluxerjs/core';
+import type { Client } from '@erinjs/core';
 import isNetworkError from './isNetworkError';
 
 const RETRY_INTERVAL = 30_000;

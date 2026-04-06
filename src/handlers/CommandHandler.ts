@@ -3,8 +3,8 @@
 import fs from 'fs';
 import path from 'path';
 import * as GlitchTip from '@sentry/node';
-import { PermissionFlags, EmbedBuilder } from '@fluxerjs/core';
-import type { Client, Message } from '@fluxerjs/core';
+import { PermissionFlags, EmbedBuilder } from '@erinjs/core';
+import type { Client, Message } from '@erinjs/core';
 import type { Command } from '../types';
 import config from '../config';
 import settingsCache from '../utils/settingsCache';

@@ -1,4 +1,4 @@
-import type { Client } from '@fluxerjs/core';
+import type { Client } from '@erinjs/core';
 
 export interface BotEvent {
   name: string;

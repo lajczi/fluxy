@@ -1,6 +1,6 @@
 import type { Command } from '../../types';
-import { PermissionFlags, EmbedBuilder } from '@fluxerjs/core';
-import { Routes } from '@fluxerjs/types';
+import { PermissionFlags, EmbedBuilder } from '@erinjs/core';
+import { Routes } from '@erinjs/types';
 import config from '../../config';
 import LockdownState from '../../models/LockdownState';
 import GuildSettings from '../../models/GuildSettings';

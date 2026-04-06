@@ -4,7 +4,7 @@ import { logServerEvent } from '../utils/logger';
 import * as messageCache from '../utils/messageCache';
 import StarboardMessage from '../models/StarboardMessage';
 import settingsCache from '../utils/settingsCache';
-import { Routes } from '@fluxerjs/types';
+import { Routes } from '@erinjs/types';
 import { getStarboards } from '../utils/starboardBoards';
 
 const event: BotEvent = {

@@ -6,8 +6,8 @@ import settingsCache from '../../utils/settingsCache';
 import parseUserId from '../../utils/parseUserId';
 import isNetworkError from '../../utils/isNetworkError';
 import config from '../../config';
-import { EmbedBuilder } from '@fluxerjs/core';
-import { Routes } from '@fluxerjs/types';
+import { EmbedBuilder } from '@erinjs/core';
+import { Routes } from '@erinjs/types';
 import * as messageDeleteQueue from '../../utils/messageDeleteQueue';
 
 const EMOJI_APPLY = '✅';

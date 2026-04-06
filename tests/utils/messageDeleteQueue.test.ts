@@ -1,6 +1,6 @@
 export {};
 
-jest.mock('@fluxerjs/types', () => ({
+jest.mock('@erinjs/types', () => ({
   Routes: {
     channelMessage: (channelId: string, messageId: string) => `/channels/${channelId}/messages/${messageId}`,
   },

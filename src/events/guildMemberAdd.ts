@@ -6,7 +6,7 @@ import { logServerEvent } from '../utils/logger';
 import * as memberCounter from '../utils/memberCounter';
 import { generateWelcomeCard } from '../utils/welcomeCard';
 import { retrySend } from '../utils/retrySend';
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder } from '@erinjs/core';
 import GlobalBan from '../models/GlobalBan';
 import GlobalBanPrompt from '../models/GlobalBanPrompt';
 import { recordJoin, sendRaidAlert, isRaidActive } from '../utils/raidDetector';

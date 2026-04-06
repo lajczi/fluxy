@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { Client } from '@fluxerjs/core';
+import type { Client } from '@erinjs/core';
 
 async function getGuildCount(client: any): Promise<number> {
   if (typeof client.fetchTotalGuildCount === 'function') {

@@ -1,8 +1,8 @@
 import './instrument';
 
 import * as GlitchTip from '@sentry/node';
-import { Client, GatewayOpcodes, Events } from '@fluxerjs/core';
-import { WebSocketShard, WebSocketManager } from '@fluxerjs/ws';
+import { Client, GatewayOpcodes, Events } from '@erinjs/core';
+import { WebSocketShard, WebSocketManager } from '@erinjs/ws';
 import mongoose from 'mongoose';
 import config from './config';
 import CommandHandler from './handlers/CommandHandler';
@@ -11,7 +11,6 @@ import isNetworkError from './utils/isNetworkError';
 import log from './utils/consoleLogger';
 import GuildSettings from './models/GuildSettings';
 import { getWorkerStats } from './utils/workerStats';
-import { startInvitePollFallback, stopInvitePollFallback } from './utils/invitePollFallback';
 
 
 const origHandleHello = (WebSocketShard.prototype as any).handleHello;
@@ -103,7 +102,7 @@ function extractGuildId(d: any, t: string | undefined): string | undefined {
   return undefined;
 }
 
-const { Guild, Role } = require('@fluxerjs/core');
+const { Guild, Role } = require('@erinjs/core');
 if (Guild && Role) {
   Guild.prototype.fetchRoles = async function (this: any) {
     const data = await this.client.rest.get(`/guilds/${this.id}/roles`);
@@ -500,8 +499,6 @@ client.on(Events.Ready, () => {
     }
   }, 15000);
 
-  startInvitePollFallback(client, ownsGuild);
-
   setTimeout(() => {
     client.rest.get('/gateway/bot').then((gw: any) => {
       const limit = gw?.session_start_limit;
@@ -600,7 +597,6 @@ async function gracefulShutdown(signal: string): Promise<void> {
   log.info('Shutdown', `Received ${signal}`);
 
   try {
-    stopInvitePollFallback();
     client.destroy();
     log.step('Client destroyed', null);
 

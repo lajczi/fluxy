@@ -1,4 +1,4 @@
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder } from '@erinjs/core';
 import * as memberCounter from './memberCounter';
 import { retrySend } from './retrySend';
 

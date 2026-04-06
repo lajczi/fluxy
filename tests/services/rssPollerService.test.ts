@@ -57,7 +57,7 @@ jest.mock('../../src/utils/consoleLogger', () => ({
   },
 }));
 
-jest.mock('@fluxerjs/core', () => {
+jest.mock('@erinjs/core', () => {
   class MockEmbedBuilder {
     public data: Record<string, unknown> = { fields: [] };
 
@@ -78,7 +78,7 @@ jest.mock('@fluxerjs/core', () => {
 });
 
 import rssPollerService from '../../src/services/RssPollerService';
-import { Routes } from '@fluxerjs/types';
+import { Routes } from '@erinjs/types';
 
 function makeFeed(overrides: Record<string, unknown> = {}) {
   return {

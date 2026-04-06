@@ -1,5 +1,5 @@
-import { EmbedBuilder, PermissionFlags } from '@fluxerjs/core';
-import type { Client, GuildChannel } from '@fluxerjs/core';
+import { EmbedBuilder, PermissionFlags } from '@erinjs/core';
+import type { Client, GuildChannel } from '@erinjs/core';
 import settingsCache from './settingsCache';
 import isNetworkError from './isNetworkError';
 import * as embedQueue from './embedQueue';

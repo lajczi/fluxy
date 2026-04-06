@@ -1,6 +1,6 @@
 'use strict';
 
-jest.mock('@fluxerjs/core', () => ({
+jest.mock('@erinjs/core', () => ({
   PermissionFlags: {
     Administrator: 0x8n,
     SendMessages: 0x800n,

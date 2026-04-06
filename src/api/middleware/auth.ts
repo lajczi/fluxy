@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import type { Client } from '@fluxerjs/core';
+import type { Client } from '@erinjs/core';
 import crypto from 'crypto';
 import config from '../../config';
 

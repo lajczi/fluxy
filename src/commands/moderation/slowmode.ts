@@ -1,5 +1,5 @@
 import type { Command } from '../../types';
-import { PermissionFlags } from '@fluxerjs/core';
+import { PermissionFlags } from '@erinjs/core';
 import parseDuration from '../../utils/parseDuration';
 import formatDuration from '../../utils/formatDuration';
 import isNetworkError from '../../utils/isNetworkError';

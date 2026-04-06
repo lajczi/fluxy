@@ -1,6 +1,6 @@
 import type { Command } from '../../types';
-import { EmbedBuilder } from '@fluxerjs/core';
-import { Routes } from '@fluxerjs/types';
+import { EmbedBuilder } from '@erinjs/core';
+import { Routes } from '@erinjs/types';
 
 const CHECK_DELAY_MS = 80;
 const BAR_LENGTH = 12;

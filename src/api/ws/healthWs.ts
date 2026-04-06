@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { Server as HttpServer } from 'http';
-import type { Client } from '@fluxerjs/core';
+import type { Client } from '@erinjs/core';
 import pidusage from 'pidusage';
 import os from 'os';
 import { verifyWsToken } from '../middleware/wsAuth';

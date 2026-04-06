@@ -1,4 +1,4 @@
-import { Routes } from '@fluxerjs/types';
+import { Routes } from '@erinjs/types';
 
 const BOT_MESSAGE_CACHE_TTL_MS = 5 * 60 * 1000;
 const BOT_MESSAGE_CACHE_MAX_SIZE = 3000;

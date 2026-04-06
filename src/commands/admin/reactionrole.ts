@@ -3,7 +3,7 @@ import GuildSettings from '../../models/GuildSettings';
 import settingsCache from '../../utils/settingsCache';
 import { canManageRole } from '../../utils/permissions';
 import isNetworkError from '../../utils/isNetworkError';
-import { Routes } from '@fluxerjs/types';
+import { Routes } from '@erinjs/types';
 import { t, normalizeLocale } from '../../i18n';
 
 async function resolveChannel(arg: string, guild: any, client: any): Promise<any> {

@@ -5,7 +5,7 @@ import isNetworkError from '../../utils/isNetworkError';
 import { generateWelcomeCard, PRESETS } from '../../utils/welcomeCard';
 import * as bgImageCache from '../../utils/bgImageCache';
 import * as memberCounter from '../../utils/memberCounter';
-import { EmbedBuilder } from '@fluxerjs/core';
+import { EmbedBuilder } from '@erinjs/core';
 
 const HEX_RE = /^#[0-9a-f]{6}$/i;
 

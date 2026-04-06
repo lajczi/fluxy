@@ -1,4 +1,4 @@
-import { Routes } from '@fluxerjs/types';
+import { Routes } from '@erinjs/types';
 import type { Command } from '../../types';
 import { logModAction } from '../../utils/logger';
 import isNetworkError from '../../utils/isNetworkError';

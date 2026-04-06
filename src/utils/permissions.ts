@@ -1,4 +1,4 @@
-import { PermissionFlags } from '@fluxerjs/core';
+import { PermissionFlags } from '@erinjs/core';
 
 interface MemberLike {
   id: string;

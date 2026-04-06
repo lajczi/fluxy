@@ -1,5 +1,5 @@
-import type { Client } from '@fluxerjs/core';
-import { Routes } from '@fluxerjs/types';
+import type { Client } from '@erinjs/core';
+import { Routes } from '@erinjs/types';
 import { encodeReactionForRoute } from './encodeReactionForRoute';
 
 const PREV_EMOJI = '⬅️';

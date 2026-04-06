@@ -13,7 +13,7 @@ const IDS = {
   message:    '40000000000000001',
 };
 
-jest.mock('@fluxerjs/core', () => ({
+jest.mock('@erinjs/core', () => ({
   PermissionFlags: {
     Administrator: 0x8n,
     BanMembers: 0x4n,

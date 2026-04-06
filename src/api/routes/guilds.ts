@@ -1,7 +1,7 @@
 import { Router, type RequestHandler } from 'express';
-import type { Client } from '@fluxerjs/core';
-import { EmbedBuilder, PermissionFlags } from '@fluxerjs/core';
-import { Routes } from '@fluxerjs/types';
+import type { Client } from '@erinjs/core';
+import { EmbedBuilder, PermissionFlags } from '@erinjs/core';
+import { Routes } from '@erinjs/types';
 import type { AuthRequest } from '../middleware/auth';
 import GuildSettings from '../../models/GuildSettings';
 import config from '../../config';
@@ -83,6 +83,24 @@ function asArray<T>(value: T[] | Record<string, T> | null | undefined): T[] {
   if (Array.isArray(value)) return value;
   if (value && typeof value === 'object') return Object.values(value);
   return [];
+}
+
+function getGuildChannelCacheFallback(client: Client, guild: any, guildId: string): any[] {
+  const cachedGuildChannels = Array.from(guild?.channels?.values?.() || []);
+  if (cachedGuildChannels.length > 0) return cachedGuildChannels;
+
+  const cachedClientChannels = Array.from(((client as any).channels?.values?.() || []) as Iterable<any>).filter((channel: any) => {
+    const channelGuildId = channel?.guildId ?? channel?.guild_id ?? channel?.guild?.id ?? null;
+    return channelGuildId === guildId;
+  });
+
+  if (cachedClientChannels.length > 0 && typeof guild?.channels?.set === 'function') {
+    for (const channel of cachedClientChannels) {
+      guild.channels.set(channel.id, channel);
+    }
+  }
+
+  return cachedClientChannels;
 }
 
 export function createGuildsRouter(client: Client, requireGuildAccess: RequestHandler): Router {
@@ -174,7 +192,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       guildName = guild.name;
       guildIcon = (guild as any).icon || null;
       guildOwnerId = (guild as any).ownerId || null;
-      channels = Array.from((guild as any).channels?.values?.() || []);
+      channels = getGuildChannelCacheFallback(client, guild, guildId);
       roles = Array.from((guild as any).roles?.values?.() || []);
     } else {
       let fetched = false;
