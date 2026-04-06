@@ -6,7 +6,7 @@ import { join } from 'path';
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 
 const CACHE_DIR = join(__dirname, '..', '..', 'data', 'bg-cache');
-const MAX_SIZE  = 2 * 1024 * 1024;
+const MAX_SIZE = 2 * 1024 * 1024;
 
 function urlToFilename(url: string): string {
   const hash = createHash('sha256').update(url).digest('hex').slice(0, 16);

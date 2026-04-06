@@ -166,7 +166,7 @@ describe('SettingsCache.enable / disable', () => {
 describe('SettingsCache.update', () => {
   test('invalidates entry and re-fetches from DB, returning updated settings', async () => {
     const original = { guildId: 'g1', logChannelId: 'old' };
-    const updated  = { guildId: 'g1', logChannelId: 'newChannel' };
+    const updated = { guildId: 'g1', logChannelId: 'newChannel' };
 
     mockFindOneResolve(original);
     await cache.get('g1');

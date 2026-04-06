@@ -10,10 +10,10 @@ const multipliers: Record<DurationUnit, number> = {
 
 export default function parseDuration(str: string | null | undefined): number | null {
   if (!str || typeof str !== 'string') return null;
-  
+
   const match = str.trim().match(/^(\d+)(s|m|h|d|w)$/);
   if (!match) return null;
-  
+
   const [, amount, unit] = match;
   return parseInt(amount, 10) * multipliers[unit as DurationUnit];
 }

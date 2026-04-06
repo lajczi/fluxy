@@ -1,11 +1,11 @@
 const MAX_PATTERN_LENGTH = 200;
 
 const DANGEROUS_PATTERNS = [
-  /\(.+[+*]\)\s*[+*]/,         // (x+)+ or (x*)* etc.
-  /\(.+\{.+\}\)\s*[+*{]/,     // (x{2,})+
-  /\(.+[+*]\)\s*\{/,           // (x+){2,}
-  /(\.\*){2,}/,                 // consecutive .* patterns
-  /\([^)]*\|[^)]*\)[+*]/,      // alternation inside quantified group: (a|a)+
+  /\(.+[+*]\)\s*[+*]/, // (x+)+ or (x*)* etc.
+  /\(.+\{.+\}\)\s*[+*{]/, // (x{2,})+
+  /\(.+[+*]\)\s*\{/, // (x+){2,}
+  /(\.\*){2,}/, // consecutive .* patterns
+  /\([^)]*\|[^)]*\)[+*]/, // alternation inside quantified group: (a|a)+
 ];
 
 export function isSafeRegex(pattern: string): { safe: boolean; reason?: string } {

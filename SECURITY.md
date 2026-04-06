@@ -24,5 +24,5 @@ We will acknowledge receipt as soon as we can and work on a fix and coordinated 
 
 ## Scope
 
-In scope: this repository’s bot code, API, and bundled dashboard as shipped here. 
+In scope: this repository’s bot code, API, and bundled dashboard as shipped here.
 Out of scope: third-party services, Fluxer's platform, or issues that require physical access to a server you control—use standard server hardening and secrets management.
