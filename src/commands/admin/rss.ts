@@ -154,7 +154,7 @@ const command: Command = {
     let initialSettings: any = null;
     let lang = 'en';
     try {
-      initialSettings = await GuildSettings.getOrCreate(guild.id);
+      initialSettings = await settingsCache.get(guild.id);
       lang = normalizeLocale(initialSettings?.language);
     } catch {}
 

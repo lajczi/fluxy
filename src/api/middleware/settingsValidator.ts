@@ -43,6 +43,7 @@ const validation = {
   mustBeValidMessageId: (field: string) => validatorT('mustBeValidMessageId', { field }),
   mustBeValidId: (field: string) => validatorT('mustBeValidId', { field }),
   maxAllowed: (label: string, max: number) => validatorT('maxAllowed', { label, max }),
+  customCommandsMaxAllowed: (max: number) => validatorT('customCommandsMaxAllowed', { max }),
   eachStringLengthRange: (label: string, min: number, max: number) =>
     validatorT('eachStringLengthRange', { label, min, max }),
   mustBeRange: (field: string, min: number, max: number) => validatorT('mustBeRange', { field, min, max }),
@@ -58,6 +59,7 @@ const validation = {
   mustBeNonEmptyStringUnder: (field: string, max: number) => validatorT('mustBeNonEmptyStringUnder', { field, max }),
   mustBeValidHexColor: (field: string) => validatorT('mustBeValidHexColor', { field }),
   mustBeUnique: (field: string) => validatorT('mustBeUnique', { field }),
+  customCommandNamesMustBeUnique: () => validatorT('customCommandNamesMustBeUnique'),
   isInvalid: (field: string) => validatorT('isInvalid', { field }),
   isRequiredForAction: (field: string, action: string) => validatorT('isRequiredForAction', { field, action }),
   canContainAtMost: (field: string, max: number, itemType: string) =>
@@ -543,7 +545,7 @@ const fieldValidators: Record<string, (value: unknown) => true | string> = {
   customCommands(v) {
     if (!Array.isArray(v)) return validation.mustBeArray('customCommands');
     if (v.length > CUSTOM_COMMAND_MAX_PER_GUILD) {
-      return validation.maxAllowed('custom commands', CUSTOM_COMMAND_MAX_PER_GUILD);
+      return validation.customCommandsMaxAllowed(CUSTOM_COMMAND_MAX_PER_GUILD);
     }
 
     const names = new Set<string>();
@@ -558,7 +560,7 @@ const fieldValidators: Record<string, (value: unknown) => true | string> = {
 
       const normalizedName = c.name.trim().toLowerCase();
       if (names.has(normalizedName)) {
-        return validation.mustBeUnique('customCommands[].name');
+        return validation.customCommandNamesMustBeUnique();
       }
       names.add(normalizedName);
 
