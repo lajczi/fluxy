@@ -34,4 +34,18 @@ describe('buildWelcomeChannelSelectData', () => {
     ]);
     expect(result.selectableIds).toEqual(['queue']);
   });
+
+  test('includes Fluxer extended link channels and still excludes voice/category channels', () => {
+    const result = buildWelcomeChannelSelectData([
+      { id: 'cat', name: 'news', type: 4, parent_id: null, position: 0 },
+      { id: 'announce', name: 'announcements', type: 998, parent_id: null, position: 1 } as any,
+      { id: 'voice', name: 'voice', type: 2, parent_id: null, position: 2 },
+    ]);
+
+    expect(result.options).toEqual([
+      { id: 'announce', label: '# announcements', isCategory: false },
+      { id: 'cat', label: 'NEWS', isCategory: true },
+    ]);
+    expect(result.selectableIds).toEqual(['announce']);
+  });
 });

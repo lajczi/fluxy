@@ -5,6 +5,13 @@ import * as memberCounter from '../utils/memberCounter';
 import { generateWelcomeCard } from '../utils/welcomeCard';
 import { EmbedBuilder } from '@erinjs/core';
 
+function resolveWelcomeTriggerRoleId(settings: any, welcomeMessage: any): string | null {
+  return welcomeMessage?.triggerRoleId
+    ?? settings?.verification?.verifiedRoleId
+    ?? settings?.autoroleId
+    ?? null;
+}
+
 const event: BotEvent = {
   name: 'guildMemberUpdate',
 
@@ -77,14 +84,14 @@ const event: BotEvent = {
           const wm = settings.welcomeMessage;
           if (!wm?.enabled || !wm.channelId || wm.trigger !== 'role') return;
 
-          const triggerRoleId = wm.triggerRoleId || settings.autoroleId;
+          const triggerRoleId = resolveWelcomeTriggerRoleId(settings, wm);
           if (!triggerRoleId || !added.includes(triggerRoleId)) return;
 
           let welcomeChannel: any;
           try {
             const channelsMap = guild.channels?.cache || guild.channels;
             welcomeChannel = channelsMap?.get(wm.channelId)
-              ?? await guild.channels.fetch(wm.channelId).catch(() => null);
+              ?? await client.channels.fetch(wm.channelId).catch(() => null);
           } catch {
             welcomeChannel = null;
           }
@@ -98,7 +105,7 @@ const event: BotEvent = {
 
           let roleName: string | null = null;
           if (wm.showRole) {
-            const rid = wm.triggerRoleId || settings.autoroleId;
+            const rid = resolveWelcomeTriggerRoleId(settings, wm);
             if (rid) {
               const role = guild.roles?.get?.(rid);
               roleName = role?.name || null;

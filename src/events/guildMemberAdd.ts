@@ -195,7 +195,7 @@ const event: BotEvent = {
       try {
         const channelsMap = guild.channels?.cache || guild.channels;
         welcomeChannel = channelsMap?.get(wm.channelId)
-          ?? await guild.channels.fetch(wm.channelId).catch(() => null);
+          ?? await client.channels.fetch(wm.channelId).catch(() => null);
       } catch {
         welcomeChannel = null;
       }

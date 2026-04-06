@@ -89,6 +89,31 @@ function ChannelSelect({ channels, value, onChange, placeholder = 'Select channe
   );
 }
 
+function RoleSelect({ roles, value, onChange, placeholder = 'Select role' }: {
+  roles: GuildDetail['roles'];
+  value: string | null;
+  onChange: (v: string | null) => void;
+  placeholder?: string;
+}) {
+  const sortedRoles = [...roles].sort((a, b) => b.position - a.position);
+
+  return (
+    <Select value={value ?? '__none__'} onValueChange={v => onChange(v === '__none__' ? null : v)}>
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none__">None</SelectItem>
+        {sortedRoles.map(role => (
+          <SelectItem key={role.id} value={role.id}>
+            {role.name.startsWith('@') ? role.name : `@${role.name}`}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 function CardPreview({ card, showRole }: {
   card: WelcomeMessage['card'];
   showRole: boolean;
@@ -337,6 +362,21 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
               </Select>
             </div>
           </div>
+
+          {welcome.trigger === 'role' && (
+            <div className="space-y-2">
+              <Label>Trigger Role</Label>
+              <RoleSelect
+                roles={guild.roles}
+                value={welcome.triggerRoleId}
+                onChange={v => update({ triggerRoleId: v })}
+                placeholder="Select the role that should trigger the welcome"
+              />
+              <p className="text-xs text-gray-500">
+                Optional explicit role. If unset, Fluxy falls back to the verified role first, then autorole.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Welcome Message</Label>

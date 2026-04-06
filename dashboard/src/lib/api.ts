@@ -45,7 +45,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
+    const body = await res.json().catch(() => ({ error: res.statusText })) as { error?: string; [key: string]: unknown };
     const error = new Error(body.error || `HTTP ${res.status}`);
 
     if (res.status !== 401 && res.status !== 403) {
@@ -58,7 +58,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw error;
   }
 
-  return res.json();
+  return res.json() as Promise<T>;
 }
 
 export const api = {
@@ -212,6 +212,7 @@ export interface WelcomeMessage {
   dm: WelcomeDM;
   showRole: boolean;
   trigger: 'join' | 'role';
+  triggerRoleId: string | null;
 }
 
 export interface ReactionRoleEntry {
@@ -542,6 +543,7 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
       imageEnabled: wm.imageEnabled ?? false,
       showRole: wm.showRole ?? false,
       trigger: wm.trigger ?? 'join',
+      triggerRoleId: wm.triggerRoleId ?? null,
       card: {
         preset: wm.card?.preset ?? null,
         bgColor1: wm.card?.bgColor1 ?? null,

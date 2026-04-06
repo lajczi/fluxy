@@ -17,13 +17,17 @@ function parentIdOf(channel: GuildChannel): string | null {
   return channel.parent_id ?? channel.parentId ?? null;
 }
 
+function isWelcomeSelectableChannel(channel: GuildChannel): boolean {
+  return channel.type !== 4 && channel.type !== 2;
+}
+
 export function buildWelcomeChannelSelectData(channels: GuildDetail['channels']): WelcomeChannelSelectData {
   const categories = channels
     .filter(channel => channel.type === 4)
     .sort((a, b) => a.position - b.position);
 
   const selectableChannels = channels
-    .filter(channel => channel.type === 0 || channel.type === 5)
+    .filter(isWelcomeSelectableChannel)
     .sort((a, b) => a.position - b.position);
 
   const uncategorized = selectableChannels.filter(channel => !parentIdOf(channel));
