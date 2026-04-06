@@ -15,7 +15,7 @@ const command: Command = {
   async execute(message, _args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.toggleGhostping.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.toggleGhostping.serverOnly')));
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
@@ -45,7 +45,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.admin.toggleGhostping.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

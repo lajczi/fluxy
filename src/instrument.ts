@@ -19,15 +19,17 @@ if (dsn) {
   console.log(`[GlitchTip] SDK initialized (dsn: ${dsn.substring(0, 30)}...)`);
 
   GlitchTip.captureMessage('Fluxy process started', { level: 'info', tags: { source: 'startup' } });
-  GlitchTip.flush(5000).then((flushed) => {
-    if (flushed) {
-      console.log('[GlitchTip] Startup event sent successfully');
-    } else {
-      console.error('[GlitchTip] WARNING: Failed to flush startup event - events may not be reaching the collector');
-    }
-  }).catch((err) => {
-    console.error('[GlitchTip] Flush error:', err);
-  });
+  GlitchTip.flush(5000)
+    .then((flushed) => {
+      if (flushed) {
+        console.log('[GlitchTip] Startup event sent successfully');
+      } else {
+        console.error('[GlitchTip] WARNING: Failed to flush startup event - events may not be reaching the collector');
+      }
+    })
+    .catch((err) => {
+      console.error('[GlitchTip] Flush error:', err);
+    });
 } else {
   console.log('[GlitchTip] No GLITCHTIP_DSN found in environment - disabled');
 }

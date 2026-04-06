@@ -1,16 +1,16 @@
 const IDS = {
-  guild:      '10000000000000001',
-  attacker:   '10000000000000002',
-  owner:      '10000000000000003',
-  bot:        '10000000000000004',
-  admin:      '10000000000000005',
-  lowUser:    '10000000000000006',
-  adminRole:  '20000000000000001',
-  modRole:    '20000000000000002',
+  guild: '10000000000000001',
+  attacker: '10000000000000002',
+  owner: '10000000000000003',
+  bot: '10000000000000004',
+  admin: '10000000000000005',
+  lowUser: '10000000000000006',
+  adminRole: '20000000000000001',
+  modRole: '20000000000000002',
   memberRole: '20000000000000003',
-  botRole:    '20000000000000004',
-  channel:    '30000000000000001',
-  message:    '40000000000000001',
+  botRole: '20000000000000004',
+  channel: '30000000000000001',
+  message: '40000000000000001',
 };
 
 jest.mock('@erinjs/core', () => ({
@@ -26,13 +26,27 @@ jest.mock('@erinjs/core', () => ({
     AddReactions: 0x40n,
   },
   EmbedBuilder: class {
-    setTitle() { return this; }
-    setColor() { return this; }
-    setDescription() { return this; }
-    addFields() { return this; }
-    setTimestamp() { return this; }
-    setThumbnail() { return this; }
-    setFooter() { return this; }
+    setTitle() {
+      return this;
+    }
+    setColor() {
+      return this;
+    }
+    setDescription() {
+      return this;
+    }
+    addFields() {
+      return this;
+    }
+    setTimestamp() {
+      return this;
+    }
+    setThumbnail() {
+      return this;
+    }
+    setFooter() {
+      return this;
+    }
   },
 }));
 
@@ -151,7 +165,17 @@ function makeMember(id: string, permBigInt: bigint, roleIds: string[], guild: an
   };
 }
 
-function makeMessage({ authorId, guild, guildId, channelId }: { authorId: string; guild: any; guildId?: string; channelId?: string }) {
+function makeMessage({
+  authorId,
+  guild,
+  guildId,
+  channelId,
+}: {
+  authorId: string;
+  guild: any;
+  guildId?: string;
+  channelId?: string;
+}) {
   const replies: string[] = [];
   return {
     author: { id: authorId, username: `User${authorId}`, send: jest.fn().mockResolvedValue(undefined) },
@@ -191,20 +215,20 @@ function makeClient() {
 }
 
 const ROLE_MAP = {
-  [IDS.adminRole]:  { name: 'Admin',  position: 10 },
-  [IDS.modRole]:    { name: 'Mod',    position: 5 },
+  [IDS.adminRole]: { name: 'Admin', position: 10 },
+  [IDS.modRole]: { name: 'Mod', position: 5 },
   [IDS.memberRole]: { name: 'Member', position: 1 },
-  [IDS.botRole]:    { name: 'Bot',    position: 15 },
+  [IDS.botRole]: { name: 'Bot', position: 15 },
 };
 
 function setupScenario() {
   const guild = makeGuild(IDS.owner, ROLE_MAP);
 
   const attacker = makeMember(IDS.attacker, 0x10000000n, [IDS.modRole], guild);
-  const owner    = makeMember(IDS.owner, 0x8n, [IDS.adminRole], guild);
-  const admin    = makeMember(IDS.admin, 0x8n, [IDS.adminRole], guild);
-  const lowUser  = makeMember(IDS.lowUser, 0x0n, [IDS.memberRole], guild);
-  const botUser  = makeMember(IDS.bot, 0x8n, [IDS.botRole], guild);
+  const owner = makeMember(IDS.owner, 0x8n, [IDS.adminRole], guild);
+  const admin = makeMember(IDS.admin, 0x8n, [IDS.adminRole], guild);
+  const lowUser = makeMember(IDS.lowUser, 0x0n, [IDS.memberRole], guild);
+  const botUser = makeMember(IDS.bot, 0x8n, [IDS.botRole], guild);
 
   guild.members.get.mockImplementation((id: string) => {
     if (id === IDS.attacker) return attacker;
@@ -229,25 +253,21 @@ describe('PRIVILEGE ESCALATION - !roleall', () => {
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await roleall.execute(msg, [IDS.adminRole], makeClient());
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('cannot manage the **Admin** role')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('cannot manage the **Admin** role'));
   });
 
   test('BLOCKS: mod tries to roleall a role at equal position', async () => {
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await roleall.execute(msg, [IDS.modRole], makeClient());
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('cannot manage the **Mod** role')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('cannot manage the **Mod** role'));
   });
 
   test('ALLOWS: mod assigns a role below their position', async () => {
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await roleall.execute(msg, [IDS.memberRole], makeClient());
-    const blocked = msg._replies.some(r => r.includes('cannot manage'));
+    const blocked = msg._replies.some((r) => r.includes('cannot manage'));
     expect(blocked).toBe(false);
   });
 
@@ -255,7 +275,7 @@ describe('PRIVILEGE ESCALATION - !roleall', () => {
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.owner, guild });
     await roleall.execute(msg, [IDS.adminRole], makeClient());
-    const blocked = msg._replies.some(r => r.includes('cannot manage'));
+    const blocked = msg._replies.some((r) => r.includes('cannot manage'));
     expect(blocked).toBe(false);
   });
 });
@@ -267,16 +287,14 @@ describe('PRIVILEGE ESCALATION - !roleclear', () => {
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await roleclear.execute(msg, [IDS.adminRole], makeClient());
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('cannot manage the **Admin** role')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('cannot manage the **Admin** role'));
   });
 
   test('ALLOWS: mod removes a role below their position', async () => {
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await roleclear.execute(msg, [IDS.memberRole], makeClient());
-    const blocked = msg._replies.some(r => r.includes('cannot manage'));
+    const blocked = msg._replies.some((r) => r.includes('cannot manage'));
     expect(blocked).toBe(false);
   });
 
@@ -284,7 +302,7 @@ describe('PRIVILEGE ESCALATION - !roleclear', () => {
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.owner, guild });
     await roleclear.execute(msg, [IDS.adminRole], makeClient());
-    const blocked = msg._replies.some(r => r.includes('cannot manage'));
+    const blocked = msg._replies.some((r) => r.includes('cannot manage'));
     expect(blocked).toBe(false);
   });
 });
@@ -302,13 +320,18 @@ describe('PRIVILEGE ESCALATION - !reactionrole add', () => {
     const channel = {
       id: IDS.channel,
       name: 'test',
-      messages: { fetch: jest.fn().mockResolvedValue({ id: IDS.message, react: jest.fn().mockResolvedValue(undefined) }) },
+      messages: {
+        fetch: jest.fn().mockResolvedValue({ id: IDS.message, react: jest.fn().mockResolvedValue(undefined) }),
+      },
     };
     guild.channels.get.mockImplementation((id: string) => {
       if (id === IDS.channel) return channel;
       return null;
     });
-    (client as any).channels = { resolve: jest.fn().mockResolvedValue(channel), fetch: jest.fn().mockResolvedValue(channel) };
+    (client as any).channels = {
+      resolve: jest.fn().mockResolvedValue(channel),
+      fetch: jest.fn().mockResolvedValue(channel),
+    };
     return client;
   }
 
@@ -317,9 +340,7 @@ describe('PRIVILEGE ESCALATION - !reactionrole add', () => {
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     const client = makeRRClient(guild);
     await reactionrole.execute(msg, rrArgs(IDS.adminRole), client);
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('cannot manage the **Admin** role')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('cannot manage the **Admin** role'));
   });
 
   test('ALLOWS: mod maps Member role (pos 1) to reaction', async () => {
@@ -334,7 +355,7 @@ describe('PRIVILEGE ESCALATION - !reactionrole add', () => {
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     const client = makeRRClient(guild);
     await reactionrole.execute(msg, rrArgs(IDS.memberRole), client);
-    const blocked = msg._replies.some(r => r.includes('cannot manage'));
+    const blocked = msg._replies.some((r) => r.includes('cannot manage'));
     expect(blocked).toBe(false);
   });
 
@@ -350,7 +371,7 @@ describe('PRIVILEGE ESCALATION - !reactionrole add', () => {
     const msg = makeMessage({ authorId: IDS.owner, guild });
     const client = makeRRClient(guild);
     await reactionrole.execute(msg, rrArgs(IDS.adminRole), client);
-    const blocked = msg._replies.some(r => r.includes('cannot manage'));
+    const blocked = msg._replies.some((r) => r.includes('cannot manage'));
     expect(blocked).toBe(false);
   });
 });
@@ -362,9 +383,7 @@ describe('PRIVILEGE ESCALATION - !autorole set', () => {
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await autorole.execute(msg, ['set', IDS.adminRole], makeClient());
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('cannot manage the **Admin** role')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('cannot manage the **Admin** role'));
   });
 
   test('ALLOWS: mod sets Member (pos 1) as autorole', async () => {
@@ -377,7 +396,7 @@ describe('PRIVILEGE ESCALATION - !autorole set', () => {
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await autorole.execute(msg, ['set', IDS.memberRole], makeClient());
-    const blocked = msg._replies.some(r => r.includes('cannot manage'));
+    const blocked = msg._replies.some((r) => r.includes('cannot manage'));
     expect(blocked).toBe(false);
   });
 
@@ -391,7 +410,7 @@ describe('PRIVILEGE ESCALATION - !autorole set', () => {
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.owner, guild });
     await autorole.execute(msg, ['set', IDS.adminRole], makeClient());
-    const blocked = msg._replies.some(r => r.includes('cannot manage'));
+    const blocked = msg._replies.some((r) => r.includes('cannot manage'));
     expect(blocked).toBe(false);
   });
 });
@@ -427,9 +446,7 @@ describe('PRIVILEGE ESCALATION - !honeypot role', () => {
     const client = makeClient();
     (client as any).channels = { resolve: jest.fn().mockResolvedValue({ id: IDS.channel }) };
     await honeypot.execute(msg, hpArgs(IDS.adminRole), client);
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('cannot manage the **Admin** role')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('cannot manage the **Admin** role'));
   });
 
   test('ALLOWS: mod sets honeypot role to Member (pos 1)', async () => {
@@ -445,21 +462,18 @@ describe('PRIVILEGE ESCALATION - !honeypot role', () => {
     const client = makeClient();
     (client as any).channels = { resolve: jest.fn().mockResolvedValue({ id: IDS.channel }) };
     await honeypot.execute(msg, hpArgs(IDS.memberRole), client);
-    const blocked = msg._replies.some(r => r.includes('cannot manage'));
+    const blocked = msg._replies.some((r) => r.includes('cannot manage'));
     expect(blocked).toBe(false);
   });
 });
 
 describe('PRIVILEGE ESCALATION - moderation commands vs higher-role targets', () => {
-
   test('!ban BLOCKS: mod banning admin', async () => {
     const ban = require('../../src/commands/moderation/ban').default;
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await ban.execute(msg, [IDS.admin, 'test'], makeClient());
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('equal or higher role')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('equal or higher role'));
   });
 
   test('!ban ALLOWS: mod banning lower user', async () => {
@@ -467,7 +481,7 @@ describe('PRIVILEGE ESCALATION - moderation commands vs higher-role targets', ()
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await ban.execute(msg, [IDS.lowUser, 'test'], makeClient());
-    const blocked = msg._replies.some(r => r.includes('equal or higher'));
+    const blocked = msg._replies.some((r) => r.includes('equal or higher'));
     expect(blocked).toBe(false);
   });
 
@@ -476,9 +490,7 @@ describe('PRIVILEGE ESCALATION - moderation commands vs higher-role targets', ()
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await kick.execute(msg, [IDS.admin, 'test'], makeClient());
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('equal or higher role')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('equal or higher role'));
   });
 
   test('!timeout BLOCKS: mod timing out admin', async () => {
@@ -486,9 +498,7 @@ describe('PRIVILEGE ESCALATION - moderation commands vs higher-role targets', ()
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await timeout.execute(msg, [IDS.admin, '10m', 'test'], makeClient());
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('equal or higher role')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('equal or higher role'));
   });
 
   test('!mute BLOCKS: mod muting admin', async () => {
@@ -496,9 +506,7 @@ describe('PRIVILEGE ESCALATION - moderation commands vs higher-role targets', ()
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await mute.execute(msg, [IDS.admin, 'test'], makeClient());
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('equal or higher role')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('equal or higher role'));
   });
 
   test('!warn BLOCKS: mod warning admin', async () => {
@@ -506,9 +514,7 @@ describe('PRIVILEGE ESCALATION - moderation commands vs higher-role targets', ()
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.attacker, guild });
     await warn.execute(msg, [IDS.admin, 'test reason'], makeClient());
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('equal or higher role')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('equal or higher role'));
   });
 });
 
@@ -519,9 +525,7 @@ describe('PRIVILEGE ESCALATION - !lockdown requires Administrator', () => {
     const { guild } = setupScenario();
     const msg = makeMessage({ authorId: IDS.lowUser, guild });
     await lockdown.execute(msg, [], makeClient());
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('Administrator')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('Administrator'));
   });
 });
 
@@ -530,9 +534,6 @@ describe('PRIVILEGE ESCALATION - owner commands reject non-owners', () => {
     const reload = require('../../src/commands/owner/reload').default;
     const msg = makeMessage({ authorId: IDS.attacker, guild: null, guildId: undefined });
     await reload.execute(msg, ['ban'], makeClient());
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('restricted to the bot owner')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('restricted to the bot owner'));
   });
-
 });

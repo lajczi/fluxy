@@ -91,13 +91,16 @@ describe('start + processQueue', () => {
   test('loads queue from disk on start and logs count', () => {
     const freshFs = require('fs');
     freshFs.existsSync.mockReturnValue(true);
-    freshFs.readFileSync.mockReturnValue(JSON.stringify([
-      { guildId: 'g1', userId: 'u1', roleId: 'r1', operation: 'add', addedAt: Date.now() }
-    ]));
+    freshFs.readFileSync.mockReturnValue(
+      JSON.stringify([{ guildId: 'g1', userId: 'u1', roleId: 'r1', operation: 'add', addedAt: Date.now() }]),
+    );
 
     const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
-    const mockMember = { addRole: jest.fn().mockResolvedValue(undefined), removeRole: jest.fn().mockResolvedValue(undefined) };
+    const mockMember = {
+      addRole: jest.fn().mockResolvedValue(undefined),
+      removeRole: jest.fn().mockResolvedValue(undefined),
+    };
     const mockGuild = {
       name: 'Test',
       members: { get: jest.fn().mockReturnValue(mockMember) },
@@ -111,7 +114,10 @@ describe('start + processQueue', () => {
   });
 
   test('processes add operations by calling member.addRole', async () => {
-    const mockMember = { addRole: jest.fn().mockResolvedValue(undefined), removeRole: jest.fn().mockResolvedValue(undefined) };
+    const mockMember = {
+      addRole: jest.fn().mockResolvedValue(undefined),
+      removeRole: jest.fn().mockResolvedValue(undefined),
+    };
     const mockGuild = {
       name: 'Test',
       members: { get: jest.fn().mockReturnValue(mockMember) },
@@ -126,7 +132,10 @@ describe('start + processQueue', () => {
   });
 
   test('processes remove operations by calling member.removeRole', async () => {
-    const mockMember = { addRole: jest.fn().mockResolvedValue(undefined), removeRole: jest.fn().mockResolvedValue(undefined) };
+    const mockMember = {
+      addRole: jest.fn().mockResolvedValue(undefined),
+      removeRole: jest.fn().mockResolvedValue(undefined),
+    };
     const mockGuild = {
       name: 'Test',
       members: { get: jest.fn().mockReturnValue(mockMember) },
@@ -204,9 +213,11 @@ describe('start + processQueue', () => {
     jest.mock('fs');
     const fs2 = require('fs');
     fs2.existsSync.mockReturnValue(true);
-    fs2.readFileSync.mockReturnValue(JSON.stringify([
-      { guildId: 'g1', userId: 'u1', roleId: 'r1', operation: 'add', addedAt: Date.now() - 25 * 60 * 60 * 1000 }
-    ]));
+    fs2.readFileSync.mockReturnValue(
+      JSON.stringify([
+        { guildId: 'g1', userId: 'u1', roleId: 'r1', operation: 'add', addedAt: Date.now() - 25 * 60 * 60 * 1000 },
+      ]),
+    );
     fs2.mkdirSync.mockReturnValue(undefined);
     fs2.writeFileSync.mockReturnValue(undefined);
     const rq = require('../../src/utils/roleQueue');

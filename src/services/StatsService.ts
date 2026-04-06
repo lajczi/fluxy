@@ -56,9 +56,8 @@ export class StatsService {
       { $sort: { _id: 1 } },
     ]);
 
-    return daily.map(d => ({ date: d._id, count: d.count }));
+    return daily.map((d) => ({ date: d._id, count: d.count }));
   }
-
 
   async getTopCommands(limit = 10): Promise<Array<{ command: string; count: number }>> {
     const top = await Stat.aggregate([
@@ -68,7 +67,7 @@ export class StatsService {
       { $limit: limit },
     ]);
 
-    return top.map(t => ({ command: t._id, count: t.count }));
+    return top.map((t) => ({ command: t._id, count: t.count }));
   }
 
   async cleanup(retentionDays = 90): Promise<number> {

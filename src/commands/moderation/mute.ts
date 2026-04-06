@@ -15,7 +15,8 @@ const DEFAULT_MUTE_DURATION = 10 * 60 * 1000; // default mute, change if you wou
 
 const command: Command = {
   name: 'mute',
-  description: 'Apply a 10-minute timeout to a member \u2014 they cannot send messages or join voice. Use !timeout for a custom duration',
+  description:
+    'Apply a 10-minute timeout to a member \u2014 they cannot send messages or join voice. Use !timeout for a custom duration',
   usage: '<@user or user ID> [reason]',
   category: 'moderation',
   permissions: ['ModerateMembers'],
@@ -28,19 +29,19 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.moderation.mute.serverOnly'));
+      return void (await message.reply(t('en', 'commands.moderation.mute.serverOnly')));
     }
 
     const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
     const lang = normalizeLocale(guildSettings?.language);
 
     if (!args[0]) {
-      return void await message.reply(t(lang, 'commands.moderation.mute.usage', { prefix }));
+      return void (await message.reply(t(lang, 'commands.moderation.mute.usage', { prefix })));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply(t(lang, 'commands.moderation.mute.invalidUser'));
+      return void (await message.reply(t(lang, 'commands.moderation.mute.invalidUser')));
     }
 
     const reason = args.slice(1).join(' ').trim() || t(lang, 'commands.moderation.mute.noReasonProvided');
@@ -55,17 +56,17 @@ const command: Command = {
       try {
         targetMember = await guild.fetchMember(userId);
       } catch {
-        return void await message.reply(t(lang, 'commands.moderation.mute.userNotInServer'));
+        return void (await message.reply(t(lang, 'commands.moderation.mute.userNotInServer')));
       }
     }
 
     if (!targetMember) {
-      return void await message.reply(t(lang, 'commands.moderation.mute.userNotInServer'));
+      return void (await message.reply(t(lang, 'commands.moderation.mute.userNotInServer')));
     }
 
     const modCheck = canModerate(moderator, targetMember);
     if (!modCheck.canModerate) {
-      return void await message.reply(`${modCheck.reason}`);
+      return void (await message.reply(`${modCheck.reason}`));
     }
 
     const botUserId = client.user?.id;
@@ -82,12 +83,12 @@ const command: Command = {
       if (!(targetMember as any).guild) (targetMember as any).guild = guild;
       const botCheck = canModerate(botMember as any, targetMember);
       if (!botCheck.canModerate) {
-        return void await message.reply(t(lang, 'commands.moderation.mute.cannotMuteRoleHierarchy'));
+        return void (await message.reply(t(lang, 'commands.moderation.mute.cannotMuteRoleHierarchy')));
       }
     }
 
     if (targetMember.communicationDisabledUntil && targetMember.communicationDisabledUntil > new Date()) {
-      return void await message.reply(t(lang, 'commands.moderation.mute.alreadyMuted'));
+      return void (await message.reply(t(lang, 'commands.moderation.mute.alreadyMuted')));
     }
 
     const settings = guildSettings;
@@ -110,48 +111,46 @@ const command: Command = {
       }
 
       if (muteMethod === 'mute_role' && !useMuteRole) {
-          return void await message.reply(t(lang, 'commands.moderation.mute.muteRoleOnlyCannotApply'));
+        return void (await message.reply(t(lang, 'commands.moderation.mute.muteRoleOnlyCannotApply')));
       }
 
       const shouldUseRole = muteMethod === 'mute_role' || (muteMethod === 'auto' && useMuteRole);
       if (shouldUseRole && muteRoleId) {
-          await targetMember.addRole(muteRoleId);
+        await targetMember.addRole(muteRoleId);
 
-          const displayName = targetMember.user?.username || targetMember.id;
-          await message.reply(
-            t(lang, 'commands.moderation.mute.successMutedRole', {
-              username: displayName,
-              userId: targetMember.id,
-              reason
-            })
-          );
-
-          await logModAction(guild, (message as any).author, targetMember.user || targetMember, 'mute', reason, {
-            fields: [
-              { name: 'Method', value: 'Mute Role', inline: true },
-            ],
-            client
-          });
-
-          await ModerationLog.logAction({
-            guildId: guild.id,
-            targetId: targetMember.id,
-            userId: (message as any).author.id,
-            action: 'mute',
+        const displayName = targetMember.user?.username || targetMember.id;
+        await message.reply(
+          t(lang, 'commands.moderation.mute.successMutedRole', {
+            username: displayName,
+            userId: targetMember.id,
             reason,
-            duration: DEFAULT_MUTE_DURATION
-          });
+          }),
+        );
 
-          return;
+        await logModAction(guild, (message as any).author, targetMember.user || targetMember, 'mute', reason, {
+          fields: [{ name: 'Method', value: 'Mute Role', inline: true }],
+          client,
+        });
+
+        await ModerationLog.logAction({
+          guildId: guild.id,
+          targetId: targetMember.id,
+          userId: (message as any).author.id,
+          action: 'mute',
+          reason,
+          duration: DEFAULT_MUTE_DURATION,
+        });
+
+        return;
       }
 
       if (muteMethod === 'mute_role') {
-        return void await message.reply(t(lang, 'commands.moderation.mute.muteRoleNotConfigured'));
+        return void (await message.reply(t(lang, 'commands.moderation.mute.muteRoleNotConfigured')));
       }
 
       await targetMember.edit({
         communication_disabled_until: timeoutUntil.toISOString(),
-        timeout_reason: `${(message as any).author.username}: ${reason}`
+        timeout_reason: `${(message as any).author.username}: ${reason}`,
       });
 
       const displayName = targetMember.user?.username || targetMember.id;
@@ -160,15 +159,13 @@ const command: Command = {
           username: displayName,
           userId: targetMember.id,
           duration: formatDuration(DEFAULT_MUTE_DURATION),
-          reason
-        })
+          reason,
+        }),
       );
 
       await logModAction(guild, (message as any).author, targetMember.user || targetMember, 'mute', reason, {
-        fields: [
-          { name: 'Duration', value: formatDuration(DEFAULT_MUTE_DURATION), inline: true }
-        ],
-        client
+        fields: [{ name: 'Duration', value: formatDuration(DEFAULT_MUTE_DURATION), inline: true }],
+        client,
       });
 
       await ModerationLog.logAction({
@@ -177,9 +174,8 @@ const command: Command = {
         userId: (message as any).author.id,
         action: 'mute',
         reason,
-        duration: DEFAULT_MUTE_DURATION
+        duration: DEFAULT_MUTE_DURATION,
       });
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -191,7 +187,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.moderation.mute.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

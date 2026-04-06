@@ -3,8 +3,8 @@ import { Routes } from '@erinjs/core';
 import isNetworkError from './isNetworkError';
 
 const RETRY_INTERVAL = 15_000;
-const MAX_AGE        = 10 * 60_000;
-const MAX_SIZE       = 200;
+const MAX_AGE = 10 * 60_000;
+const MAX_SIZE = 200;
 
 interface DeleteQueueEntry {
   channelId: string;
@@ -16,9 +16,7 @@ let queue: DeleteQueueEntry[] = [];
 let _client: Client | null = null;
 
 export function enqueue(channelId: string, messageId: string): void {
-  const exists = queue.some(
-    e => e.channelId === channelId && e.messageId === messageId,
-  );
+  const exists = queue.some((e) => e.channelId === channelId && e.messageId === messageId);
   if (exists) return;
 
   if (queue.length >= MAX_SIZE) {
@@ -27,7 +25,9 @@ export function enqueue(channelId: string, messageId: string): void {
   }
 
   queue.push({ channelId, messageId, addedAt: Date.now() });
-  console.log(`[delete-queue] Queued delete for message ${messageId} in channel ${channelId} (${queue.length} pending)`);
+  console.log(
+    `[delete-queue] Queued delete for message ${messageId} in channel ${channelId} (${queue.length} pending)`,
+  );
 }
 
 async function processQueue(): Promise<void> {

@@ -15,7 +15,7 @@ const command: Command = {
   async execute(message, _args, client) {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.toggleAutomod.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.toggleAutomod.serverOnly')));
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
@@ -28,8 +28,8 @@ const command: Command = {
       await settings.save();
       settingsCache.invalidate(guild.id);
 
-      if (newLevel === 'off') return void await message.reply(t(lang, 'commands.admin.toggleAutomod.disabled'));
-      return void await message.reply(t(lang, 'commands.admin.toggleAutomod.enabled'));
+      if (newLevel === 'off') return void (await message.reply(t(lang, 'commands.admin.toggleAutomod.disabled')));
+      return void (await message.reply(t(lang, 'commands.admin.toggleAutomod.enabled')));
     } catch (error: any) {
       if (isNetworkError(error)) {
         console.warn(`[${guild?.name || 'Unknown Server'}] Fluxer API unreachable during !toggle-automod (ECONNRESET)`);
@@ -40,7 +40,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.admin.toggleAutomod.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

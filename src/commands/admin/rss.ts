@@ -149,7 +149,7 @@ const command: Command = {
     if (!guild && (message as any).guildId) {
       guild = await client.guilds.fetch((message as any).guildId);
     }
-    if (!guild) return void await message.reply(t('en', 'commands.admin.keywords.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.keywords.serverOnly')));
 
     let initialSettings: any = null;
     let lang = 'en';
@@ -162,7 +162,7 @@ const command: Command = {
     const owner = isBotOwner(message);
 
     if (sub && OWNER_ONLY_SUBCOMMANDS.has(sub) && !owner) {
-      return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l157_reply'));
+      return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l157_reply')));
     }
 
     if (!sub || sub === 'help') {
@@ -225,34 +225,38 @@ const command: Command = {
             inline: false,
           },
         )
-        .setColor(0x3498db)
+        .setColor(0x3498db);
 
-      return void await message.reply({ embeds: [embed] });
+      return void (await message.reply({ embeds: [embed] }));
     }
 
     try {
-      const settings: any = initialSettings ?? await GuildSettings.getOrCreate(guild.id);
+      const settings: any = initialSettings ?? (await GuildSettings.getOrCreate(guild.id));
       lang = normalizeLocale(settings?.language);
       const rss = ensureRssSettings(settings);
 
       if (sub === 'add') {
         const channelId = parseChannelId(args[1]);
         if (!channelId) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l232_reply', { prefix }));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l232_reply', { prefix })));
         }
 
         const sourceInput = args[2];
         if (!sourceInput) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l237_reply', { prefix }));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l237_reply', { prefix })));
         }
 
         if (rss.feeds.length >= config.rss.maxFeedsPerGuild) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l241_reply', { 'config.rss.maxFeedsPerGuild': config.rss.maxFeedsPerGuild }));
+          return void (await message.reply(
+            t(lang, 'auditCatalog.commands.admin.rss.l241_reply', {
+              'config.rss.maxFeedsPerGuild': config.rss.maxFeedsPerGuild,
+            }),
+          ));
         }
 
         const parsedSource = parseSource(sourceInput);
         if (!parsedSource) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l246_reply'));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l246_reply')));
         }
 
         const mentionRoleId = parseRoleId(args[3]);
@@ -272,7 +276,7 @@ const command: Command = {
         );
 
         if (probe.items.length === 0) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l266_reply'));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l266_reply')));
         }
 
         const feed: IRssFeed = {
@@ -305,12 +309,12 @@ const command: Command = {
           mentionRoleId ? `Mention role: <@&${mentionRoleId}>` : 'Mention role: none',
         ].join('\n');
 
-        return void await message.reply(summary);
+        return void (await message.reply(summary));
       }
 
       if (sub === 'list') {
         if (rss.feeds.length === 0) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l304_reply', { prefix }));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l304_reply', { prefix })));
         }
 
         const embed = new EmbedBuilder()
@@ -318,10 +322,10 @@ const command: Command = {
           .setDescription(
             t(lang, 'auditCatalog.commands.admin.rss.l309_setDescription', {
               'rss.pollIntervalMinutes': rss.pollIntervalMinutes,
-              "rss.enabled ? 'enabled' : 'disabled'": rss.enabled ? 'enabled' : 'disabled'
-            })
+              "rss.enabled ? 'enabled' : 'disabled'": rss.enabled ? 'enabled' : 'disabled',
+            }),
           )
-          .setColor(0x3498db)
+          .setColor(0x3498db);
 
         for (let i = 0; i < rss.feeds.length; i++) {
           const feed = rss.feeds[i];
@@ -332,45 +336,55 @@ const command: Command = {
           });
         }
 
-        return void await message.reply({ embeds: [embed] });
+        return void (await message.reply({ embeds: [embed] }));
       }
 
       if (sub === 'remove') {
         const ref = args[1];
-        if (!ref) return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l326_reply', { prefix }));
+        if (!ref) return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l326_reply', { prefix })));
 
         const found = findFeedByRef(rss.feeds, ref);
-        if (!found) return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l329_reply'));
+        if (!found) return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l329_reply')));
 
         const [removed] = rss.feeds.splice(found.index, 1);
         await saveSettings(settings, guild.id);
 
         await RssFeedState.deleteOne({ guildId: guild.id, feedId: removed.id }).catch(() => {});
 
-        return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l336_reply', { 'removed.id': removed.id }));
+        return void (await message.reply(
+          t(lang, 'auditCatalog.commands.admin.rss.l336_reply', { 'removed.id': removed.id }),
+        ));
       }
 
       if (sub === 'pause' || sub === 'resume') {
         const ref = args[1];
-        if (!ref) return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l341_reply', { prefix, sub }));
+        if (!ref)
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l341_reply', { prefix, sub })));
 
         const found = findFeedByRef(rss.feeds, ref);
-        if (!found) return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l344_reply'));
+        if (!found) return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l344_reply')));
 
         found.feed.enabled = sub === 'resume';
         await saveSettings(settings, guild.id);
-        return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l348_reply', { sub, 'found.feed.id': found.feed.id }));
+        return void (await message.reply(
+          t(lang, 'auditCatalog.commands.admin.rss.l348_reply', { sub, 'found.feed.id': found.feed.id }),
+        ));
       }
 
       if (sub === 'interval') {
         const raw = args[1];
         if (!raw) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l354_reply', { 'rss.pollIntervalMinutes': rss.pollIntervalMinutes, prefix }));
+          return void (await message.reply(
+            t(lang, 'auditCatalog.commands.admin.rss.l354_reply', {
+              'rss.pollIntervalMinutes': rss.pollIntervalMinutes,
+              prefix,
+            }),
+          ));
         }
 
         const parsed = parseInt(raw, 10);
         if (!Number.isFinite(parsed)) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l359_reply'));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l359_reply')));
         }
 
         const clamped = clampPollIntervalMinutes(parsed);
@@ -378,13 +392,13 @@ const command: Command = {
         rss.enabled = true;
         await saveSettings(settings, guild.id);
 
-        return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l367_reply', { clamped }));
+        return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l367_reply', { clamped })));
       }
 
       if (sub === 'test') {
         const refOrSource = args[1];
         if (!refOrSource) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l373_reply', { prefix }));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l373_reply', { prefix })));
         }
 
         let source: { sourceType: 'rss' | 'rsshub'; url: string | null; route: string | null } | null = null;
@@ -401,18 +415,15 @@ const command: Command = {
         }
 
         if (!source) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l390_reply'));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l390_reply')));
         }
 
-        const parsed = await fetchFeed(
-          source,
-          {
-            timeoutMs: config.rss.fetchTimeoutMs,
-            maxBodyBytes: config.rss.maxBodyBytes,
-            rsshubBaseUrl: config.rss.rsshubBaseUrl,
-            rsshubAccessKey: config.rss.rsshubAccessKey,
-          },
-        );
+        const parsed = await fetchFeed(source, {
+          timeoutMs: config.rss.fetchTimeoutMs,
+          maxBodyBytes: config.rss.maxBodyBytes,
+          rsshubBaseUrl: config.rss.rsshubBaseUrl,
+          rsshubAccessKey: config.rss.rsshubAccessKey,
+        });
 
         const preview = parsed.items
           .slice(0, 5)
@@ -434,14 +445,14 @@ const command: Command = {
               value: String(parsed.items.length),
               inline: true,
             },
-          )
+          );
 
-        return void await message.reply({ embeds: [embed] });
+        return void (await message.reply({ embeds: [embed] }));
       }
 
       if (sub === 'status') {
         if (rss.feeds.length === 0) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l430_reply', { prefix }));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l430_reply', { prefix })));
         }
 
         const states = await RssFeedState.find({
@@ -452,8 +463,12 @@ const command: Command = {
 
         const embed = new EmbedBuilder()
           .setTitle(t(lang, 'auditCatalog.commands.admin.rss.l440_setTitle'))
-          .setDescription(t(lang, 'auditCatalog.commands.admin.rss.l441_setDescription', { 'rss.pollIntervalMinutes': rss.pollIntervalMinutes }))
-          .setColor(0x3498db)
+          .setDescription(
+            t(lang, 'auditCatalog.commands.admin.rss.l441_setDescription', {
+              'rss.pollIntervalMinutes': rss.pollIntervalMinutes,
+            }),
+          )
+          .setColor(0x3498db);
 
         for (const feed of rss.feeds) {
           const state = stateByFeedId.get(feed.id);
@@ -472,12 +487,12 @@ const command: Command = {
           });
         }
 
-        return void await message.reply({ embeds: [embed] });
+        return void (await message.reply({ embeds: [embed] }));
       }
 
       if (sub === 'debug') {
         if (rss.feeds.length === 0) {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l466_reply', { prefix }));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l466_reply', { prefix })));
         }
 
         const ref = args[1];
@@ -485,7 +500,7 @@ const command: Command = {
 
         if (ref) {
           const found = findFeedByRef(rss.feeds, ref);
-          if (!found) return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l474_reply'));
+          if (!found) return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l474_reply')));
           feeds = [found.feed];
         }
 
@@ -508,7 +523,7 @@ const command: Command = {
               `Guild RSS enabled: ${rss.enabled ? 'true' : 'false'} • Poll interval: ${intervalMinutes} minute(s)`,
             ].join('\n'),
           )
-          .setColor(0xe67e22)
+          .setColor(0xe67e22);
 
         for (const feed of visibleFeeds) {
           const state = stateByFeedId.get(feed.id) as any;
@@ -539,12 +554,15 @@ const command: Command = {
         if (feeds.length > visibleFeeds.length) {
           embed.addFields({
             name: t(lang, 'auditCatalog.commands.admin.rss.l527_addFields_name'),
-            value: t(lang, 'auditCatalog.commands.admin.rss.l528_addFields_value', { 'visibleFeeds.length': visibleFeeds.length, 'feeds.length': feeds.length }),
+            value: t(lang, 'auditCatalog.commands.admin.rss.l528_addFields_value', {
+              'visibleFeeds.length': visibleFeeds.length,
+              'feeds.length': feeds.length,
+            }),
             inline: false,
           });
         }
 
-        return void await message.reply({ embeds: [embed] });
+        return void (await message.reply({ embeds: [embed] }));
       }
 
       if (sub === 'forcepoll' || sub === 'force' || sub === 'pollnow') {
@@ -553,26 +571,26 @@ const command: Command = {
 
         if (ref) {
           const found = findFeedByRef(rss.feeds, ref);
-          if (!found) return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l542_reply'));
+          if (!found) return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l542_reply')));
           targetFeedId = found.feed.id;
         }
 
         const result = await rssPollerService.forcePollGuild(client, guild.id, targetFeedId);
 
         if (result.reason === 'busy') {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l549_reply'));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l549_reply')));
         }
         if (result.reason === 'rss_disabled') {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l552_reply'));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l552_reply')));
         }
         if (result.reason === 'no_feeds') {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l555_reply', { prefix }));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l555_reply', { prefix })));
         }
         if (result.reason === 'feed_not_found') {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l558_reply'));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l558_reply')));
         }
         if (result.reason === 'no_eligible_feeds') {
-          return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l561_reply'));
+          return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l561_reply')));
         }
 
         const lines = [
@@ -599,10 +617,10 @@ const command: Command = {
           lines.push(...detailLines);
         }
 
-        return void await message.reply(lines.join('\n'));
+        return void (await message.reply(lines.join('\n')));
       }
 
-      return void await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l591_reply', { prefix }));
+      return void (await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l591_reply', { prefix })));
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -610,7 +628,13 @@ const command: Command = {
         return;
       }
       console.error(`[${guildName}] Error in !rss: ${error.message || error}`);
-      await message.reply(t(lang, 'auditCatalog.commands.admin.rss.l599_reply', { 'error.message || \'unknown error\'': error.message || 'unknown error' })).catch(() => {});
+      await message
+        .reply(
+          t(lang, 'auditCatalog.commands.admin.rss.l599_reply', {
+            "error.message || 'unknown error'": error.message || 'unknown error',
+          }),
+        )
+        .catch(() => {});
     }
   },
 };

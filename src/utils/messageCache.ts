@@ -30,7 +30,6 @@ export function get(messageId: string): string | null {
   return cache.get(messageId) ?? null;
 }
 
-
 export function remove(messageId: string): void {
   cache.delete(messageId);
 }

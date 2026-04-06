@@ -53,9 +53,7 @@ describe('guildMemberUpdate welcome trigger', () => {
       id: 'g1',
       name: 'Fluxy Test Guild',
       channels: new Map(),
-      roles: new Map([
-        ['verified-role', { id: 'verified-role', name: 'Verified' }],
-      ]),
+      roles: new Map([['verified-role', { id: 'verified-role', name: 'Verified' }]]),
     };
 
     const client = {

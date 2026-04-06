@@ -59,9 +59,7 @@ describe('RSS routes', () => {
   test('POST /:id/rss/test rejects rss source without url', async () => {
     const app = createApp();
 
-    const res = await request(app)
-      .post('/api/guilds/g1/rss/test')
-      .send({ sourceType: 'rss' });
+    const res = await request(app).post('/api/guilds/g1/rss/test').send({ sourceType: 'rss' });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('url is required');
@@ -70,9 +68,7 @@ describe('RSS routes', () => {
   test('POST /:id/rss/test rejects rsshub source without route', async () => {
     const app = createApp();
 
-    const res = await request(app)
-      .post('/api/guilds/g1/rss/test')
-      .send({ sourceType: 'rsshub' });
+    const res = await request(app).post('/api/guilds/g1/rss/test').send({ sourceType: 'rsshub' });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('route is required');

@@ -5,7 +5,7 @@ jest.mock('@erinjs/core', () => ({
     KickMembers: 0x2n,
     ManageGuild: 0x20n,
     ManageMessages: 0x2000n,
-  }
+  },
 }));
 
 import {
@@ -107,7 +107,7 @@ function makeGuild(ownerId: string, roleMap: Record<string, number> = {}) {
     ownerId,
     roles: {
       get: jest.fn((roleId: string) =>
-        roleMap[roleId] !== undefined ? { id: roleId, position: roleMap[roleId] } : undefined
+        roleMap[roleId] !== undefined ? { id: roleId, position: roleMap[roleId] } : undefined,
       ),
     },
   };
@@ -132,8 +132,8 @@ describe('canModerate', () => {
 
   test('returns true when moderator has a higher role position', () => {
     const guild = makeGuild('0', { role_high: 10, role_low: 5 });
-    const mod    = makeMember('1', 0x4n, { guild, roles: makeRoles(['role_high']) });
-    const target = makeMember('2', 0x0n, { guild, roles: makeRoles(['role_low'])  });
+    const mod = makeMember('1', 0x4n, { guild, roles: makeRoles(['role_high']) });
+    const target = makeMember('2', 0x0n, { guild, roles: makeRoles(['role_low']) });
     const result = canModerate(mod, target);
     expect(result.canModerate).toBe(true);
     expect(result.reason).toBeNull();
@@ -141,7 +141,7 @@ describe('canModerate', () => {
 
   test('returns false when moderator has equal role position to target', () => {
     const guild = makeGuild('0', { role_same: 5 });
-    const mod    = makeMember('1', 0x4n, { guild, roles: makeRoles(['role_same']) });
+    const mod = makeMember('1', 0x4n, { guild, roles: makeRoles(['role_same']) });
     const target = makeMember('2', 0x0n, { guild, roles: makeRoles(['role_same']) });
     const result = canModerate(mod, target);
     expect(result.canModerate).toBe(false);
@@ -150,7 +150,7 @@ describe('canModerate', () => {
 
   test('returns false when target has a higher role position', () => {
     const guild = makeGuild('0', { role_high: 10, role_low: 3 });
-    const mod    = makeMember('1', 0x4n, { guild, roles: makeRoles(['role_low'])  });
+    const mod = makeMember('1', 0x4n, { guild, roles: makeRoles(['role_low']) });
     const target = makeMember('2', 0x0n, { guild, roles: makeRoles(['role_high']) });
     const result = canModerate(mod, target);
     expect(result.canModerate).toBe(false);
@@ -159,22 +159,22 @@ describe('canModerate', () => {
 
   test('uses highest position when member has multiple roles', () => {
     const guild = makeGuild('0', { r1: 3, r2: 8, r3: 1 });
-    const mod    = makeMember('1', 0x4n, { guild, roles: makeRoles(['r1', 'r2', 'r3']) });
-    const target = makeMember('2', 0x0n, { guild, roles: makeRoles(['r1'])              });
+    const mod = makeMember('1', 0x4n, { guild, roles: makeRoles(['r1', 'r2', 'r3']) });
+    const target = makeMember('2', 0x0n, { guild, roles: makeRoles(['r1']) });
     const result = canModerate(mod, target);
     expect(result.canModerate).toBe(true);
   });
 
   test('skips hierarchy check when roles array is empty (both positions = 0)', () => {
     const guild = makeGuild('0', {});
-    const mod    = makeMember('1', 0x4n, { guild, roles: makeRoles([]) });
+    const mod = makeMember('1', 0x4n, { guild, roles: makeRoles([]) });
     const target = makeMember('2', 0x0n, { guild, roles: makeRoles([]) });
     const result = canModerate(mod, target);
     expect(result.canModerate).toBe(true);
   });
 
   test('skips hierarchy check when guild is absent', () => {
-    const mod    = makeMember('1', 0x4n, { guild: null, roles: makeRoles([]) });
+    const mod = makeMember('1', 0x4n, { guild: null, roles: makeRoles([]) });
     const target = makeMember('2', 0x0n, { guild: null, roles: makeRoles([]) });
     const result = canModerate(mod, target);
     expect(result.canModerate).toBe(true);
@@ -243,7 +243,7 @@ describe('getPermissionList', () => {
   test('returns an array of strings', () => {
     const list = getPermissionList();
     expect(Array.isArray(list)).toBe(true);
-    expect(list.every(p => typeof p === 'string')).toBe(true);
+    expect(list.every((p) => typeof p === 'string')).toBe(true);
   });
 
   test('includes known permissions from the mock', () => {

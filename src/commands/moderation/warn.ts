@@ -11,7 +11,8 @@ import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'warn',
-  description: 'Issue a formal warning to a user \u2014 reason is stored and can be reviewed with !warnings or cleared with !clearwarns',
+  description:
+    'Issue a formal warning to a user \u2014 reason is stored and can be reviewed with !warnings or cleared with !clearwarns',
   usage: '<@user or user ID> <reason>',
   category: 'moderation',
   permissions: ['ModerateMembers'],
@@ -24,23 +25,23 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.moderation.warn.serverOnly'));
+      return void (await message.reply(t('en', 'commands.moderation.warn.serverOnly')));
     }
 
     const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
     const lang = normalizeLocale(guildSettings?.language);
 
     if (!args[0]) {
-      return void await message.reply(t(lang, 'commands.moderation.warn.usage', { prefix }));
+      return void (await message.reply(t(lang, 'commands.moderation.warn.usage', { prefix })));
     }
 
     if (!args[1]) {
-      return void await message.reply(t(lang, 'commands.moderation.warn.missingReason'));
+      return void (await message.reply(t(lang, 'commands.moderation.warn.missingReason')));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply(t(lang, 'commands.moderation.warn.invalidUser'));
+      return void (await message.reply(t(lang, 'commands.moderation.warn.invalidUser')));
     }
 
     const reason = args.slice(1).join(' ').trim();
@@ -62,7 +63,7 @@ const command: Command = {
     if (targetMember) {
       const modCheck = canModerate(moderator, targetMember);
       if (!modCheck.canModerate) {
-        return void await message.reply(`${modCheck.reason}`);
+        return void (await message.reply(`${modCheck.reason}`));
       }
     }
 
@@ -85,8 +86,8 @@ const command: Command = {
           username: displayName,
           userId: targetUser.id,
           reason,
-          warningCount
-        })
+          warningCount,
+        }),
       );
 
       try {
@@ -99,7 +100,8 @@ const command: Command = {
 
         if (autoMuteEnabled && warningCount >= threshold && targetMember) {
           const muteRoleId = moderation.muteRoleId || guildSettings?.muteRoleId || null;
-          const alreadyTimedOut = targetMember.communicationDisabledUntil && targetMember.communicationDisabledUntil > new Date();
+          const alreadyTimedOut =
+            targetMember.communicationDisabledUntil && targetMember.communicationDisabledUntil > new Date();
           const alreadyRoleMuted = muteRoleId && targetMember.roles?.roleIds?.includes?.(muteRoleId);
 
           if (!alreadyTimedOut && !alreadyRoleMuted) {
@@ -147,8 +149,8 @@ const command: Command = {
                 t(lang, 'commands.moderation.warn.autoMuteApplied', {
                   targetUserId: targetMember.id,
                   warningCount,
-                  threshold
-                })
+                  threshold,
+                }),
               );
               await logModAction(guild, (message as any).author, targetUser, 'mute', autoMuteReason, { client });
               await ModerationLog.logAction({
@@ -173,7 +175,7 @@ const command: Command = {
             .setDescription(t(lang, 'commands.moderation.warn.dmDescription', { guildName: guild.name }))
             .addFields(
               { name: t(lang, 'commands.moderation.warn.dmFieldReason'), value: reason },
-              { name: t(lang, 'commands.moderation.warn.dmFieldTotalWarnings'), value: `${warningCount}` }
+              { name: t(lang, 'commands.moderation.warn.dmFieldTotalWarnings'), value: `${warningCount}` },
             )
             .setColor(0xf39c12);
 
@@ -187,10 +189,8 @@ const command: Command = {
       }
 
       await logModAction(guild, (message as any).author, targetUser, 'warn', reason, {
-        fields: [
-          { name: 'Total Warnings', value: `${warningCount}`, inline: true }
-        ],
-        client
+        fields: [{ name: 'Total Warnings', value: `${warningCount}`, inline: true }],
+        client,
       });
 
       await ModerationLog.logAction({
@@ -199,9 +199,8 @@ const command: Command = {
         userId: (message as any).author.id,
         action: 'warn',
         reason,
-        metadata: { caseNumber: warningCount } as any
+        metadata: { caseNumber: warningCount } as any,
       });
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -211,7 +210,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.moderation.warn.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

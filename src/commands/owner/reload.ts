@@ -18,11 +18,11 @@ const command: Command = {
       const guildId = message.guildId || message.guild?.id;
       const guildSettings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
       const lang = normalizeLocale(guildSettings?.language);
-      return void await message.reply(t(lang, 'commands.reload.ownerOnly'));
+      return void (await message.reply(t(lang, 'commands.reload.ownerOnly')));
     }
 
     if (!args[0]) {
-      return void await message.reply(t('en', 'commands.reload.usage', { prefix: config.prefix }));
+      return void (await message.reply(t('en', 'commands.reload.usage', { prefix: config.prefix })));
     }
 
     const commandName = args[0].toLowerCase();
@@ -33,7 +33,7 @@ const command: Command = {
       const guildId = message.guildId || message.guild?.id;
       const guildSettings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
       const lang = normalizeLocale(guildSettings?.language);
-      return void await message.reply(t(lang, 'commands.reload.commandHandlerMissing'));
+      return void (await message.reply(t(lang, 'commands.reload.commandHandlerMissing')));
     }
 
     const oldCommand = commandHandler.getCommand(commandName);
@@ -42,7 +42,7 @@ const command: Command = {
       const guildId = message.guildId || message.guild?.id;
       const guildSettings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
       const lang = normalizeLocale(guildSettings?.language);
-      return void await message.reply(t(lang, 'commands.reload.commandNotFound', { commandName }));
+      return void (await message.reply(t(lang, 'commands.reload.commandNotFound', { commandName })));
     }
 
     try {
@@ -70,7 +70,7 @@ const command: Command = {
 
       commandHandler.commands.set(newCommand.name, {
         ...newCommand,
-        category
+        category,
       });
 
       if (newCommand.aliases && Array.isArray(newCommand.aliases)) {
@@ -78,7 +78,7 @@ const command: Command = {
           commandHandler.commands.set(alias, {
             ...newCommand,
             category,
-            isAlias: true
+            isAlias: true,
           });
         }
       }
@@ -87,7 +87,6 @@ const command: Command = {
       const guildSettings = guildId ? await settingsCache.get(guildId).catch(() => null) : null;
       const lang = normalizeLocale(guildSettings?.language);
       await message.reply(t(lang, 'commands.reload.success', { commandName: newCommand.name }));
-
     } catch (error: any) {
       if (isNetworkError(error)) {
         console.warn(`Fluxer API unreachable during !reload (ECONNRESET)`);
@@ -99,7 +98,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.reload.error', { error: error.message })).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

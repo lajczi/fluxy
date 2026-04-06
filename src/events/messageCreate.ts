@@ -13,26 +13,32 @@ import { requestDMProcess } from '../utils/dmCoordinator';
 import { t, normalizeLocale } from '../i18n';
 
 async function handleInboxMessage(message: any, client: any, settings: any): Promise<void> {
-  message.delete().catch(() => { });
+  message.delete().catch(() => {});
 
   const content = message.content?.trim();
   if (!content) return;
   const lang = normalizeLocale(settings?.language);
 
   if (!settings.staffChannelId) {
-    console.warn(`[${message.guild?.name ?? message.guildId}] Report inbox received a message but no staff output channel is configured.`);
+    console.warn(
+      `[${message.guild?.name ?? message.guildId}] Report inbox received a message but no staff output channel is configured.`,
+    );
     return;
   }
 
   const author = message.author;
   const embed = new EmbedBuilder()
     .setTitle(t(lang, 'commands.report.embedTitle'))
-    .setColor(0xED4245)
+    .setColor(0xed4245)
     .setDescription(content)
     .addFields(
       { name: t(lang, 'commands.report.fieldReporter'), value: `${author.username} (<@${author.id}>)`, inline: true },
       { name: t(lang, 'auditCatalog.events.messageCreate.l33_addFields_name'), value: author.id, inline: true },
-      { name: t(lang, 'auditCatalog.events.messageCreate.l34_addFields_name'), value: t(lang, 'auditCatalog.events.messageCreate.l34_addFields_value'), inline: true }
+      {
+        name: t(lang, 'auditCatalog.events.messageCreate.l34_addFields_name'),
+        value: t(lang, 'auditCatalog.events.messageCreate.l34_addFields_value'),
+        inline: true,
+      },
     )
     .setThumbnail(author.displayAvatarURL?.() ?? author.avatarURL ?? null)
     .setFooter({ text: t(lang, 'auditCatalog.events.messageCreate.l37_setFooterReport') })
@@ -50,17 +56,21 @@ async function handleInboxMessage(message: any, client: any, settings: any): Pro
   }
 
   if (!staffChannel) {
-    console.warn(`[${guild?.name ?? message.guildId}] Staff output channel ${settings.staffChannelId} not found when forwarding inbox report.`);
+    console.warn(
+      `[${guild?.name ?? message.guildId}] Staff output channel ${settings.staffChannelId} not found when forwarding inbox report.`,
+    );
     return;
   }
 
   const rolePing = settings.staffRoleId ? `<@&${settings.staffRoleId}>` : null;
-  await staffChannel.send({
-    content: rolePing ?? undefined,
-    embeds: [embed]
-  }).catch((err: any) => {
-    console.error(`[${guild?.name ?? message.guildId}] Failed to forward inbox report: ${err.message || err}`);
-  });
+  await staffChannel
+    .send({
+      content: rolePing ?? undefined,
+      embeds: [embed],
+    })
+    .catch((err: any) => {
+      console.error(`[${guild?.name ?? message.guildId}] Failed to forward inbox report: ${err.message || err}`);
+    });
 }
 
 async function handleMention(message: any, client: any): Promise<void> {
@@ -73,7 +83,7 @@ async function handleMention(message: any, client: any): Promise<void> {
       const settings = await settingsCache.get(guildId);
       if (settings?.prefixes?.length) prefix = settings.prefixes[0];
       lang = normalizeLocale(settings?.language);
-    } catch { }
+    } catch {}
   }
 
   const categories = client.commandHandler?.getCommandsByCategory() ?? {};
@@ -82,12 +92,16 @@ async function handleMention(message: any, client: any): Promise<void> {
     .setTitle(t(lang, 'auditCatalog.events.messageCreate.l79_setTitle'))
     .setDescription(
       `My prefix in this server is **\`${prefix}\`**\n` +
-      `Use \`${prefix}help\` to see all commands, or \`${prefix}help <command>\` for details on a specific one.\n\n` +
-      `**📖 [Full Documentation](https://docs.fluxy.gay)**`
+        `Use \`${prefix}help\` to see all commands, or \`${prefix}help <command>\` for details on a specific one.\n\n` +
+        `**📖 [Full Documentation](https://docs.fluxy.gay)**`,
     )
     .setColor(0x6c72f8)
     .setTimestamp(new Date())
-    .setFooter({ text: t(lang, 'auditCatalog.events.messageCreate.l87_setFooter', { "require('../../package.json').version": require('../../package.json').version }) });
+    .setFooter({
+      text: t(lang, 'auditCatalog.events.messageCreate.l87_setFooter', {
+        "require('../../package.json').version": require('../../package.json').version,
+      }),
+    });
 
   for (const [category, commands] of Object.entries(categories) as [string, any[]][]) {
     if (category === 'owner') continue;
@@ -102,9 +116,7 @@ async function handleMention(message: any, client: any): Promise<void> {
   }
 
   await message.reply({ embeds: [embed] }).catch(() => {
-    message.reply(
-      t(lang, 'auditCatalog.events.messageCreate.l103_reply', { prefix })
-    ).catch(() => { });
+    message.reply(t(lang, 'auditCatalog.events.messageCreate.l103_reply', { prefix })).catch(() => {});
   });
 }
 
@@ -122,10 +134,7 @@ const event: BotEvent = {
     }
 
     if (message.content && client.user) {
-      const mentionPatterns = [
-        `<@${client.user.id}>`,
-        `<@!${client.user.id}>`,
-      ];
+      const mentionPatterns = [`<@${client.user.id}>`, `<@!${client.user.id}>`];
       const trimmed = message.content.trim();
       if (mentionPatterns.some((m: string) => trimmed === m || trimmed.startsWith(m + ' '))) {
         await handleMention(message, client);
@@ -163,7 +172,9 @@ const event: BotEvent = {
                   if (guild) {
                     let member = guild.members?.get(message.author.id);
                     if (!member) {
-                      try { member = await guild.fetchMember(message.author.id); } catch {}
+                      try {
+                        member = await guild.fetchMember(message.author.id);
+                      } catch {}
                     }
                     if (member) {
                       try {
@@ -192,13 +203,15 @@ const event: BotEvent = {
                   .setDescription(t(lang, 'verification.result.passedDescription'))
                   .setColor(0x2ecc71);
                 await message.reply({ embeds: [successEmbed] });
-              } catch { }
+              } catch {}
 
               if (verification?.logChannelId) {
                 try {
                   const guild = message.guild || (message.guildId ? await client.guilds.fetch(message.guildId) : null);
                   if (guild) {
-                    const logChannel = guild.channels?.get(verification.logChannelId) || await client.channels.fetch(verification.logChannelId).catch(() => null);
+                    const logChannel =
+                      guild.channels?.get(verification.logChannelId) ||
+                      (await client.channels.fetch(verification.logChannelId).catch(() => null));
                     if (logChannel) {
                       const logEmbed = new EmbedBuilder()
                         .setTitle(t(lang, 'verification.log.passedTitle'))
@@ -208,14 +221,16 @@ const event: BotEvent = {
                       await logChannel.send({ embeds: [logEmbed] });
                     }
                   }
-                } catch { }
+                } catch {}
               }
 
               setTimeout(async () => {
                 try {
-                  const ch = message.guild?.channels?.get(channelId) || await client.channels.fetch(channelId).catch(() => null);
+                  const ch =
+                    message.guild?.channels?.get(channelId) ||
+                    (await client.channels.fetch(channelId).catch(() => null));
                   if (ch) await ch.delete();
-                } catch { }
+                } catch {}
               }, 3000);
 
               return;
@@ -232,14 +247,17 @@ const event: BotEvent = {
                     .setDescription(t(lang, 'verification.result.failedDescription'))
                     .setColor(0xe74c3c);
                   await message.reply({ embeds: [failEmbed] });
-                } catch { }
+                } catch {}
 
                 const verification = settings?.verification;
                 if (verification?.logChannelId) {
                   try {
-                    const guild = message.guild || (message.guildId ? await client.guilds.fetch(message.guildId) : null);
+                    const guild =
+                      message.guild || (message.guildId ? await client.guilds.fetch(message.guildId) : null);
                     if (guild) {
-                      const logChannel = guild.channels?.get(verification.logChannelId) || await client.channels.fetch(verification.logChannelId).catch(() => null);
+                      const logChannel =
+                        guild.channels?.get(verification.logChannelId) ||
+                        (await client.channels.fetch(verification.logChannelId).catch(() => null));
                       if (logChannel) {
                         const logEmbed = new EmbedBuilder()
                           .setTitle(t(lang, 'verification.log.failedTitle'))
@@ -249,23 +267,25 @@ const event: BotEvent = {
                         await logChannel.send({ embeds: [logEmbed] });
                       }
                     }
-                  } catch { }
+                  } catch {}
                 }
 
                 if (session.panelChannelId && session.panelMessageId) {
                   try {
                     const { Routes } = await import('@erinjs/types');
                     await client.rest.delete(
-                      `${Routes.channelMessageReaction(session.panelChannelId, session.panelMessageId, '✅')}/${message.author.id}`
+                      `${Routes.channelMessageReaction(session.panelChannelId, session.panelMessageId, '✅')}/${message.author.id}`,
                     );
-                  } catch { }
+                  } catch {}
                 }
 
                 setTimeout(async () => {
                   try {
-                    const ch = message.guild?.channels?.get(channelId) || await client.channels.fetch(channelId).catch(() => null);
+                    const ch =
+                      message.guild?.channels?.get(channelId) ||
+                      (await client.channels.fetch(channelId).catch(() => null));
                     if (ch) await ch.delete();
-                  } catch { }
+                  } catch {}
                 }, 3000);
 
                 return;
@@ -277,12 +297,12 @@ const event: BotEvent = {
                     .setDescription(t(lang, 'verification.result.incorrectDescription', { remaining }))
                     .setColor(0xf39c12);
                   await message.reply({ embeds: [retryEmbed] });
-                } catch { }
+                } catch {}
                 return;
               }
             }
           }
-        } catch { }
+        } catch {}
       }
 
       if (channelId && (message.content || message.attachments?.size)) {
@@ -295,14 +315,17 @@ const event: BotEvent = {
                 authorName: message.author.username || message.author.id,
                 avatarURL: message.author.avatarURL?.() || message.author.avatar || null,
                 content: message.content,
-                attachments: (message.attachments?.values?.()
-                  ? [...message.attachments.values()].map((a: any) => ({ url: a.url, name: a.filename || a.name || 'file' }))
-                  : []),
+                attachments: message.attachments?.values?.()
+                  ? [...message.attachments.values()].map((a: any) => ({
+                      url: a.url,
+                      name: a.filename || a.name || 'file',
+                    }))
+                  : [],
                 timestamp: new Date(),
               },
             },
           },
-        ).catch(() => { });
+        ).catch(() => {});
       }
 
       if (settings?.staffInboxChannelId && channelId === settings.staffInboxChannelId) {
@@ -325,7 +348,7 @@ const event: BotEvent = {
     if (client.commandHandler) {
       await client.commandHandler.handleMessage(message);
     }
-  }
+  },
 };
 
 export default event;

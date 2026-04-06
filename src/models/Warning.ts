@@ -23,12 +23,14 @@ const warningSchema = new Schema<WarningDocument, WarningModel>({
     required: true,
     index: true,
   },
-  warnings: [{
-    modId:  { type: String, required: true },
-    reason: { type: String, required: true },
-    date:   { type: Date, default: Date.now },
-    active: { type: Boolean, default: true },
-  }],
+  warnings: [
+    {
+      modId: { type: String, required: true },
+      reason: { type: String, required: true },
+      date: { type: Date, default: Date.now },
+      active: { type: Boolean, default: true },
+    },
+  ],
 });
 
 warningSchema.index({ guildId: 1, userId: 1 });
@@ -59,11 +61,7 @@ warningSchema.statics.addWarning = async function (guildId: string, userId: stri
 };
 
 warningSchema.statics.clearWarnings = async function (guildId: string, userId: string) {
-  return this.findOneAndUpdate(
-    { guildId, userId },
-    { warnings: [] },
-    { returnDocument: 'after', upsert: true },
-  );
+  return this.findOneAndUpdate({ guildId, userId }, { warnings: [] }, { returnDocument: 'after', upsert: true });
 };
 
 warningSchema.methods.getActiveCount = function () {

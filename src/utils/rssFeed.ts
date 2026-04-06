@@ -73,9 +73,7 @@ function decodeHtmlEntities(raw: string): string {
 
     if (entity[0] === '#') {
       const isHex = entity[1]?.toLowerCase() === 'x';
-      const value = isHex
-        ? parseInt(entity.slice(2), 16)
-        : parseInt(entity.slice(1), 10);
+      const value = isHex ? parseInt(entity.slice(2), 16) : parseInt(entity.slice(1), 10);
 
       if (!Number.isInteger(value) || value <= 0 || value > 0x10ffff) {
         return match;
@@ -259,7 +257,13 @@ function isPrivateIPv6(address: string): boolean {
   const normalized = address.toLowerCase().split('%')[0];
   if (normalized === '::1' || normalized === '::') return true;
   if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
-  if (normalized.startsWith('fe8') || normalized.startsWith('fe9') || normalized.startsWith('fea') || normalized.startsWith('feb')) return true;
+  if (
+    normalized.startsWith('fe8') ||
+    normalized.startsWith('fe9') ||
+    normalized.startsWith('fea') ||
+    normalized.startsWith('feb')
+  )
+    return true;
 
   if (normalized.startsWith('::ffff:')) {
     const v4 = normalized.substring('::ffff:'.length);
@@ -362,9 +366,7 @@ function parseRss2(xml: Record<string, unknown>): {
       const rawDescription = readString(item['content:encoded']) ?? readString(item.description);
       const description = stripHtml(rawDescription);
       const imageUrl =
-        extractLink(item.enclosure) ||
-        extractLink(item['media:content']) ||
-        extractImageFromHtml(rawDescription);
+        extractLink(item.enclosure) || extractLink(item['media:content']) || extractImageFromHtml(rawDescription);
 
       const publishedAt = readDate(item.pubDate) || readDate(item.isoDate) || readDate(item.published);
       const guid = readString(item.guid);
@@ -441,7 +443,10 @@ function parseAtom(xml: Record<string, unknown>): {
       const author = (() => {
         const authorObj = entry.author;
         if (authorObj && typeof authorObj === 'object') {
-          return readString((authorObj as Record<string, unknown>).name) || readString((authorObj as Record<string, unknown>)['#text']);
+          return (
+            readString((authorObj as Record<string, unknown>).name) ||
+            readString((authorObj as Record<string, unknown>)['#text'])
+          );
         }
         return readString(authorObj);
       })();

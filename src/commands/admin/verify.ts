@@ -6,18 +6,21 @@ import { generateCaptcha } from '../../utils/captchaCard';
 import { EmbedBuilder, PermissionFlags } from '@erinjs/core';
 import { t, normalizeLocale } from '../../i18n';
 
-export const verificationSessions = new Map<string, {
-  userId: string;
-  code: string;
-  attempts: number;
-  maxAttempts: number;
-  panelChannelId: string;
-  panelMessageId: string;
-  timeout: ReturnType<typeof setTimeout>;
-}>();
+export const verificationSessions = new Map<
+  string,
+  {
+    userId: string;
+    code: string;
+    attempts: number;
+    maxAttempts: number;
+    panelChannelId: string;
+    panelMessageId: string;
+    timeout: ReturnType<typeof setTimeout>;
+  }
+>();
 
 function embedReply(message: any, description: string, title?: string): Promise<any> {
-  const embed = new EmbedBuilder().setDescription(description).setColor(0x5865F2);
+  const embed = new EmbedBuilder().setDescription(description).setColor(0x5865f2);
   if (title) embed.setTitle(title);
   return message.reply({ embeds: [embed] });
 }
@@ -28,8 +31,14 @@ async function save(settings: any, guildId: string): Promise<void> {
   settingsCache.invalidate(guildId);
 }
 
-
-async function setupVerification(message: any, args: string[], guild: any, settings: any, client: any, _prefix: string): Promise<any> {
+async function setupVerification(
+  message: any,
+  args: string[],
+  guild: any,
+  settings: any,
+  client: any,
+  _prefix: string,
+): Promise<any> {
   const lang = normalizeLocale(settings.language);
   const verification = settings.verification;
   const botId = client.user?.id;
@@ -58,7 +67,25 @@ async function setupVerification(message: any, args: string[], guild: any, setti
         name: 'Verification',
         permission_overwrites: [
           { id: everyoneRoleId, type: 0, allow: '0', deny: String(PermissionFlags.ViewChannel) },
-          ...(botId ? [{ id: botId, type: 1, allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ManageChannels | PermissionFlags.ManageMessages | PermissionFlags.EmbedLinks | PermissionFlags.AttachFiles | PermissionFlags.ReadMessageHistory | PermissionFlags.AddReactions), deny: '0' }] : []),
+          ...(botId
+            ? [
+                {
+                  id: botId,
+                  type: 1,
+                  allow: String(
+                    PermissionFlags.ViewChannel |
+                      PermissionFlags.SendMessages |
+                      PermissionFlags.ManageChannels |
+                      PermissionFlags.ManageMessages |
+                      PermissionFlags.EmbedLinks |
+                      PermissionFlags.AttachFiles |
+                      PermissionFlags.ReadMessageHistory |
+                      PermissionFlags.AddReactions,
+                  ),
+                  deny: '0',
+                },
+              ]
+            : []),
         ],
       });
       categoryId = category.id;
@@ -77,8 +104,32 @@ async function setupVerification(message: any, args: string[], guild: any, setti
         parent_id: categoryId,
         topic: 'React with ✅ to begin the verification process.',
         permission_overwrites: [
-          { id: everyoneRoleId, type: 0, allow: String(PermissionFlags.ViewChannel | PermissionFlags.ReadMessageHistory | PermissionFlags.AddReactions), deny: String(PermissionFlags.SendMessages) },
-          ...(botId ? [{ id: botId, type: 1, allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ManageMessages | PermissionFlags.EmbedLinks | PermissionFlags.AttachFiles | PermissionFlags.ReadMessageHistory | PermissionFlags.AddReactions), deny: '0' }] : []),
+          {
+            id: everyoneRoleId,
+            type: 0,
+            allow: String(
+              PermissionFlags.ViewChannel | PermissionFlags.ReadMessageHistory | PermissionFlags.AddReactions,
+            ),
+            deny: String(PermissionFlags.SendMessages),
+          },
+          ...(botId
+            ? [
+                {
+                  id: botId,
+                  type: 1,
+                  allow: String(
+                    PermissionFlags.ViewChannel |
+                      PermissionFlags.SendMessages |
+                      PermissionFlags.ManageMessages |
+                      PermissionFlags.EmbedLinks |
+                      PermissionFlags.AttachFiles |
+                      PermissionFlags.ReadMessageHistory |
+                      PermissionFlags.AddReactions,
+                  ),
+                  deny: '0',
+                },
+              ]
+            : []),
           { id: verifiedRoleId, type: 0, allow: '0', deny: String(PermissionFlags.ViewChannel) },
         ],
       });
@@ -93,10 +144,10 @@ async function setupVerification(message: any, args: string[], guild: any, setti
     const panelEmbed = new EmbedBuilder()
       .setTitle(t(lang, 'verification.panel.title'))
       .setDescription(t(lang, 'verification.panel.description'))
-      .setColor(0x5865F2)
-      .setFooter({ text: t(lang, 'verification.panel.footer') })
+      .setColor(0x5865f2)
+      .setFooter({ text: t(lang, 'verification.panel.footer') });
 
-    const channel = guild.channels?.get?.(panelChannelId) || await client.channels.fetch(panelChannelId);
+    const channel = guild.channels?.get?.(panelChannelId) || (await client.channels.fetch(panelChannelId));
     const panelMessage = await channel.send({ embeds: [panelEmbed] });
     await panelMessage.react('✅');
 
@@ -111,12 +162,19 @@ async function setupVerification(message: any, args: string[], guild: any, setti
   const statusEmbed = new EmbedBuilder()
     .setTitle(t(lang, 'verification.setupComplete.title'))
     .setDescription(t(lang, 'verification.setupComplete.description', { panelChannelId, verifiedRoleId }))
-    .setColor(0x2ecc71)
+    .setColor(0x2ecc71);
 
   return message.reply({ embeds: [statusEmbed] });
 }
 
-async function postPanel(message: any, args: string[], guild: any, settings: any, client: any, prefix: string): Promise<any> {
+async function postPanel(
+  message: any,
+  args: string[],
+  guild: any,
+  settings: any,
+  client: any,
+  prefix: string,
+): Promise<any> {
   const lang = normalizeLocale(settings.language);
   const verification = settings.verification;
 
@@ -136,10 +194,10 @@ async function postPanel(message: any, args: string[], guild: any, settings: any
     const panelEmbed = new EmbedBuilder()
       .setTitle(t(lang, 'verification.panel.title'))
       .setDescription(t(lang, 'verification.panel.description'))
-      .setColor(0x5865F2)
-      .setFooter({ text: t(lang, 'verification.panel.footer') })
+      .setColor(0x5865f2)
+      .setFooter({ text: t(lang, 'verification.panel.footer') });
 
-    const channel = guild.channels?.get?.(channelId) || await client.channels.fetch(channelId);
+    const channel = guild.channels?.get?.(channelId) || (await client.channels.fetch(channelId));
     const panelMsg = await channel.send({ embeds: [panelEmbed] });
     await panelMsg.react('✅');
 
@@ -153,7 +211,14 @@ async function postPanel(message: any, args: string[], guild: any, settings: any
   }
 }
 
-async function setRole(message: any, args: string[], guild: any, settings: any, _client: any, prefix: string): Promise<any> {
+async function setRole(
+  message: any,
+  args: string[],
+  guild: any,
+  settings: any,
+  _client: any,
+  prefix: string,
+): Promise<any> {
   const lang = normalizeLocale(settings.language);
   const roleArg = args[0];
   if (!roleArg) return embedReply(message, t(lang, 'verification.errors.usageRole', { prefix }));
@@ -166,7 +231,14 @@ async function setRole(message: any, args: string[], guild: any, settings: any, 
   return embedReply(message, t(lang, 'verification.roleSetDone', { roleId }));
 }
 
-async function setCategory(message: any, args: string[], guild: any, settings: any, _client: any, prefix: string): Promise<any> {
+async function setCategory(
+  message: any,
+  args: string[],
+  guild: any,
+  settings: any,
+  _client: any,
+  prefix: string,
+): Promise<any> {
   const lang = normalizeLocale(settings.language);
   const catArg = args[0];
   if (!catArg) return embedReply(message, t(lang, 'verification.errors.usageCategory', { prefix }));
@@ -179,7 +251,14 @@ async function setCategory(message: any, args: string[], guild: any, settings: a
   return embedReply(message, t(lang, 'verification.categorySetDone', { categoryId: catId }));
 }
 
-async function setLog(message: any, args: string[], guild: any, settings: any, _client: any, prefix: string): Promise<any> {
+async function setLog(
+  message: any,
+  args: string[],
+  guild: any,
+  settings: any,
+  _client: any,
+  prefix: string,
+): Promise<any> {
   const lang = normalizeLocale(settings.language);
   const channelArg = args[0];
   if (!channelArg) return embedReply(message, t(lang, 'verification.errors.usageLog', { prefix }));
@@ -198,26 +277,40 @@ async function setLog(message: any, args: string[], guild: any, settings: any, _
   return embedReply(message, t(lang, 'verification.log.setDone', { channelId }));
 }
 
-async function showStatus(message: any, args: string[], guild: any, settings: any, _client: any, _prefix: string): Promise<any> {
+async function showStatus(
+  message: any,
+  args: string[],
+  guild: any,
+  settings: any,
+  _client: any,
+  _prefix: string,
+): Promise<any> {
   const lang = normalizeLocale(settings.language);
   const v = settings.verification;
 
   const statusEmbed = new EmbedBuilder()
     .setTitle(t(lang, 'verification.status.title'))
-    .setColor(0x5865F2)
+    .setColor(0x5865f2)
     .setDescription(
       `**Enabled:** ${v.enabled ? t(lang, 'verification.status.enabledYes') : t(lang, 'verification.status.enabledNo')}\n` +
-      `**Verified Role:** ${v.verifiedRoleId ? `<@&${v.verifiedRoleId}>` : t(lang, 'verification.status.notSet')}\n` +
-      `**Category:** ${v.categoryId || t(lang, 'verification.status.notSet')}\n` +
-      `**Panel Channel:** ${v.panelChannelId ? `<#${v.panelChannelId}>` : t(lang, 'verification.status.notSet')}\n` +
-      `**Log Channel:** ${v.logChannelId ? `<#${v.logChannelId}>` : t(lang, 'verification.status.notSet')}\n` +
-      `**${t(lang, 'verification.status.maxAttemptsLabel')}:** ${v.maxAttempts || 2}`
-    )
+        `**Verified Role:** ${v.verifiedRoleId ? `<@&${v.verifiedRoleId}>` : t(lang, 'verification.status.notSet')}\n` +
+        `**Category:** ${v.categoryId || t(lang, 'verification.status.notSet')}\n` +
+        `**Panel Channel:** ${v.panelChannelId ? `<#${v.panelChannelId}>` : t(lang, 'verification.status.notSet')}\n` +
+        `**Log Channel:** ${v.logChannelId ? `<#${v.logChannelId}>` : t(lang, 'verification.status.notSet')}\n` +
+        `**${t(lang, 'verification.status.maxAttemptsLabel')}:** ${v.maxAttempts || 2}`,
+    );
 
   return message.reply({ embeds: [statusEmbed] });
 }
 
-async function resetVerification(message: any, args: string[], guild: any, settings: any, _client: any, _prefix: string): Promise<any> {
+async function resetVerification(
+  message: any,
+  args: string[],
+  guild: any,
+  settings: any,
+  _client: any,
+  _prefix: string,
+): Promise<any> {
   const lang = normalizeLocale(settings.language);
   settings.verification = {
     enabled: false,
@@ -232,7 +325,14 @@ async function resetVerification(message: any, args: string[], guild: any, setti
   return embedReply(message, t(lang, 'verification.resetDone'));
 }
 
-async function testVerification(message: any, args: string[], guild: any, settings: any, client: any, prefix: string): Promise<any> {
+async function testVerification(
+  message: any,
+  args: string[],
+  guild: any,
+  settings: any,
+  client: any,
+  prefix: string,
+): Promise<any> {
   const lang = normalizeLocale(settings.language);
   const verification = settings.verification;
 
@@ -247,7 +347,11 @@ async function testVerification(message: any, args: string[], guild: any, settin
   let channel: any;
   try {
     const username = (message as any).member?.displayName || (message.author as any).username || 'user';
-    const safeName = username.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 16) || 'user';
+    const safeName =
+      username
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .slice(0, 16) || 'user';
 
     channel = await guild.createChannel({
       type: 0,
@@ -255,12 +359,39 @@ async function testVerification(message: any, args: string[], guild: any, settin
       parent_id: verification.categoryId,
       permission_overwrites: [
         { id: everyoneRoleId, type: 0, allow: '0', deny: String(PermissionFlags.ViewChannel) },
-        { id: userId, type: 1, allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ReadMessageHistory), deny: '0' },
-        ...(botId ? [{ id: botId, type: 1, allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ManageChannels | PermissionFlags.ManageMessages | PermissionFlags.EmbedLinks | PermissionFlags.AttachFiles | PermissionFlags.ReadMessageHistory), deny: '0' }] : []),
+        {
+          id: userId,
+          type: 1,
+          allow: String(
+            PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ReadMessageHistory,
+          ),
+          deny: '0',
+        },
+        ...(botId
+          ? [
+              {
+                id: botId,
+                type: 1,
+                allow: String(
+                  PermissionFlags.ViewChannel |
+                    PermissionFlags.SendMessages |
+                    PermissionFlags.ManageChannels |
+                    PermissionFlags.ManageMessages |
+                    PermissionFlags.EmbedLinks |
+                    PermissionFlags.AttachFiles |
+                    PermissionFlags.ReadMessageHistory,
+                ),
+                deny: '0',
+              },
+            ]
+          : []),
       ],
     });
   } catch (err: any) {
-    return embedReply(message, t(lang, 'verification.errors.createTestVerificationChannelFailed', { error: err.message }));
+    return embedReply(
+      message,
+      t(lang, 'verification.errors.createTestVerificationChannelFailed', { error: err.message }),
+    );
   }
 
   try {
@@ -270,7 +401,7 @@ async function testVerification(message: any, args: string[], guild: any, settin
     const captchaEmbed = new EmbedBuilder()
       .setTitle(t(lang, 'verification.captcha.title'))
       .setDescription(t(lang, 'verification.captcha.description', { userId, maxAttempts }))
-      .setColor(0x5865F2)
+      .setColor(0x5865f2);
 
     await channel.send({
       embeds: [captchaEmbed],
@@ -281,7 +412,7 @@ async function testVerification(message: any, args: string[], guild: any, settin
       verificationSessions.delete(channel.id);
       try {
         await channel.delete();
-      } catch { }
+      } catch {}
     }, 60_000);
 
     verificationSessions.set(channel.id, {
@@ -296,18 +427,21 @@ async function testVerification(message: any, args: string[], guild: any, settin
 
     return embedReply(message, t(lang, 'verification.testChannelCreated', { channelId: channel.id }));
   } catch (err: any) {
-    try { await channel.delete(); } catch { }
+    try {
+      await channel.delete();
+    } catch {}
     return embedReply(message, t(lang, 'verification.errors.generateCaptchaFailed', { error: err.message }));
   }
 }
-
 
 function showHelp(message: any, prefix: string, lang: string): Promise<any> {
   return embedReply(message, t(lang, 'verification.help.body', { prefix }), t(lang, 'verification.help.title'));
 }
 
-
-const subcommands: Record<string, (message: any, args: string[], guild: any, settings: any, client: any, prefix: string) => Promise<any>> = {
+const subcommands: Record<
+  string,
+  (message: any, args: string[], guild: any, settings: any, client: any, prefix: string) => Promise<any>
+> = {
   setup: setupVerification,
   panel: postPanel,
   role: setRole,
@@ -317,7 +451,6 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
   reset: resetVerification,
   test: testVerification,
 };
-
 
 const command: Command = {
   name: 'verify',
@@ -342,7 +475,7 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await embedReply(message, t('en', 'verification.errors.serverOnly'));
+    if (!guild) return void (await embedReply(message, t('en', 'verification.errors.serverOnly')));
 
     const sub = args[0]?.toLowerCase();
 
@@ -365,7 +498,7 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !verify (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !verify: ${error.message || error}`);
-        embedReply(message, t(lang, 'verification.errors.updateFailed')).catch(() => { });
+        embedReply(message, t(lang, 'verification.errors.updateFailed')).catch(() => {});
       }
     }
   },

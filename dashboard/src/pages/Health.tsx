@@ -4,10 +4,7 @@ import { useHealthWs } from '../hooks/useHealthWs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import {
-  Activity, Cpu, Clock, RefreshCw, Wifi,
-  Server, MemoryStick, Radio,
-} from 'lucide-react';
+import { Activity, Cpu, Clock, RefreshCw, Wifi, Server, MemoryStick, Radio } from 'lucide-react';
 
 interface HostInfo {
   platform: string;
@@ -32,8 +29,18 @@ function formatUptime(seconds: number): string {
   return `${m}m ${s}s`;
 }
 
-function GaugeRing({ value, max, label, unit, color }: {
-  value: number; max: number; label: string; unit: string; color: string;
+function GaugeRing({
+  value,
+  max,
+  label,
+  unit,
+  color,
+}: {
+  value: number;
+  max: number;
+  label: string;
+  unit: string;
+  color: string;
 }) {
   const pct = Math.min((value / max) * 100, 100);
   const radius = 40;
@@ -45,9 +52,18 @@ function GaugeRing({ value, max, label, unit, color }: {
       <div className="relative w-24 h-24">
         <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r={radius} fill="none" stroke="hsl(217.2, 32.6%, 17.5%)" strokeWidth="8" />
-          <circle cx="50" cy="50" r={radius} fill="none" stroke={color} strokeWidth="8"
-            strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
-            className="transition-all duration-500" />
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            fill="none"
+            stroke={color}
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            className="transition-all duration-500"
+          />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-lg font-bold text-white">{Math.round(pct)}%</span>
@@ -55,7 +71,9 @@ function GaugeRing({ value, max, label, unit, color }: {
       </div>
       <div className="text-center">
         <p className="text-sm font-medium text-white">{label}</p>
-        <p className="text-xs text-gray-400">{value.toFixed(1)} {unit}</p>
+        <p className="text-xs text-gray-400">
+          {value.toFixed(1)} {unit}
+        </p>
       </div>
     </div>
   );
@@ -65,11 +83,13 @@ function Sparkline({ data, color, height = 32 }: { data: number[]; color: string
   if (data.length < 2) return null;
   const max = Math.max(...data, 1);
   const w = 200;
-  const points = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * w;
-    const y = height - (v / max) * (height - 4) - 2;
-    return `${x},${y}`;
-  }).join(' ');
+  const points = data
+    .map((v, i) => {
+      const x = (i / (data.length - 1)) * w;
+      const y = height - (v / max) * (height - 4) - 2;
+      return `${x},${y}`;
+    })
+    .join(' ');
   return (
     <svg viewBox={`0 0 ${w} ${height}`} className="w-full" style={{ height }} preserveAspectRatio="none">
       <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" />
@@ -91,10 +111,7 @@ export function Health() {
 
   const fetchStatic = useCallback(async () => {
     try {
-      const [p, ho] = await Promise.all([
-        api.get<ProcessInfo>('/health/process'),
-        api.get<HostInfo>('/health/host'),
-      ]);
+      const [p, ho] = await Promise.all([api.get<ProcessInfo>('/health/process'), api.get<HostInfo>('/health/host')]);
       setRestProcess(p);
       setHost(ho);
       setError(null);
@@ -126,9 +143,7 @@ export function Health() {
     setRefreshing(false);
   };
 
-  const filteredLogs = logFilter === 'all'
-    ? logEntries
-    : logEntries.filter(e => e.level === logFilter);
+  const filteredLogs = logFilter === 'all' ? logEntries : logEntries.filter((e) => e.level === logFilter);
 
   const uptime = live?.uptime ?? restProcess?.uptime ?? 0;
   const online = live?.online ?? !!restProcess;
@@ -140,8 +155,8 @@ export function Health() {
   const hostUsedMB = live?.hostUsedMemoryMB ?? host?.usedMemoryMB ?? 0;
   const hostTotalMB = live?.hostTotalMemoryMB ?? host?.totalMemoryMB ?? 0;
 
-  const cpuHistory = history.map(h => h.cpu);
-  const memHistory = history.map(h => h.memoryMB);
+  const cpuHistory = history.map((h) => h.cpu);
+  const memHistory = history.map((h) => h.memoryMB);
 
   if (loading) {
     return (
@@ -163,7 +178,10 @@ export function Health() {
           <p className="text-gray-400 mt-1">Real-time monitoring of bot and host resources.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className={wsConnected ? 'border-emerald-500 text-emerald-400' : 'border-yellow-500 text-yellow-400'}>
+          <Badge
+            variant="outline"
+            className={wsConnected ? 'border-emerald-500 text-emerald-400' : 'border-yellow-500 text-yellow-400'}
+          >
             <Radio className={`h-3 w-3 mr-1.5 ${wsConnected ? 'text-emerald-400' : 'text-yellow-400'}`} />
             {wsConnected ? 'Live' : 'Polling'}
           </Badge>
@@ -194,9 +212,7 @@ export function Health() {
               <p className="text-sm text-gray-400">WS Latency</p>
               <Wifi className="h-5 w-5 text-blue-400" />
             </div>
-            <p className="text-xl font-bold text-white mt-2">
-              {wsPing != null ? `${wsPing}ms` : 'N/A'}
-            </p>
+            <p className="text-xl font-bold text-white mt-2">{wsPing != null ? `${wsPing}ms` : 'N/A'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -239,35 +255,11 @@ export function Health() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap justify-center gap-8 py-4">
-            <GaugeRing
-              value={cpu}
-              max={100}
-              label="Process CPU"
-              unit="%"
-              color="#8b5cf6"
-            />
-            <GaugeRing
-              value={memoryMB}
-              max={memoryTotalMB || 512}
-              label="Heap Used"
-              unit="MB"
-              color="#3b82f6"
-            />
-            <GaugeRing
-              value={rssMB}
-              max={hostTotalMB || 1024}
-              label="RSS"
-              unit="MB"
-              color="#f59e0b"
-            />
+            <GaugeRing value={cpu} max={100} label="Process CPU" unit="%" color="#8b5cf6" />
+            <GaugeRing value={memoryMB} max={memoryTotalMB || 512} label="Heap Used" unit="MB" color="#3b82f6" />
+            <GaugeRing value={rssMB} max={hostTotalMB || 1024} label="RSS" unit="MB" color="#f59e0b" />
             {hostTotalMB > 0 && (
-              <GaugeRing
-                value={hostUsedMB}
-                max={hostTotalMB}
-                label="Host Memory"
-                unit="MB"
-                color="#ef4444"
-              />
+              <GaugeRing value={hostUsedMB} max={hostTotalMB} label="Host Memory" unit="MB" color="#ef4444" />
             )}
           </div>
         </CardContent>
@@ -277,7 +269,9 @@ export function Health() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" /> Process Info</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" /> Process Info
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 text-sm">
@@ -301,25 +295,29 @@ export function Health() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Server className="h-5 w-5" /> Host Info</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5" /> Host Info
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 text-sm">
-              {host ? [
-                ['Hostname', host.hostname],
-                ['Platform', `${host.platform} (${host.arch})`],
-                ['CPU', `${host.cpuModel}`],
-                ['CPU Cores', host.cpuCores],
-                ['Total Memory', `${(host.totalMemoryMB / 1024).toFixed(1)} GB`],
-                ['Free Memory', `${(host.freeMemoryMB / 1024).toFixed(1)} GB`],
-                ['Load Average', (live?.loadAvg ?? host.loadAvg).map(l => l.toFixed(2)).join(', ')],
-                ['Host Uptime', formatUptime(host.uptimeSeconds)],
-              ].map(([label, value]) => (
-                <div key={label as string} className="flex justify-between">
-                  <span className="text-gray-400">{label}</span>
-                  <span className="text-white font-mono text-right max-w-[60%] truncate">{String(value)}</span>
-                </div>
-              )) : (
+              {host ? (
+                [
+                  ['Hostname', host.hostname],
+                  ['Platform', `${host.platform} (${host.arch})`],
+                  ['CPU', `${host.cpuModel}`],
+                  ['CPU Cores', host.cpuCores],
+                  ['Total Memory', `${(host.totalMemoryMB / 1024).toFixed(1)} GB`],
+                  ['Free Memory', `${(host.freeMemoryMB / 1024).toFixed(1)} GB`],
+                  ['Load Average', (live?.loadAvg ?? host.loadAvg).map((l) => l.toFixed(2)).join(', ')],
+                  ['Host Uptime', formatUptime(host.uptimeSeconds)],
+                ].map(([label, value]) => (
+                  <div key={label as string} className="flex justify-between">
+                    <span className="text-gray-400">{label}</span>
+                    <span className="text-white font-mono text-right max-w-[60%] truncate">{String(value)}</span>
+                  </div>
+                ))
+              ) : (
                 <p className="text-gray-400">Host info unavailable</p>
               )}
             </div>
@@ -336,18 +334,23 @@ export function Health() {
               <CardDescription>Last {filteredLogs.length} log entries (auto-refreshes every 10s)</CardDescription>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {['all', 'error', 'warn', 'info', 'ok', 'debug'].map(level => (
+              {['all', 'error', 'warn', 'info', 'ok', 'debug'].map((level) => (
                 <button
                   key={level}
                   onClick={() => setLogFilter(level)}
                   className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                     logFilter === level
-                      ? level === 'error' ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/40'
-                      : level === 'warn' ? 'bg-yellow-500/20 text-yellow-400 ring-1 ring-yellow-500/40'
-                      : level === 'ok' ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/40'
-                      : level === 'debug' ? 'bg-gray-500/20 text-gray-400 ring-1 ring-gray-500/40'
-                      : level === 'info' ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/40'
-                      : 'bg-white/10 text-white ring-1 ring-white/20'
+                      ? level === 'error'
+                        ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/40'
+                        : level === 'warn'
+                          ? 'bg-yellow-500/20 text-yellow-400 ring-1 ring-yellow-500/40'
+                          : level === 'ok'
+                            ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/40'
+                            : level === 'debug'
+                              ? 'bg-gray-500/20 text-gray-400 ring-1 ring-gray-500/40'
+                              : level === 'info'
+                                ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/40'
+                                : 'bg-white/10 text-white ring-1 ring-white/20'
                       : 'bg-white/5 text-gray-400 hover:bg-white/10'
                   }`}
                 >
@@ -368,14 +371,20 @@ export function Health() {
                 const mm = String(time.getMinutes()).padStart(2, '0');
                 const ss = String(time.getSeconds()).padStart(2, '0');
                 const levelColor =
-                  entry.level === 'error' || entry.level === 'fatal' ? 'text-red-400'
-                  : entry.level === 'warn' ? 'text-yellow-400'
-                  : entry.level === 'ok' ? 'text-green-400'
-                  : entry.level === 'debug' ? 'text-gray-500'
-                  : 'text-blue-400';
+                  entry.level === 'error' || entry.level === 'fatal'
+                    ? 'text-red-400'
+                    : entry.level === 'warn'
+                      ? 'text-yellow-400'
+                      : entry.level === 'ok'
+                        ? 'text-green-400'
+                        : entry.level === 'debug'
+                          ? 'text-gray-500'
+                          : 'text-blue-400';
                 return (
                   <div key={i} className="flex gap-2 py-1 px-2 rounded hover:bg-white/5">
-                    <span className="text-gray-500 shrink-0">{hh}:{mm}:{ss}</span>
+                    <span className="text-gray-500 shrink-0">
+                      {hh}:{mm}:{ss}
+                    </span>
                     <span className={`shrink-0 w-8 ${levelColor}`}>
                       {entry.level === 'fatal' ? 'FTL' : entry.level.toUpperCase().slice(0, 3)}
                     </span>

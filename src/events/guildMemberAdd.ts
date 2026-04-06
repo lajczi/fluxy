@@ -21,19 +21,21 @@ async function handleGlobalBan(member: any, guild: any, client: any, ban: any): 
     try {
       const user = member.user || member;
       await user.send({
-        embeds: [new EmbedBuilder()
-          .setTitle(t('en', 'auditCatalog.events.guildMemberAdd.l24_setTitle'))
-          .setDescription(
-            `You have been banned from **${guild.name}** because your account is on the Fluxy global ban list.\n\n` +
-            `**Reason:** ${ban.reason}` +
-            (ban.evidence ? `\n**Evidence:** ${ban.evidence}` : '')
-          )
-          .setColor(0xe74c3c)
-          .setFooter({ text: t('en', 'auditCatalog.events.guildMemberAdd.l31_setFooter') })
-          .setTimestamp(new Date())
-          .toJSON()]
+        embeds: [
+          new EmbedBuilder()
+            .setTitle(t('en', 'auditCatalog.events.guildMemberAdd.l24_setTitle'))
+            .setDescription(
+              `You have been banned from **${guild.name}** because your account is on the Fluxy global ban list.\n\n` +
+                `**Reason:** ${ban.reason}` +
+                (ban.evidence ? `\n**Evidence:** ${ban.evidence}` : ''),
+            )
+            .setColor(0xe74c3c)
+            .setFooter({ text: t('en', 'auditCatalog.events.guildMemberAdd.l31_setFooter') })
+            .setTimestamp(new Date())
+            .toJSON(),
+        ],
       });
-    } catch { }
+    } catch {}
 
     await guild.ban(member.id || member.user?.id, {
       reason: `[Fluxy Global Ban] ${ban.reason}`,
@@ -53,30 +55,32 @@ async function handleGlobalBan(member: any, guild: any, client: any, ban: any): 
         description: 'This user was automatically banned because they are on the Fluxy global ban list.',
         footer: `Banned by Fluxy Global Protection • Disable with the globalban toggle command`,
         eventType: 'global_ban',
-      }
-    ).catch(() => { });
+      },
+    ).catch(() => {});
 
     const ownerId = guild.ownerId || (guild as any).owner_id;
     if (ownerId) {
       try {
-        const owner = client.users.get(ownerId) || await client.users.fetch(ownerId).catch(() => null);
+        const owner = client.users.get(ownerId) || (await client.users.fetch(ownerId).catch(() => null));
         if (owner) {
           await owner.send({
-            embeds: [new EmbedBuilder()
-              .setTitle(t('en', 'auditCatalog.events.guildMemberAdd.l65_setTitle'))
-              .setDescription(
-                `A user was automatically banned from **${guild.name}** because they are on the Fluxy global ban list.\n\n` +
-                `**User:** <@${member.id}> (\`${member.id}\`)\n` +
-                `**Reason:** ${ban.reason}` +
-                (ban.evidence ? `\n**Evidence:** ${ban.evidence}` : '') +
-                `\n\nYou can disable this with \`globalban off\` in your server.`
-              )
-              .setColor(0xe74c3c)
-              .setTimestamp(new Date())
-              .toJSON()]
+            embeds: [
+              new EmbedBuilder()
+                .setTitle(t('en', 'auditCatalog.events.guildMemberAdd.l65_setTitle'))
+                .setDescription(
+                  `A user was automatically banned from **${guild.name}** because they are on the Fluxy global ban list.\n\n` +
+                    `**User:** <@${member.id}> (\`${member.id}\`)\n` +
+                    `**Reason:** ${ban.reason}` +
+                    (ban.evidence ? `\n**Evidence:** ${ban.evidence}` : '') +
+                    `\n\nYou can disable this with \`globalban off\` in your server.`,
+                )
+                .setColor(0xe74c3c)
+                .setTimestamp(new Date())
+                .toJSON(),
+            ],
           });
         }
-      } catch { }
+      } catch {}
     }
 
     return true;
@@ -100,7 +104,7 @@ const event: BotEvent = {
       if (userId) {
         const raid = recordJoin(guild.id, userId, settings);
         if (raid?.detected) {
-          sendRaidAlert(client, guild, raid.joinCount, raid.userIds).catch(() => { });
+          sendRaidAlert(client, guild, raid.joinCount, raid.userIds).catch(() => {});
         }
       }
 
@@ -146,7 +150,9 @@ const event: BotEvent = {
               if (isNetworkError(err)) {
                 autoroleQueue.enqueue(guild.id, member.id, settings.autoroleId);
               } else {
-                console.error(`[autorole] Failed to assign role ${settings.autoroleId} to ${member.id} in ${guild.name}: ${err.message}`);
+                console.error(
+                  `[autorole] Failed to assign role ${settings.autoroleId} to ${member.id} in ${guild.name}: ${err.message}`,
+                );
               }
             }
           }
@@ -154,9 +160,7 @@ const event: BotEvent = {
       }
 
       const user = member.user;
-      const createdEpoch = user?.id
-        ? Math.floor((parseInt(user.id) / 4194304 + 1420070400000) / 1000)
-        : null;
+      const createdEpoch = user?.id ? Math.floor((parseInt(user.id) / 4194304 + 1420070400000) / 1000) : null;
 
       if (memberCounter.get(guild.id) === null) {
         await memberCounter.fetchAndSetMemberCount(guild.id, client);
@@ -171,18 +175,11 @@ const event: BotEvent = {
         joinFields.push({ name: 'Members', value: memberCount.toLocaleString(), inline: true });
       }
 
-      await logServerEvent(
-        guild,
-        'Member Joined',
-        0x2ecc71,
-        joinFields,
-        client,
-        {
-          description: `<@${member.id}> joined the server`,
-          footer: `User ID: ${member.id}`,
-          eventType: 'member_join',
-        }
-      ).catch(() => { });
+      await logServerEvent(guild, 'Member Joined', 0x2ecc71, joinFields, client, {
+        description: `<@${member.id}> joined the server`,
+        footer: `User ID: ${member.id}`,
+        eventType: 'member_join',
+      }).catch(() => {});
 
       const wm = settings.welcomeMessage;
       if (!wm?.enabled || !wm.channelId) return;
@@ -195,8 +192,8 @@ const event: BotEvent = {
       let welcomeChannel: any;
       try {
         const channelsMap = guild.channels?.cache || guild.channels;
-        welcomeChannel = channelsMap?.get(wm.channelId)
-          ?? await client.channels.fetch(wm.channelId).catch(() => null);
+        welcomeChannel =
+          channelsMap?.get(wm.channelId) ?? (await client.channels.fetch(wm.channelId).catch(() => null));
       } catch {
         welcomeChannel = null;
       }
@@ -213,9 +210,8 @@ const event: BotEvent = {
         roleName = role?.name || null;
       }
 
-      const avatarURL = user.displayAvatarURL?.({ size: 256, format: 'png' })
-        ?? user.avatarURL
-        ?? '/assets/default-avatar.png';
+      const avatarURL =
+        user.displayAvatarURL?.({ size: 256, format: 'png' }) ?? user.avatarURL ?? '/assets/default-avatar.png';
 
       const sendOpts: any = {};
       let cardBuffer: Buffer | null = null;
@@ -236,12 +232,13 @@ const event: BotEvent = {
         }
       }
 
-      const replaceVars = (text: string) => text
-        .replace(/\\n/g, '\n')
-        .replace(/\{user\}/gi, `<@${member.id}>`)
-        .replace(/\{server\}/gi, guild.name)
-        .replace(/\{count\}/gi, String(memberCount || 0))
-        .replace(/\{role\}/gi, roleName || 'None');
+      const replaceVars = (text: string) =>
+        text
+          .replace(/\\n/g, '\n')
+          .replace(/\{user\}/gi, `<@${member.id}>`)
+          .replace(/\{server\}/gi, guild.name)
+          .replace(/\{count\}/gi, String(memberCount || 0))
+          .replace(/\{role\}/gi, roleName || 'None');
 
       if (wm.message) {
         sendOpts.content = replaceVars(wm.message);
@@ -290,16 +287,15 @@ const event: BotEvent = {
             dmOpts.files = [{ name: 'welcome.png', data: cardBuffer }];
           }
 
-          await member.user.send(dmOpts).catch(() => { });
+          await member.user.send(dmOpts).catch(() => {});
         } catch (err: any) {
           console.error(`[welcome] Failed to send DM to ${member.id}: ${err.message}`);
         }
       }
-
     } catch (error) {
       console.error('Error in guildMemberAdd event:', error);
     }
-  }
+  },
 };
 
 export default event;

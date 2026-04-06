@@ -15,13 +15,14 @@ export function useGuildData(guildId: string | undefined) {
 
   const fetchSettings = useCallback((id: string) => {
     if (MOCK_MODE) {
-      setSettings(prev => normalizeSettings({ ...(prev ?? createMockSettings(id)), guildId: id }));
+      setSettings((prev) => normalizeSettings({ ...(prev ?? createMockSettings(id)), guildId: id }));
       return;
     }
 
-    api.get<GuildSettings>(`/guilds/${id}/settings`)
-      .then(s => setSettings(normalizeSettings(s)))
-      .catch(() => { });
+    api
+      .get<GuildSettings>(`/guilds/${id}/settings`)
+      .then((s) => setSettings(normalizeSettings(s)))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export function useGuildData(guildId: string | undefined) {
         setGuild(g);
         setSettings(normalizeSettings(s));
       })
-      .catch(err => setError(err.message))
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [guildId]);
 
@@ -72,12 +73,11 @@ export function useGuildData(guildId: string | undefined) {
           if (data.event === 'settings_updated' && data.guildId === guildId && !savingRef.current) {
             fetchSettings(guildId);
           }
-        } catch { }
+        } catch {}
       };
 
-      ws.onerror = () => { };
-    } catch {
-    }
+      ws.onerror = () => {};
+    } catch {}
 
     return () => {
       ws?.close();
@@ -93,13 +93,15 @@ export function useGuildData(guildId: string | undefined) {
         savingRef.current = true;
         setSaveError(null);
 
-        setSettings(prev => {
+        setSettings((prev) => {
           const base = prev ?? createMockSettings(guildId);
           return normalizeSettings({ ...base, ...patch, guildId });
         });
 
         setSaving(false);
-        setTimeout(() => { savingRef.current = false; }, 200);
+        setTimeout(() => {
+          savingRef.current = false;
+        }, 200);
         return;
       }
 
@@ -114,7 +116,9 @@ export function useGuildData(guildId: string | undefined) {
         throw err;
       } finally {
         setSaving(false);
-        setTimeout(() => { savingRef.current = false; }, 3000);
+        setTimeout(() => {
+          savingRef.current = false;
+        }, 3000);
       }
     },
     [guildId],

@@ -16,7 +16,7 @@ const defaultConfig = {
   timeWindow: 5000,
   timeoutDuration: 600000,
   violationThreshold: 3,
-  violationWindow: 1800000
+  violationWindow: 1800000,
 };
 
 function antiSpamT(locale: unknown, key: string, vars?: Record<string, string | number>): string {
@@ -30,7 +30,10 @@ function markDeleted(msgId: string): void {
 function isAlreadyDeleted(msgId: string): boolean {
   const expiry = recentlyDeleted.get(msgId);
   if (!expiry) return false;
-  if (Date.now() > expiry) { recentlyDeleted.delete(msgId); return false; }
+  if (Date.now() > expiry) {
+    recentlyDeleted.delete(msgId);
+    return false;
+  }
   return true;
 }
 
@@ -91,12 +94,12 @@ function trackViolation(guildId: string, userId: string, config: any) {
     violationTracker.set(key, data);
   }
 
-  data.violations = data.violations.filter(v => now - v < window);
+  data.violations = data.violations.filter((v) => now - v < window);
   data.violations.push(now);
 
   return {
     count: data.violations.length,
-    shouldTimeout: data.violations.length >= config.violationThreshold
+    shouldTimeout: data.violations.length >= config.violationThreshold,
   };
 }
 
@@ -111,15 +114,14 @@ function resetSpamTracker(guildId: string, userId: string): void {
 function cleanupTrackers(windowMs: number): void {
   const now = Date.now();
   for (const [key, data] of spamTracker) {
-    data.timestamps = data.timestamps.filter(t => now - t < windowMs);
+    data.timestamps = data.timestamps.filter((t) => now - t < windowMs);
     if (data.timestamps.length === 0) spamTracker.delete(key);
   }
   for (const [key, data] of violationTracker) {
-    data.violations = data.violations.filter(v => now - v < defaultConfig.violationWindow);
+    data.violations = data.violations.filter((v) => now - v < defaultConfig.violationWindow);
     if (data.violations.length === 0) violationTracker.delete(key);
   }
 }
-
 
 async function deleteSpamMessages(message: any, client: any, messageIds: string[] | null): Promise<number> {
   if (!messageIds || messageIds.length === 0) return 0;
@@ -128,7 +130,7 @@ async function deleteSpamMessages(message: any, client: any, messageIds: string[
   const guild = message.guild;
   if (!channelId || !guild) return 0;
 
-  const toDelete = messageIds.filter(id => !isAlreadyDeleted(id));
+  const toDelete = messageIds.filter((id) => !isAlreadyDeleted(id));
   if (toDelete.length === 0) return 0;
 
   toDelete.forEach(markDeleted);
@@ -141,28 +143,29 @@ async function deleteSpamMessages(message: any, client: any, messageIds: string[
         pruneDeletedCache();
         return toDelete.length;
       }
-    } catch {
-    }
+    } catch {}
   }
 
   let deleted = 0;
-  const promises = toDelete.map(msgId =>
-    client.rest.delete(Routes.channelMessage(channelId, msgId))
-      .then(() => { deleted++; })
+  const promises = toDelete.map((msgId) =>
+    client.rest
+      .delete(Routes.channelMessage(channelId, msgId))
+      .then(() => {
+        deleted++;
+      })
       .catch((e: any) => {
         if (isNetworkError(e)) {
           messageDeleteQueue.enqueue(channelId, msgId);
         } else if (e.status !== 404) {
           console.error(`[antiSpam] Delete ${msgId}: ${e.message}`);
         }
-      })
+      }),
   );
   await Promise.allSettled(promises);
 
   pruneDeletedCache();
   return deleted;
 }
-
 
 async function applyTimeout(guild: any, userId: string, duration: number, locale: unknown): Promise<boolean> {
   try {
@@ -175,13 +178,17 @@ async function applyTimeout(guild: any, userId: string, duration: number, locale
     const reason = antiSpamT(locale, 'timeoutReason');
     await member.edit({
       communication_disabled_until: until,
-      timeout_reason: reason
+      timeout_reason: reason,
     });
     return true;
   } catch (error: any) {
     if (isNetworkError(error)) {
       const guildId = guild.id;
-      if (guildId) moderationQueue.enqueue(guildId, userId, 'timeout', { durationMs: duration, reason: antiSpamT(locale, 'timeoutReason') });
+      if (guildId)
+        moderationQueue.enqueue(guildId, userId, 'timeout', {
+          durationMs: duration,
+          reason: antiSpamT(locale, 'timeoutReason'),
+        });
       return true;
     }
     if (error.statusCode === 404 || error.code === 'MEMBER_NOT_FOUND') return false;
@@ -193,11 +200,11 @@ async function applyTimeout(guild: any, userId: string, duration: number, locale
 function getEffectiveConfig(automodSettings: any, settings: any) {
   const spam = settings?.automod?.spam || {};
   return {
-    maxMessages:        spam.maxMessages        ?? defaultConfig.maxMessages,
-    timeWindow:        (spam.timeWindow         ?? (defaultConfig.timeWindow / 1000)) * 1000,
-    timeoutDuration:   (spam.timeoutDuration    ?? (defaultConfig.timeoutDuration / 60000)) * 60000,
+    maxMessages: spam.maxMessages ?? defaultConfig.maxMessages,
+    timeWindow: (spam.timeWindow ?? defaultConfig.timeWindow / 1000) * 1000,
+    timeoutDuration: (spam.timeoutDuration ?? defaultConfig.timeoutDuration / 60000) * 60000,
     violationThreshold: spam.violationThreshold ?? defaultConfig.violationThreshold,
-    violationWindow:    defaultConfig.violationWindow
+    violationWindow: defaultConfig.violationWindow,
   };
 }
 
@@ -234,7 +241,14 @@ const antiSpam = {
     return true;
   },
 
-  async execute(message: any, client: any, settings: any, automodSettings: any, spamResult: any, config?: any): Promise<void> {
+  async execute(
+    message: any,
+    client: any,
+    settings: any,
+    automodSettings: any,
+    spamResult: any,
+    config?: any,
+  ): Promise<void> {
     const userId = message.author.id;
     const guildId = message.guildId || message.guild?.id;
     const guild = message.guild;
@@ -293,7 +307,6 @@ const antiSpam = {
           language: settings?.language,
         }).catch(() => {});
       }
-
     } catch (error) {
       console.error('[antiSpam] Execute error:', error);
     }
@@ -306,33 +319,53 @@ const antiSpam = {
 
       let logChannel = guild.channels?.get(logChannelId);
       if (!logChannel) {
-        try { logChannel = await client.channels.fetch(logChannelId); } catch { return; }
+        try {
+          logChannel = await client.channels.fetch(logChannelId);
+        } catch {
+          return;
+        }
       }
       if (!logChannel) return;
 
       const fields: any[] = [
-        { name: antiSpamT(info.language, 'fieldUser'), value: `<@${message.author.id}> (${message.author.id})`, inline: true },
-        { name: antiSpamT(info.language, 'fieldChannel'), value: `<#${message.channelId || message.channel?.id}>`, inline: true },
+        {
+          name: antiSpamT(info.language, 'fieldUser'),
+          value: `<@${message.author.id}> (${message.author.id})`,
+          inline: true,
+        },
+        {
+          name: antiSpamT(info.language, 'fieldChannel'),
+          value: `<#${message.channelId || message.channel?.id}>`,
+          inline: true,
+        },
         { name: antiSpamT(info.language, 'fieldMessagesDeleted'), value: `${info.deletedCount}`, inline: true },
-        { name: antiSpamT(info.language, 'fieldViolations'), value: `${info.violation.count}/${info.config.violationThreshold}`, inline: true }
+        {
+          name: antiSpamT(info.language, 'fieldViolations'),
+          value: `${info.violation.count}/${info.config.violationThreshold}`,
+          inline: true,
+        },
       ];
 
       if (info.timedOut) {
         fields.push({
           name: antiSpamT(info.language, 'fieldAction'),
-          value: antiSpamT(info.language, 'actionTimedOutFor', { duration: formatDuration(info.config.timeoutDuration) }),
-          inline: true
+          value: antiSpamT(info.language, 'actionTimedOutFor', {
+            duration: formatDuration(info.config.timeoutDuration),
+          }),
+          inline: true,
         });
       }
 
       const embed = {
-        title: info.timedOut ? antiSpamT(info.language, 'logTitleTimedOut') : antiSpamT(info.language, 'logTitleDetected'),
+        title: info.timedOut
+          ? antiSpamT(info.language, 'logTitleTimedOut')
+          : antiSpamT(info.language, 'logTitleDetected'),
         description: info.timedOut
           ? antiSpamT(info.language, 'logDescriptionTimedOut')
           : antiSpamT(info.language, 'logDescriptionDetected'),
         fields,
         color: info.timedOut ? 0xf1c40f : 0xe74c3c,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
       try {
         await logChannel.send({ embeds: [embed] });
@@ -350,7 +383,7 @@ const antiSpam = {
   resetSpamTracker,
   trackViolation,
   clearViolations,
-  defaultConfig
+  defaultConfig,
 };
 
 export default antiSpam;

@@ -3,10 +3,10 @@ import path from 'path';
 import type { Client } from '@erinjs/core';
 import isNetworkError from './isNetworkError';
 
-const QUEUE_FILE     = path.join(__dirname, '../../data/role-queue.json');
+const QUEUE_FILE = path.join(__dirname, '../../data/role-queue.json');
 const RETRY_INTERVAL = 60_000;
-const MAX_AGE        = 24 * 60 * 60 * 1000;
-const MAX_SIZE       = 500;
+const MAX_AGE = 24 * 60 * 60 * 1000;
+const MAX_SIZE = 500;
 
 interface RoleQueueEntry {
   guildId: string;
@@ -41,7 +41,7 @@ function saveQueue(): void {
 
 export function enqueue(guildId: string, userId: string, roleId: string, operation: 'add' | 'remove' = 'add'): void {
   const exists = queue.some(
-    e => e.guildId === guildId && e.userId === userId && e.roleId === roleId && e.operation === operation,
+    (e) => e.guildId === guildId && e.userId === userId && e.roleId === roleId && e.operation === operation,
   );
   if (exists) return;
 
@@ -52,7 +52,9 @@ export function enqueue(guildId: string, userId: string, roleId: string, operati
 
   queue.push({ guildId, userId, roleId, operation, addedAt: Date.now() });
   saveQueue();
-  console.log(`[role-queue] Queued ${operation} ${roleId} for user ${userId} in guild ${guildId} (${queue.length} pending)`);
+  console.log(
+    `[role-queue] Queued ${operation} ${roleId} for user ${userId} in guild ${guildId} (${queue.length} pending)`,
+  );
 }
 
 async function processQueue(): Promise<void> {
@@ -91,12 +93,13 @@ async function processQueue(): Promise<void> {
         await member.addRole(entry.roleId);
         console.log(`[role-queue] Assigned role ${entry.roleId} to ${entry.userId} in ${guild.name}`);
       }
-
     } catch (err) {
       if (isNetworkError(err)) {
         remaining.push(entry);
       } else {
-        console.warn(`[role-queue] Permanent error for user ${entry.userId} in guild ${entry.guildId}, dropping: ${(err as Error).message}`);
+        console.warn(
+          `[role-queue] Permanent error for user ${entry.userId} in guild ${entry.guildId}, dropping: ${(err as Error).message}`,
+        );
       }
     }
   }

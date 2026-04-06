@@ -2,8 +2,8 @@ import type { Client } from '@erinjs/core';
 import isNetworkError from './isNetworkError';
 
 const RETRY_INTERVAL = 30_000;
-const MAX_AGE        = 60 * 60_000;
-const MAX_SIZE       = 500;
+const MAX_AGE = 60 * 60_000;
+const MAX_SIZE = 500;
 
 interface EmbedQueueEntry {
   guildId: string;
@@ -30,7 +30,6 @@ async function processQueue(): Promise<void> {
   const remaining: EmbedQueueEntry[] = [];
 
   for (const entry of queue) {
-
     if (Date.now() - entry.addedAt > MAX_AGE) {
       console.log(`[embed-queue] Dropping stale embed for channel ${entry.channelId}`);
       continue;
@@ -38,13 +37,21 @@ async function processQueue(): Promise<void> {
 
     try {
       const guild = _client.guilds.get(entry.guildId);
-      if (!guild) { remaining.push(entry); continue; }
+      if (!guild) {
+        remaining.push(entry);
+        continue;
+      }
 
       let channel = guild.channels?.get(entry.channelId) as any;
       if (!channel) {
-        try { channel = await _client.channels.fetch(entry.channelId); } catch {}
+        try {
+          channel = await _client.channels.fetch(entry.channelId);
+        } catch {}
       }
-      if (!channel) { remaining.push(entry); continue; }
+      if (!channel) {
+        remaining.push(entry);
+        continue;
+      }
 
       await channel.send({ embeds: [entry.embed] });
       console.log(`[embed-queue] Sent queued embed to channel ${entry.channelId}`);
@@ -52,7 +59,9 @@ async function processQueue(): Promise<void> {
       if (isNetworkError(err)) {
         remaining.push(entry);
       } else {
-        console.warn(`[embed-queue] Permanent error for ${entry.channelId}, dropping: ${(err as any).code || (err as Error).message}`);
+        console.warn(
+          `[embed-queue] Permanent error for ${entry.channelId}, dropping: ${(err as any).code || (err as Error).message}`,
+        );
       }
     }
   }

@@ -23,14 +23,14 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.moderation.massban.serverOnly'));
+      return void (await message.reply(t('en', 'commands.moderation.massban.serverOnly')));
     }
 
     const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
     const lang = normalizeLocale(guildSettings?.language);
 
     if (args.length < 2) {
-      return void await message.reply(t(lang, 'commands.moderation.massban.usage', { prefix }));
+      return void (await message.reply(t(lang, 'commands.moderation.massban.usage', { prefix })));
     }
 
     const startId = args[0];
@@ -38,34 +38,29 @@ const command: Command = {
     const reason = args.slice(2).join(' ').trim() || t(lang, 'commands.moderation.massban.noReasonProvided');
 
     if (!/^\d{17,22}$/.test(startId) || !/^\d{17,22}$/.test(endId)) {
-      return void await message.reply(t(lang, 'commands.moderation.massban.invalidMessageIds'));
+      return void (await message.reply(t(lang, 'commands.moderation.massban.invalidMessageIds')));
     }
 
     const channelId = (message as any).channelId || (message as any).channel?.id;
     if (!channelId) {
-      return void await message.reply(t(lang, 'commands.moderation.massban.couldNotDetermineChannel'));
+      return void (await message.reply(t(lang, 'commands.moderation.massban.couldNotDetermineChannel')));
     }
 
-    const channel = guild.channels?.get(channelId)
-      || await guild.fetchChannel?.(channelId).catch(() => null);
+    const channel = guild.channels?.get(channelId) || (await guild.fetchChannel?.(channelId).catch(() => null));
     if (!channel) {
-      return void await message.reply(t(lang, 'commands.moderation.massban.couldNotAccessChannel'));
+      return void (await message.reply(t(lang, 'commands.moderation.massban.couldNotAccessChannel')));
     }
 
     let startMsg: any, endMsg: any;
     try {
       startMsg = await channel.messages.fetch(startId);
     } catch {
-      return void await message.reply(
-        t(lang, 'commands.moderation.massban.couldNotFindStartMessage', { startId })
-      );
+      return void (await message.reply(t(lang, 'commands.moderation.massban.couldNotFindStartMessage', { startId })));
     }
     try {
       endMsg = await channel.messages.fetch(endId);
     } catch {
-      return void await message.reply(
-        t(lang, 'commands.moderation.massban.couldNotFindEndMessage', { endId })
-      );
+      return void (await message.reply(t(lang, 'commands.moderation.massban.couldNotFindEndMessage', { endId })));
     }
 
     const [lowId, highId] = BigInt(startId) <= BigInt(endId) ? [startId, endId] : [endId, startId];
@@ -137,18 +132,18 @@ const command: Command = {
     }
 
     if (authorIds.size === 0) {
-      return void await statusMsg.edit({ content: t(lang, 'commands.moderation.massban.noBannableUsersFound') });
+      return void (await statusMsg.edit({ content: t(lang, 'commands.moderation.massban.noBannableUsersFound') }));
     }
 
     const confirmEmbed = new EmbedBuilder()
       .setTitle(t(lang, 'commands.moderation.massban.confirmTitle'))
-      .setColor(0xFF4444)
+      .setColor(0xff4444)
       .setDescription(
         t(lang, 'commands.moderation.massban.confirmDescription', {
           authorCount: authorIds.size,
           messageCount: messageMap.size,
-          reason
-        })
+          reason,
+        }),
       );
 
     const confirmMsg = await statusMsg.edit({ content: undefined, embeds: [confirmEmbed] });
@@ -157,10 +152,10 @@ const command: Command = {
       await confirmMsg.react('✅');
       await confirmMsg.react('❌');
     } catch {
-      return void await confirmMsg.edit({
+      return void (await confirmMsg.edit({
         content: t(lang, 'commands.moderation.massban.confirmationReactionsFailed'),
-        embeds: []
-      });
+        embeds: [],
+      }));
     }
 
     const confirmed = await new Promise<boolean>((resolve) => {
@@ -190,12 +185,12 @@ const command: Command = {
     });
 
     if (!confirmed) {
-      return void await confirmMsg.edit({ content: t(lang, 'commands.moderation.massban.cancelled'), embeds: [] });
+      return void (await confirmMsg.edit({ content: t(lang, 'commands.moderation.massban.cancelled'), embeds: [] }));
     }
 
     await confirmMsg.edit({
       content: t(lang, 'commands.moderation.massban.statusBanning', { authorCount: authorIds.size }),
-      embeds: []
+      embeds: [],
     });
 
     let moderator: any = guild.members?.get(invokerId);
@@ -211,7 +206,11 @@ const command: Command = {
       try {
         let targetMember: any = guild.members?.get(userId);
         if (!targetMember) {
-          try { targetMember = await guild.fetchMember(userId); } catch { targetMember = null; }
+          try {
+            targetMember = await guild.fetchMember(userId);
+          } catch {
+            targetMember = null;
+          }
         }
 
         if (targetMember && moderator) {
@@ -232,67 +231,66 @@ const command: Command = {
 
         let targetUser: any = targetMember?.user;
         if (!targetUser) {
-          try { targetUser = await client.users.fetch(userId); } catch {
+          try {
+            targetUser = await client.users.fetch(userId);
+          } catch {
             targetUser = { id: userId, username: t(lang, 'commands.userinfo.unknown') };
           }
         }
 
-        await logModAction(guild, (message as any).author, targetUser, 'ban', `[massban] ${reason}`, { client }).catch(() => {});
+        await logModAction(guild, (message as any).author, targetUser, 'ban', `[massban] ${reason}`, { client }).catch(
+          () => {},
+        );
 
         await ModerationLog.logAction({
           guildId: guild.id,
           targetId: userId,
           userId: invokerId,
           action: 'ban',
-          reason: `[massban] ${reason}`
+          reason: `[massban] ${reason}`,
         }).catch(() => {});
 
-        if (authorIds.size > 5) await new Promise(r => setTimeout(r, 300));
-
+        if (authorIds.size > 5) await new Promise((r) => setTimeout(r, 300));
       } catch (error: any) {
         failed++;
         if (isNetworkError(error)) {
-          failures.push(
-            `<@${userId}>: ${t(lang, 'commands.moderation.massban.failures.networkError')}`
-          );
+          failures.push(`<@${userId}>: ${t(lang, 'commands.moderation.massban.failures.networkError')}`);
         } else if (isPermDenied(error)) {
-          failures.push(
-            `<@${userId}>: ${t(lang, 'commands.moderation.massban.failures.missingPermissions')}`
-          );
+          failures.push(`<@${userId}>: ${t(lang, 'commands.moderation.massban.failures.missingPermissions')}`);
         } else {
           failures.push(
-            `<@${userId}>: ${
-              error.message || t(lang, 'commands.moderation.massban.failures.unknownError')
-            }`
+            `<@${userId}>: ${error.message || t(lang, 'commands.moderation.massban.failures.unknownError')}`,
           );
         }
       }
     }
 
-    const failuresBlock = failures.length > 0
-      ? t(lang, 'commands.moderation.massban.failuresBlock', {
-        failuresPreview: failures.slice(0, 10).join('\n'),
-        moreSuffix: failures.length > 10
-          ? t(lang, 'commands.moderation.massban.failuresMoreSuffix', { moreCount: failures.length - 10 })
-          : ''
-      })
-      : '';
+    const failuresBlock =
+      failures.length > 0
+        ? t(lang, 'commands.moderation.massban.failuresBlock', {
+            failuresPreview: failures.slice(0, 10).join('\n'),
+            moreSuffix:
+              failures.length > 10
+                ? t(lang, 'commands.moderation.massban.failuresMoreSuffix', { moreCount: failures.length - 10 })
+                : '',
+          })
+        : '';
 
     const resultEmbed = new EmbedBuilder()
       .setTitle(t(lang, 'commands.moderation.massban.resultTitle'))
-      .setColor(banned > 0 ? 0x43B581 : 0xFF4444)
+      .setColor(banned > 0 ? 0x43b581 : 0xff4444)
       .setDescription(
         t(lang, 'commands.moderation.massban.resultDescription', {
           banned,
           total: authorIds.size,
           failed,
           reason,
-          failuresBlock
-        })
+          failuresBlock,
+        }),
       );
 
     await confirmMsg.edit({ content: undefined, embeds: [resultEmbed] });
-  }
+  },
 };
 
 export default command;

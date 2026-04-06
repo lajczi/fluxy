@@ -16,17 +16,21 @@ const event: BotEvent = {
       }
       if ((oldChannel.topic ?? '') !== (newChannel.topic ?? '')) {
         const before = oldChannel.topic || '*(none)*';
-        const after  = newChannel.topic || '*(none)*';
+        const after = newChannel.topic || '*(none)*';
         changes.push({ name: 'Topic', value: `Before: ${before}\nAfter: ${after}`, inline: false });
       }
       if (oldChannel.nsfw !== newChannel.nsfw) {
-        changes.push({ name: 'NSFW', value: `${oldChannel.nsfw ? 'Yes' : 'No'} → ${newChannel.nsfw ? 'Yes' : 'No'}`, inline: true });
+        changes.push({
+          name: 'NSFW',
+          value: `${oldChannel.nsfw ? 'Yes' : 'No'} → ${newChannel.nsfw ? 'Yes' : 'No'}`,
+          inline: true,
+        });
       }
       if ((oldChannel.rateLimitPerUser ?? 0) !== (newChannel.rateLimitPerUser ?? 0)) {
         changes.push({
           name: 'Slowmode',
           value: `${oldChannel.rateLimitPerUser ?? 0}s → ${newChannel.rateLimitPerUser ?? 0}s`,
-          inline: true
+          inline: true,
         });
       }
 
@@ -36,17 +40,14 @@ const event: BotEvent = {
         guild,
         'Channel Updated',
         0xf1c40f,
-        [
-          { name: 'Channel', value: `<#${newChannel.id}>`, inline: false },
-          ...changes,
-        ],
+        [{ name: 'Channel', value: `<#${newChannel.id}>`, inline: false }, ...changes],
         client,
-        { footer: `Channel ID: ${newChannel.id}`, eventType: 'channel_update' }
+        { footer: `Channel ID: ${newChannel.id}`, eventType: 'channel_update' },
       );
     } catch (error) {
       console.error('Error in channelUpdate event:', error);
     }
-  }
+  },
 };
 
 export default event;

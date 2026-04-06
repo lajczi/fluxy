@@ -20,7 +20,9 @@ const sessions = new Map<string, PaginatorSession>();
 
 function normalizeEmoji(emoji: any): string {
   if (emoji?.id) return `${emoji.name}:${emoji.id}`;
-  return String(emoji?.name ?? '').replace(/[\uFE00-\uFE0F\u200D]/g, '').trim();
+  return String(emoji?.name ?? '')
+    .replace(/[\uFE00-\uFE0F\u200D]/g, '')
+    .trim();
 }
 
 function isPrevEmoji(emoji: any): boolean {
@@ -55,17 +57,19 @@ async function removeUserReaction(client: Client, reaction: any, userId: string)
   const encoded = reactionRouteParam(reaction.emoji);
   if (!encoded) return;
 
-  await client.rest
-    .delete(`${Routes.channelMessageReaction(channelId, messageId, encoded)}/${userId}`)
-    .catch(() => {});
+  await client.rest.delete(`${Routes.channelMessageReaction(channelId, messageId, encoded)}/${userId}`).catch(() => {});
 }
 
 async function removePaginatorReactions(client: Client, session: PaginatorSession): Promise<void> {
   await client.rest.delete(Routes.channelMessageReactions(session.channelId, session.messageId)).catch(async () => {
     const prev = encodeReactionForRoute(PREV_EMOJI);
     const next = encodeReactionForRoute(NEXT_EMOJI);
-    await client.rest.delete(`${Routes.channelMessageReaction(session.channelId, session.messageId, prev)}/@me`).catch(() => {});
-    await client.rest.delete(`${Routes.channelMessageReaction(session.channelId, session.messageId, next)}/@me`).catch(() => {});
+    await client.rest
+      .delete(`${Routes.channelMessageReaction(session.channelId, session.messageId, prev)}/@me`)
+      .catch(() => {});
+    await client.rest
+      .delete(`${Routes.channelMessageReaction(session.channelId, session.messageId, next)}/@me`)
+      .catch(() => {});
   });
 }
 
@@ -88,14 +92,17 @@ async function renderPage(client: Client, session: PaginatorSession): Promise<vo
   });
 }
 
-export async function registerReactionPaginator(client: Client, opts: {
-  messageId: string;
-  channelId: string;
-  ownerUserId: string;
-  pages: unknown[];
-  initialPageIndex?: number;
-  ttlMs?: number;
-}): Promise<void> {
+export async function registerReactionPaginator(
+  client: Client,
+  opts: {
+    messageId: string;
+    channelId: string;
+    ownerUserId: string;
+    pages: unknown[];
+    initialPageIndex?: number;
+    ttlMs?: number;
+  },
+): Promise<void> {
   if (!opts.messageId || !opts.channelId || !opts.ownerUserId) return;
   if (!Array.isArray(opts.pages) || opts.pages.length <= 1) return;
 

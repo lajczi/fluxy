@@ -35,7 +35,7 @@ const event: BotEvent = {
           0x2ecc71,
           [{ name: 'Channel', value: `<#${currChannelId}>`, inline: true }],
           client,
-          { description: `<@${userId}> joined a voice channel`, footer: `User ID: ${userId}`, eventType: 'voice_join' }
+          { description: `<@${userId}> joined a voice channel`, footer: `User ID: ${userId}`, eventType: 'voice_join' },
         );
       } else if (prevChannelId && !currChannelId) {
         await logServerEvent(
@@ -44,7 +44,7 @@ const event: BotEvent = {
           0xe67e22,
           [{ name: 'Channel', value: `<#${prevChannelId}>`, inline: true }],
           client,
-          { description: `<@${userId}> left a voice channel`, footer: `User ID: ${userId}`, eventType: 'voice_leave' }
+          { description: `<@${userId}> left a voice channel`, footer: `User ID: ${userId}`, eventType: 'voice_leave' },
         );
       } else if (prevChannelId && currChannelId && prevChannelId !== currChannelId) {
         await logServerEvent(
@@ -53,16 +53,16 @@ const event: BotEvent = {
           0x3498db,
           [
             { name: 'From', value: `<#${prevChannelId}>`, inline: true },
-            { name: 'To',   value: `<#${currChannelId}>`, inline: true },
+            { name: 'To', value: `<#${currChannelId}>`, inline: true },
           ],
           client,
-          { description: `<@${userId}> moved voice channels`, footer: `User ID: ${userId}`, eventType: 'voice_move' }
+          { description: `<@${userId}> moved voice channels`, footer: `User ID: ${userId}`, eventType: 'voice_move' },
         );
       }
     } catch (error) {
       console.error('Error in voiceStateUpdate event:', error);
     }
-  }
+  },
 };
 
 export default event;

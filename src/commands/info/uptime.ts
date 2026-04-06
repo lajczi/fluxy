@@ -25,10 +25,22 @@ const command: Command = {
       const seconds = Math.floor((uptime % (60 * 1000)) / 1000);
 
       const uptimeParts: string[] = [];
-      if (days > 0) uptimeParts.push(`${days} ${t(lang, days === 1 ? 'commands.uptime.unitDaySingular' : 'commands.uptime.unitDayPlural')}`);
-      if (hours > 0) uptimeParts.push(`${hours} ${t(lang, hours === 1 ? 'commands.uptime.unitHourSingular' : 'commands.uptime.unitHourPlural')}`);
-      if (minutes > 0) uptimeParts.push(`${minutes} ${t(lang, minutes === 1 ? 'commands.uptime.unitMinuteSingular' : 'commands.uptime.unitMinutePlural')}`);
-      if (seconds > 0 || uptimeParts.length === 0) uptimeParts.push(`${seconds} ${t(lang, seconds === 1 ? 'commands.uptime.unitSecondSingular' : 'commands.uptime.unitSecondPlural')}`);
+      if (days > 0)
+        uptimeParts.push(
+          `${days} ${t(lang, days === 1 ? 'commands.uptime.unitDaySingular' : 'commands.uptime.unitDayPlural')}`,
+        );
+      if (hours > 0)
+        uptimeParts.push(
+          `${hours} ${t(lang, hours === 1 ? 'commands.uptime.unitHourSingular' : 'commands.uptime.unitHourPlural')}`,
+        );
+      if (minutes > 0)
+        uptimeParts.push(
+          `${minutes} ${t(lang, minutes === 1 ? 'commands.uptime.unitMinuteSingular' : 'commands.uptime.unitMinutePlural')}`,
+        );
+      if (seconds > 0 || uptimeParts.length === 0)
+        uptimeParts.push(
+          `${seconds} ${t(lang, seconds === 1 ? 'commands.uptime.unitSecondSingular' : 'commands.uptime.unitSecondPlural')}`,
+        );
 
       const uptimeString = uptimeParts.join(t(lang, 'commands.uptime.listSeparator'));
 
@@ -40,16 +52,17 @@ const command: Command = {
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        timeZoneName: 'short'
+        timeZoneName: 'short',
       });
 
-      await message.reply(t(lang, 'commands.uptime.response', {
-        labelUptime: t(lang, 'commands.uptime.labelUptime'),
-        labelStarted: t(lang, 'commands.uptime.labelStarted'),
-        uptimeString,
-        startString
-      }));
-
+      await message.reply(
+        t(lang, 'commands.uptime.response', {
+          labelUptime: t(lang, 'commands.uptime.labelUptime'),
+          labelStarted: t(lang, 'commands.uptime.labelStarted'),
+          uptimeString,
+          startString,
+        }),
+      );
     } catch (error: any) {
       if (isNetworkError(error)) {
         console.warn(`Fluxer API unreachable during !uptime (ECONNRESET)`);
@@ -57,7 +70,7 @@ const command: Command = {
         console.error(`Error in !uptime: ${error.message || error}`);
       }
     }
-  }
+  },
 };
 
 export default command;

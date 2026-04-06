@@ -21,10 +21,7 @@ export function createPublicRouter(client: Client): Router {
     const hasBotUser = Boolean(client.user);
     const online = hasBotUser && hasReadySession;
     const guilds = await getGuildCount(c);
-    const gateway =
-      wsPing === null || wsPing === undefined
-        ? (online ? 'connected' : 'disconnected')
-        : 'connected';
+    const gateway = wsPing === null || wsPing === undefined ? (online ? 'connected' : 'disconnected') : 'connected';
 
     const payload = {
       status: online ? 'online' : 'degraded',
@@ -43,4 +40,3 @@ export function createPublicRouter(client: Client): Router {
 
   return router;
 }
-

@@ -25,7 +25,7 @@ async function check(message: any, client: any, settings: any): Promise<boolean>
 
   if (entry.enabled === false) return false;
 
-  const guild = message.guild || await client.guilds.fetch(message.guildId).catch(() => null);
+  const guild = message.guild || (await client.guilds.fetch(message.guildId).catch(() => null));
   if (!guild) return false;
 
   const author = message.author;
@@ -56,19 +56,16 @@ async function check(message: any, client: any, settings: any): Promise<boolean>
     if (action === 'ban') {
       await guild.ban(author.id, {
         reason: honeypotReason(settings?.language),
-        delete_message_days: entry.banDeleteDays ?? 1
+        delete_message_days: entry.banDeleteDays ?? 1,
       });
-
     } else if (action === 'kick') {
       await guild.kick(author.id);
-
     } else if (action === 'timeout') {
       const durationMs = (entry.timeoutHours ?? 24) * 3600000;
       await member.edit({
         communication_disabled_until: new Date(Date.now() + durationMs).toISOString(),
-        timeout_reason: honeypotReason(settings?.language)
+        timeout_reason: honeypotReason(settings?.language),
       });
-
     } else if (action === 'role') {
       if (!entry.roleId) {
         console.error(`[${guild.name}] Honeypot role action in <#${channelId}> has no roleId configured - skipping.`);
@@ -85,13 +82,17 @@ async function check(message: any, client: any, settings: any): Promise<boolean>
       fields: [
         { name: honeypotT(settings?.language, 'fieldUser'), value: `<@${author.id}> (${author.id})`, inline: true },
         { name: honeypotT(settings?.language, 'fieldChannel'), value: `<#${channelId}>`, inline: true },
-        { name: honeypotT(settings?.language, 'fieldAction'), value: formatAction(entry, settings?.language), inline: true },
+        {
+          name: honeypotT(settings?.language, 'fieldAction'),
+          value: formatAction(entry, settings?.language),
+          inline: true,
+        },
       ],
       footer: honeypotT(settings?.language, 'footerUserId', { userId: author.id }),
       client,
     }).catch(() => {});
 
-    const alertRoleId  = settings.honeypotAlertRoleId;
+    const alertRoleId = settings.honeypotAlertRoleId;
     const logChannelId = settings.logChannelId;
     if (alertRoleId && logChannelId) {
       const logChannel = guild.channels?.get(logChannelId);
@@ -101,23 +102,28 @@ async function check(message: any, client: any, settings: any): Promise<boolean>
     }
 
     await ModerationLog.logAction({
-      guildId:  guild.id,
+      guildId: guild.id,
       targetId: author.id,
-      userId:   'automod',
+      userId: 'automod',
       action,
-      reason:   honeypotReason(settings?.language),
-      metadata: { honeypotChannelId: channelId } as any
+      reason: honeypotReason(settings?.language),
+      metadata: { honeypotChannelId: channelId } as any,
     });
-
   } catch (err: any) {
     if (isNetworkError(err)) {
       if (action === 'ban') {
-        moderationQueue.enqueue(guild.id, author.id, 'ban', { reason: honeypotReason(settings?.language), deleteDays: entry.banDeleteDays ?? 1 });
+        moderationQueue.enqueue(guild.id, author.id, 'ban', {
+          reason: honeypotReason(settings?.language),
+          deleteDays: entry.banDeleteDays ?? 1,
+        });
       } else if (action === 'kick') {
         moderationQueue.enqueue(guild.id, author.id, 'kick', { reason: honeypotReason(settings?.language) });
       } else if (action === 'timeout') {
         const durationMs = (entry.timeoutHours ?? 24) * 3600000;
-        moderationQueue.enqueue(guild.id, author.id, 'timeout', { durationMs, reason: honeypotReason(settings?.language) });
+        moderationQueue.enqueue(guild.id, author.id, 'timeout', {
+          durationMs,
+          reason: honeypotReason(settings?.language),
+        });
       } else if (action === 'role' && entry.roleId) {
         roleQueue.enqueue(guild.id, author.id, entry.roleId, 'add');
       }
@@ -141,7 +147,8 @@ function formatAction(entry: any, locale: unknown): string {
       return entry.roleId
         ? honeypotT(locale, 'actionRole', { roleId: entry.roleId })
         : honeypotT(locale, 'actionRoleUnconfigured');
-    default:        return entry.action;
+    default:
+      return entry.action;
   }
 }
 

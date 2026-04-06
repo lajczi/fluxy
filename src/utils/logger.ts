@@ -4,12 +4,7 @@ import settingsCache from './settingsCache';
 import isNetworkError from './isNetworkError';
 import * as embedQueue from './embedQueue';
 
-const REQUIRED_SEND_PERMS = [
-  'ViewChannel',
-  'SendMessages',
-  'EmbedLinks',
-] as const;
-
+const REQUIRED_SEND_PERMS = ['ViewChannel', 'SendMessages', 'EmbedLinks'] as const;
 
 function hasRequiredChannelPerms(me: any, channel: any): boolean {
   if (!me?.permissionsIn || !channel) return true;
@@ -53,7 +48,7 @@ function diagnosePermissions(guild: any, channelId: string, error: any, resolved
 
   const guildPerms = me.permissions;
   if (guildPerms) {
-    const guildPermList = REQUIRED_SEND_PERMS.map(p => {
+    const guildPermList = REQUIRED_SEND_PERMS.map((p) => {
       const flag = (PermissionFlags as any)[p];
       return `${p}=${flag ? guildPerms.has(flag) : '?'}`;
     });
@@ -65,7 +60,7 @@ function diagnosePermissions(guild: any, channelId: string, error: any, resolved
   if (channel && me.permissionsIn) {
     try {
       const chanPerms = me.permissionsIn(channel);
-      const chanPermList = REQUIRED_SEND_PERMS.map(p => {
+      const chanPermList = REQUIRED_SEND_PERMS.map((p) => {
         const flag = (PermissionFlags as any)[p];
         return `${p}=${flag ? chanPerms.has(flag) : '?'}`;
       });
@@ -79,9 +74,7 @@ function diagnosePermissions(guild: any, channelId: string, error: any, resolved
 
   const roleIds = me.roles?.roleIds ?? me._roles;
   if (roleIds) {
-    const roleNames = roleIds
-      .map((id: string) => guild.roles?.get(id)?.name ?? id)
-      .slice(0, 10);
+    const roleNames = roleIds.map((id: string) => guild.roles?.get(id)?.name ?? id).slice(0, 10);
     parts.push(`botRoles=[${roleNames.join(', ')}]`);
   }
 
@@ -92,17 +85,17 @@ function diagnosePermissions(guild: any, channelId: string, error: any, resolved
 }
 
 export const COLORS: Record<string, number> = {
-  ban: 0xe74c3c,      // Red
-  unban: 0x2ecc71,    // Green
-  kick: 0xe67e22,     // Orange
-  mute: 0xf1c40f,     // Yellow
-  unmute: 0x2ecc71,   // Green
-  timeout: 0xf1c40f,  // Yellow
-  warn: 0xf39c12,     // Orange
+  ban: 0xe74c3c, // Red
+  unban: 0x2ecc71, // Green
+  kick: 0xe67e22, // Orange
+  mute: 0xf1c40f, // Yellow
+  unmute: 0x2ecc71, // Green
+  timeout: 0xf1c40f, // Yellow
+  warn: 0xf39c12, // Orange
   clearwarns: 0x3498db, // Blue
-  clear: 0x9b59b6,    // Purple
-  automod: 0xe74c3c,  // Red
-  default: 0x95a5a6,  // Gray
+  clear: 0x9b59b6, // Purple
+  automod: 0xe74c3c, // Red
+  default: 0x95a5a6, // Gray
 };
 
 /**
@@ -213,7 +206,6 @@ export async function logToChannel(guild: any, settings: any, options: LogOption
 
     await logChannel.send({ embeds: [embed] });
     return true;
-
   } catch (error: any) {
     if (error?.code === 'MISSING_PERMISSIONS' || error?.statusCode === 403) {
       const diag = diagnosePermissions(guild, logChannelId ?? 'unknown', error, logChannel);
@@ -249,9 +241,7 @@ export async function logModAction(
   }
 
   const actionName = action.charAt(0).toUpperCase() + action.slice(1);
-  const title = target
-    ? `${actionName} - ${target.username || target.id}`
-    : actionName;
+  const title = target ? `${actionName} - ${target.username || target.id}` : actionName;
 
   return logToChannel(guild, null, {
     action,
@@ -293,7 +283,9 @@ export async function sendEmbed(guild: any, channelId: string, embed: any, clien
   try {
     channel = guild.channels?.get(channelId);
     if (!channel && client) {
-      try { channel = await client.channels.fetch(channelId); } catch {}
+      try {
+        channel = await client.channels.fetch(channelId);
+      } catch {}
     }
     if (!channel) return false;
 
@@ -345,7 +337,7 @@ const EVENT_CATEGORY: Record<string, string> = {
 };
 
 export const LOG_CATEGORIES = ['member', 'voice', 'message', 'role', 'channel', 'reaction', 'server'] as const;
-export type LogCategory = typeof LOG_CATEGORIES[number];
+export type LogCategory = (typeof LOG_CATEGORIES)[number];
 
 const bulkRoleUpdateSuppressionUntil = new Map<string, number>();
 
@@ -398,10 +390,7 @@ export async function logServerEvent(
     }
     if (!channelId) return false;
 
-    const embed = new EmbedBuilder()
-      .setTitle(title)
-      .setColor(color)
-      .setTimestamp(new Date());
+    const embed = new EmbedBuilder().setTitle(title).setColor(color).setTimestamp(new Date());
 
     if (embedExtra.description) embed.setDescription(embedExtra.description);
 

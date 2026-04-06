@@ -28,9 +28,8 @@ const event: BotEvent = {
     try {
       if (!newGuild?.id) return;
 
-      const preservedChannels = oldGuild?.channels?.size > 0
-        ? oldGuild.channels.entries()
-        : getClientGuildChannels(client, newGuild.id);
+      const preservedChannels =
+        oldGuild?.channels?.size > 0 ? oldGuild.channels.entries() : getClientGuildChannels(client, newGuild.id);
 
       restoreCollectionIfEmpty(newGuild.channels, preservedChannels);
       restoreCollectionIfEmpty(newGuild.roles, oldGuild?.roles?.entries?.());

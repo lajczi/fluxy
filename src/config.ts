@@ -35,8 +35,14 @@ const config: BotConfig = {
   },
   rss: {
     enabled: process.env.RSS_ENABLED !== 'false',
-    defaultPollIntervalMinutes: parseInt(process.env.RSS_DEFAULT_POLL_INTERVAL_MINUTES || String(RSS_DEFAULT_POLL_INTERVAL_MINUTES), 10),
-    minPollIntervalMinutes: parseInt(process.env.RSS_MIN_POLL_INTERVAL_MINUTES || String(RSS_MIN_POLL_INTERVAL_MINUTES), 10),
+    defaultPollIntervalMinutes: parseInt(
+      process.env.RSS_DEFAULT_POLL_INTERVAL_MINUTES || String(RSS_DEFAULT_POLL_INTERVAL_MINUTES),
+      10,
+    ),
+    minPollIntervalMinutes: parseInt(
+      process.env.RSS_MIN_POLL_INTERVAL_MINUTES || String(RSS_MIN_POLL_INTERVAL_MINUTES),
+      10,
+    ),
     maxFeedsPerGuild: parseInt(process.env.RSS_MAX_FEEDS_PER_GUILD || String(RSS_MAX_FEEDS_PER_GUILD), 10),
     fetchTimeoutMs: parseInt(process.env.RSS_FETCH_TIMEOUT_MS || '10000', 10),
     maxBodyBytes: parseInt(process.env.RSS_MAX_BODY_BYTES || String(1024 * 1024), 10),

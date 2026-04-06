@@ -6,9 +6,7 @@ describe('validateSettingsUpdate keywordWarnings validation', () => {
       keywordWarnings: {
         enabled: true,
         action: 'delete',
-        keywords: [
-          { pattern: 'six seven', isRegex: false, label: null, addedBy: null },
-        ],
+        keywords: [{ pattern: 'six seven', isRegex: false, label: null, addedBy: null }],
       },
     });
 
@@ -43,9 +41,7 @@ describe('validateSettingsUpdate keywordWarnings validation', () => {
       keywordWarnings: {
         enabled: true,
         action: 'delete+warn',
-        keywords: [
-          { pattern: '', isRegex: 'nope' },
-        ],
+        keywords: [{ pattern: '', isRegex: 'nope' }],
       },
     });
 

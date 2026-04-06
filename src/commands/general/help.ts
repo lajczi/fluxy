@@ -17,9 +17,9 @@ const ACCENT_COLOR = 0xf1c40f;
 
 const CATEGORY_META: Record<string, { label: string; description: string }> = {
   moderation: { label: 'Moderation', description: 'Ban, kick, warn, timeout, mute, clear, slowmode' },
-  admin:      { label: 'Admin',      description: 'Configure the bot - logging, automod, tickets, lockdown, reaction roles' },
-  info:       { label: 'Info',        description: 'Server, member, role, and bot information' },
-  general:    { label: 'General',     description: 'Help, ping, report' },
+  admin: { label: 'Admin', description: 'Configure the bot - logging, automod, tickets, lockdown, reaction roles' },
+  info: { label: 'Info', description: 'Server, member, role, and bot information' },
+  general: { label: 'General', description: 'Help, ping, report' },
 };
 
 const CATEGORY_ORDER = ['moderation', 'admin', 'info', 'general'];
@@ -73,7 +73,6 @@ function canSeeLockdownCommand(message: any, member: any | null, guildSettings: 
   return (guildSettings?.lockdownAllowedRoles ?? []).some((roleId: string) => memberRoleIds.includes(roleId));
 }
 
-
 async function getPrefix(message: any): Promise<string> {
   const guildId = message.guildId || message.guild?.id;
   if (!guildId) return config.prefix;
@@ -90,7 +89,10 @@ function isCommandDisabledInGuild(cmd: Command, disabled: unknown): boolean {
 }
 
 function sanitizeHelpQuery(raw: string): string {
-  return raw.toLowerCase().replace(/^[^\w]+/, '').trim();
+  return raw
+    .toLowerCase()
+    .replace(/^[^\w]+/, '')
+    .trim();
 }
 
 function categorySlug(value: string): string {
@@ -123,8 +125,9 @@ async function buildVisibleHelpCategories(opts: {
   guildSettings: any;
 }): Promise<HelpCategoryPage[]> {
   const categories = opts.commandHandler.getCommandsByCategory();
-  const sorted = CATEGORY_ORDER.filter(c => categories[c])
-    .concat(Object.keys(categories).filter(c => !CATEGORY_ORDER.includes(c)));
+  const sorted = CATEGORY_ORDER.filter((c) => categories[c]).concat(
+    Object.keys(categories).filter((c) => !CATEGORY_ORDER.includes(c)),
+  );
 
   const pages: HelpCategoryPage[] = [];
   for (const cat of sorted) {
@@ -133,14 +136,16 @@ async function buildVisibleHelpCategories(opts: {
 
     const visible: Command[] = [];
     for (const cmd of cmds) {
-      if (await canUserSeeCommand({
-        message: opts.message,
-        cmd,
-        isOwner: opts.isOwner,
-        member: opts.member,
-        disabledCommands: opts.disabledCommands,
-        guildSettings: opts.guildSettings,
-      })) {
+      if (
+        await canUserSeeCommand({
+          message: opts.message,
+          cmd,
+          isOwner: opts.isOwner,
+          member: opts.member,
+          disabledCommands: opts.disabledCommands,
+          guildSettings: opts.guildSettings,
+        })
+      ) {
         visible.push(cmd);
       }
     }
@@ -242,7 +247,7 @@ const command: Command = {
 
   async execute(message, args, client) {
     const commandHandler = (client as any).commandHandler;
-    if (!commandHandler) return void await message.reply(t('en', 'commands.help.handlerMissing'));
+    if (!commandHandler) return void (await message.reply(t('en', 'commands.help.handlerMissing')));
 
     const prefix = await getPrefix(message);
     const isOwner = Boolean(config.ownerId && (message as any).author.id === config.ownerId);
@@ -257,7 +262,8 @@ const command: Command = {
         const commandName = sanitizeHelpQuery(args[0]);
         const cmd = commandHandler.getCommand(commandName);
 
-        const visible = cmd && await canUserSeeCommand({ message, cmd, isOwner, member, disabledCommands, guildSettings });
+        const visible =
+          cmd && (await canUserSeeCommand({ message, cmd, isOwner, member, disabledCommands, guildSettings }));
         if (cmd && visible) {
           const usageStr = `\`${prefix}${cmd.name}${cmd.usage ? ' ' + cmd.usage : ''}\``;
 
@@ -268,25 +274,39 @@ const command: Command = {
             .addFields({ name: t(lang, 'commands.admin.starboard.help.fieldUsage'), value: usageStr, inline: false });
 
           if (cmd.permissions?.length) {
-            embed.addFields({ name: t(lang, 'auditCatalog.commands.general.help.l271_addFields_name'), value: cmd.permissions.join(', '), inline: true });
+            embed.addFields({
+              name: t(lang, 'auditCatalog.commands.general.help.l271_addFields_name'),
+              value: cmd.permissions.join(', '),
+              inline: true,
+            });
           }
           if (cmd.aliases?.length) {
-            embed.addFields({ name: t(lang, 'commands.admin.starboard.help.fieldAliases'), value: cmd.aliases.map((a: string) => `\`${a}\``).join('  '), inline: true });
+            embed.addFields({
+              name: t(lang, 'commands.admin.starboard.help.fieldAliases'),
+              value: cmd.aliases.map((a: string) => `\`${a}\``).join('  '),
+              inline: true,
+            });
           }
           if (cmd.cooldown) {
-            embed.addFields({ name: t(lang, 'commands.admin.starboard.help.fieldCooldown'), value: t(lang, 'auditCatalog.commands.general.help.l277_addFields_value', { 'cmd.cooldown': cmd.cooldown }), inline: true });
+            embed.addFields({
+              name: t(lang, 'commands.admin.starboard.help.fieldCooldown'),
+              value: t(lang, 'auditCatalog.commands.general.help.l277_addFields_value', {
+                'cmd.cooldown': cmd.cooldown,
+              }),
+              inline: true,
+            });
           }
 
           try {
-            return void await message.reply({ embeds: [embed] });
+            return void (await message.reply({ embeds: [embed] }));
           } catch {
             const lines = [
               `**${cmd.name}** - ${Array.isArray(cmd.description) ? cmd.description[0] : cmd.description || ''}`,
               `Usage: ${usageStr}`,
               cmd.permissions?.length ? `Permission: ${cmd.permissions.join(', ')}` : '',
-              cmd.aliases?.length    ? `Aliases: ${cmd.aliases.join(', ')}` : '',
+              cmd.aliases?.length ? `Aliases: ${cmd.aliases.join(', ')}` : '',
             ].filter(Boolean);
-            return void await message.reply(lines.join('\n')).catch(() => {});
+            return void (await message.reply(lines.join('\n')).catch(() => {}));
           }
         }
       }
@@ -301,15 +321,15 @@ const command: Command = {
       });
 
       if (visibleCategories.length === 0) {
-        return void await message.reply(t(lang, 'commands.help.errors.generic')).catch(() => {});
+        return void (await message.reply(t(lang, 'commands.help.errors.generic')).catch(() => {}));
       }
 
       const startIndex = args[0] ? findCategoryStartIndex(args[0], visibleCategories) : 0;
       if (args[0] && startIndex < 0) {
         const commandName = sanitizeHelpQuery(args[0]);
-        return void await message
+        return void (await message
           .reply(t(lang, 'commands.help.errors.commandNotFound', { commandName, prefix }))
-          .catch(() => {});
+          .catch(() => {}));
       }
 
       const pages = visibleCategories.map((category, index) => {
@@ -349,9 +369,8 @@ const command: Command = {
           startIndex: Math.max(0, startIndex),
           showOnlyStartCategory: Boolean(args[0]),
         });
-        return void await message.reply(text).catch(() => {});
+        return void (await message.reply(text).catch(() => {}));
       }
-
     } catch (error: any) {
       const guildName = (message as any).guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -363,10 +382,12 @@ const command: Command = {
         return;
       } else {
         console.error(`[${guildName}] Error in !help: ${error.message || error}`);
-        try { await message.reply(t(lang, 'commands.help.errors.generic')); } catch {}
+        try {
+          await message.reply(t(lang, 'commands.help.errors.generic'));
+        } catch {}
       }
     }
-  }
+  },
 };
 
 export default command;

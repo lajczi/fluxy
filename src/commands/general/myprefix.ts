@@ -26,42 +26,42 @@ const command: Command = {
       try {
         const current = await UserSettings.getPrefix((message as any).author.id);
         if (current) {
-          return void await message.reply(t(lang, 'commands.myprefix.current', { prefixValue: current, prefix }));
+          return void (await message.reply(t(lang, 'commands.myprefix.current', { prefixValue: current, prefix })));
         }
-        return void await message.reply(t(lang, 'commands.myprefix.notSet', { prefix }));
+        return void (await message.reply(t(lang, 'commands.myprefix.notSet', { prefix })));
       } catch (error: any) {
         if (isNetworkError(error)) return;
-        return void await message.reply(t(lang, 'commands.myprefix.fetchFailed'));
+        return void (await message.reply(t(lang, 'commands.myprefix.fetchFailed')));
       }
     }
 
     if (sub === 'clear' || sub === 'reset' || sub === 'remove') {
       try {
         await UserSettings.setPrefix((message as any).author.id, null);
-        return void await message.reply(t(lang, 'commands.myprefix.cleared'));
+        return void (await message.reply(t(lang, 'commands.myprefix.cleared')));
       } catch (error: any) {
         if (isNetworkError(error)) return;
-        return void await message.reply(t(lang, 'commands.myprefix.clearFailed'));
+        return void (await message.reply(t(lang, 'commands.myprefix.clearFailed')));
       }
     }
 
     const newPrefix = args[0];
     if (newPrefix.length > MAX_PREFIX_LENGTH) {
-      return void await message.reply(t(lang, 'commands.myprefix.tooLong', { max: MAX_PREFIX_LENGTH }));
+      return void (await message.reply(t(lang, 'commands.myprefix.tooLong', { max: MAX_PREFIX_LENGTH })));
     }
 
     if (/\s/.test(newPrefix)) {
-      return void await message.reply(t(lang, 'commands.myprefix.noSpaces'));
+      return void (await message.reply(t(lang, 'commands.myprefix.noSpaces')));
     }
 
     try {
       await UserSettings.setPrefix((message as any).author.id, newPrefix);
-      return void await message.reply(t(lang, 'commands.myprefix.saved', { newPrefix }));
+      return void (await message.reply(t(lang, 'commands.myprefix.saved', { newPrefix })));
     } catch (error: any) {
       if (isNetworkError(error)) return;
-      return void await message.reply(t(lang, 'commands.myprefix.saveFailed'));
+      return void (await message.reply(t(lang, 'commands.myprefix.saveFailed')));
     }
-  }
+  },
 };
 
 export default command;

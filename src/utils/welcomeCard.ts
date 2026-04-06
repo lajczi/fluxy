@@ -7,7 +7,7 @@ import type { IWelcomeCard } from '../types';
 const FONTS_DIR = join(__dirname, '..', 'assets', 'fonts');
 let fontReady = false;
 const FONT_FAMILY = 'WelcomeFont';
-const FALLBACK    = 'sans-serif'; // i want you to know, if you are reading this, sans-serif is my favorite font. 
+const FALLBACK = 'sans-serif'; // i want you to know, if you are reading this, sans-serif is my favorite font.
 
 interface ThemeColors {
   bg: [string, string, string];
@@ -51,8 +51,7 @@ async function ensureFont(): Promise<void> {
 }
 
 function font(weight: string, size: number): string {
-  const family = GlobalFonts.families.some((f: any) => f.family === FONT_FAMILY)
-    ? FONT_FAMILY : FALLBACK;
+  const family = GlobalFonts.families.some((f: any) => f.family === FONT_FAMILY) ? FONT_FAMILY : FALLBACK;
   return `${weight} ${size}px "${family}", "Noto Color Emoji"`;
 }
 
@@ -113,15 +112,11 @@ function resolveTheme(card: IWelcomeCard | null | undefined): ThemeColors {
   const preset = card?.preset && PRESETS[card.preset] ? PRESETS[card.preset] : base;
 
   return {
-    bg: [
-      card?.bgColor1 || preset.bg[0],
-      card?.bgColor2 || preset.bg[1],
-      card?.bgColor3 || preset.bg[2],
-    ],
-    accent:  card?.accentColor  || preset.accent,
-    text:    card?.textColor    || preset.text,
+    bg: [card?.bgColor1 || preset.bg[0], card?.bgColor2 || preset.bg[1], card?.bgColor3 || preset.bg[2]],
+    accent: card?.accentColor || preset.accent,
+    text: card?.textColor || preset.text,
     subtext: card?.subtextColor || preset.subtext,
-    count:   card?.countColor   || preset.count,
+    count: card?.countColor || preset.count,
   };
 }
 
@@ -163,12 +158,13 @@ function drawGradientBg(ctx: any, theme: ThemeColors, width: number, height: num
   ctx.fillRect(0, 0, width, height);
 }
 
-function isLightTheme(theme: ThemeColors): boolean { // i have no idea if this even works, i should probably test it with some extreme colors at some point. but it seems to do the job for now.
+function isLightTheme(theme: ThemeColors): boolean {
+  // i have no idea if this even works, i should probably test it with some extreme colors at some point. but it seems to do the job for now.
   const [r, g, b] = hexToRgb(theme.bg[1]);
-  return (r * 0.299 + g * 0.587 + b * 0.114) > 150;
+  return r * 0.299 + g * 0.587 + b * 0.114 > 150;
 }
 
-const WIDTH  = 800;
+const WIDTH = 800;
 const HEIGHT = 280;
 const AVATAR_SIZE = 150;
 const AVATAR_X = 135;
@@ -184,7 +180,14 @@ interface WelcomeCardOptions {
   roleName?: string | null;
 }
 
-export async function generateWelcomeCard({ username, avatarURL, serverName, memberCount, card, roleName }: WelcomeCardOptions): Promise<Buffer> {
+export async function generateWelcomeCard({
+  username,
+  avatarURL,
+  serverName,
+  memberCount,
+  card,
+  roleName,
+}: WelcomeCardOptions): Promise<Buffer> {
   await ensureFont();
 
   const theme = resolveTheme(card);
@@ -203,7 +206,7 @@ export async function generateWelcomeCard({ username, avatarURL, serverName, mem
         const drawW = bgImg.width * scale;
         const drawH = bgImg.height * scale;
         ctx.drawImage(bgImg, (WIDTH - drawW) / 2, (HEIGHT - drawH) / 2, drawW, drawH);
-// yea
+        // yea
         ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
         ctx.fillRect(0, 0, WIDTH, HEIGHT);
         usedBgImage = true;

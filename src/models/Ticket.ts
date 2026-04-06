@@ -7,22 +7,37 @@ export interface TicketModel extends Model<TicketDocument> {
   getNextNumber(guildId: string): Promise<number>;
 }
 
-const ticketSchema = new Schema<TicketDocument, TicketModel>({
-  guildId:      { type: String, required: true, index: true },
-  channelId:    { type: String, required: true, unique: true },
-  openedBy:     { type: String, required: true },
-  ticketNumber: { type: Number, required: true },
-  subject:      { type: String, default: null },
-  status:       { type: String, enum: ['open', 'closed'], default: 'open' },
-  claimedBy:    { type: String, default: null },
-  claimedAt:    { type: Date, default: null },
-  closedBy:     { type: String, default: null },
-  closedAt:     { type: Date, default: null },
-  participants: { type: [String], default: [] },
-  transcript:   { type: [{ authorId: String, authorName: String, avatarURL: String, content: String, attachments: [{ url: String, name: String }], timestamp: Date }], default: [] },
-}, {
-  timestamps: true,
-});
+const ticketSchema = new Schema<TicketDocument, TicketModel>(
+  {
+    guildId: { type: String, required: true, index: true },
+    channelId: { type: String, required: true, unique: true },
+    openedBy: { type: String, required: true },
+    ticketNumber: { type: Number, required: true },
+    subject: { type: String, default: null },
+    status: { type: String, enum: ['open', 'closed'], default: 'open' },
+    claimedBy: { type: String, default: null },
+    claimedAt: { type: Date, default: null },
+    closedBy: { type: String, default: null },
+    closedAt: { type: Date, default: null },
+    participants: { type: [String], default: [] },
+    transcript: {
+      type: [
+        {
+          authorId: String,
+          authorName: String,
+          avatarURL: String,
+          content: String,
+          attachments: [{ url: String, name: String }],
+          timestamp: Date,
+        },
+      ],
+      default: [],
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
 ticketSchema.index({ guildId: 1, ticketNumber: 1 }, { unique: true });
 ticketSchema.index({ guildId: 1, openedBy: 1, status: 1 });

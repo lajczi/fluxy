@@ -31,8 +31,12 @@ function escapeHtml(text: string): string {
 function formatTime(date: Date | string): string {
   const d = new Date(date);
   return d.toLocaleString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: true,
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
   });
 }
 
@@ -41,10 +45,7 @@ function isImageUrl(url: string): boolean {
 }
 
 export function generateTranscriptHtml(opts: TranscriptOptions): string {
-  const {
-    guildName, ticketNumber, openedBy, claimedBy, closedBy,
-    subject, createdAt, closedAt, messages,
-  } = opts;
+  const { guildName, ticketNumber, openedBy, claimedBy, closedBy, subject, createdAt, closedAt, messages } = opts;
 
   const nameMap = new Map<string, string>();
   for (const msg of messages) {
@@ -58,19 +59,23 @@ export function generateTranscriptHtml(opts: TranscriptOptions): string {
     });
   }
 
-  const messageHtml = messages.map(msg => {
-    const time = formatTime(msg.timestamp);
-    const content = resolveMentions(escapeHtml(msg.content || ''));
+  const messageHtml = messages
+    .map((msg) => {
+      const time = formatTime(msg.timestamp);
+      const content = resolveMentions(escapeHtml(msg.content || ''));
 
-    const attachmentHtml = (msg.attachments || []).map(a => {
-      if (isImageUrl(a.url)) {
-        return `<div class="att"><a href="${escapeHtml(a.url)}" target="_blank"><img src="${escapeHtml(a.url)}" alt="${escapeHtml(a.name)}"></a></div>`;
-      }
-      return `<div class="att"><a href="${escapeHtml(a.url)}" target="_blank">${escapeHtml(a.name)}</a></div>`;
-    }).join('');
+      const attachmentHtml = (msg.attachments || [])
+        .map((a) => {
+          if (isImageUrl(a.url)) {
+            return `<div class="att"><a href="${escapeHtml(a.url)}" target="_blank"><img src="${escapeHtml(a.url)}" alt="${escapeHtml(a.name)}"></a></div>`;
+          }
+          return `<div class="att"><a href="${escapeHtml(a.url)}" target="_blank">${escapeHtml(a.name)}</a></div>`;
+        })
+        .join('');
 
-    return `<div class="msg"><span class="name">${escapeHtml(msg.authorName)}</span> <span class="time">${time}</span><div class="text">${content}${attachmentHtml}</div></div>`;
-  }).join('\n');
+      return `<div class="msg"><span class="name">${escapeHtml(msg.authorName)}</span> <span class="time">${time}</span><div class="text">${content}${attachmentHtml}</div></div>`;
+    })
+    .join('\n');
 
   const claimedLine = claimedBy ? `<br>Claimed by: ${escapeHtml(claimedBy)}` : '';
   const subjectLine = subject ? `<br>Subject: ${escapeHtml(subject)}` : '';

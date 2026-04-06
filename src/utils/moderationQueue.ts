@@ -3,10 +3,10 @@ import path from 'path';
 import type { Client } from '@erinjs/core';
 import isNetworkError from './isNetworkError';
 
-const QUEUE_FILE     = path.join(__dirname, '../../data/moderation-queue.json');
+const QUEUE_FILE = path.join(__dirname, '../../data/moderation-queue.json');
 const RETRY_INTERVAL = 30_000;
-const MAX_AGE        = 24 * 60 * 60 * 1000;
-const MAX_SIZE       = 200;
+const MAX_AGE = 24 * 60 * 60 * 1000;
+const MAX_SIZE = 200;
 
 interface ModQueueParams {
   reason?: string;
@@ -45,10 +45,13 @@ function saveQueue(): void {
   }
 }
 
-export function enqueue(guildId: string, targetId: string, action: 'ban' | 'kick' | 'timeout', params: ModQueueParams = {}): void {
-  const exists = queue.some(
-    e => e.guildId === guildId && e.targetId === targetId && e.action === action,
-  );
+export function enqueue(
+  guildId: string,
+  targetId: string,
+  action: 'ban' | 'kick' | 'timeout',
+  params: ModQueueParams = {},
+): void {
+  const exists = queue.some((e) => e.guildId === guildId && e.targetId === targetId && e.action === action);
   if (exists) return;
 
   if (queue.length >= MAX_SIZE) {
@@ -85,11 +88,9 @@ async function processQueue(): Promise<void> {
           delete_message_days: entry.params.deleteDays ?? 1,
         });
         console.log(`[mod-queue] Banned ${entry.targetId} in ${guild.name}`);
-
       } else if (entry.action === 'kick') {
         await (guild as any).kick(entry.targetId, entry.params.reason || 'Queued moderation action');
         console.log(`[mod-queue] Kicked ${entry.targetId} in ${guild.name}`);
-
       } else if (entry.action === 'timeout') {
         let member = (guild as any).members?.get(entry.targetId);
         if (!member) {
@@ -109,17 +110,17 @@ async function processQueue(): Promise<void> {
           timeout_reason: entry.params.reason || 'Queued moderation action',
         });
         console.log(`[mod-queue] Timed out ${entry.targetId} in ${guild.name}`);
-
       } else {
         console.warn(`[mod-queue] Unknown action "${entry.action}", dropping`);
         continue;
       }
-
     } catch (err) {
       if (isNetworkError(err)) {
         remaining.push(entry);
       } else {
-        console.warn(`[mod-queue] Permanent error for ${entry.action} on ${entry.targetId} in guild ${entry.guildId}, dropping: ${(err as Error).message}`);
+        console.warn(
+          `[mod-queue] Permanent error for ${entry.action} on ${entry.targetId} in guild ${entry.guildId}, dropping: ${(err as Error).message}`,
+        );
       }
     }
   }

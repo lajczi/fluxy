@@ -291,10 +291,25 @@ export interface IGuildSettings {
 }
 
 export type ModerationAction =
-  | 'ban' | 'unban' | 'kick' | 'mute' | 'unmute'
-  | 'warn' | 'unwarn' | 'clearwarn' | 'slowmode' | 'unlock'
-  | 'purge' | 'softban' | 'tempban' | 'tempmute' | 'timeout'
-  | 'nickname' | 'role_add' | 'role_remove' | 'other';
+  | 'ban'
+  | 'unban'
+  | 'kick'
+  | 'mute'
+  | 'unmute'
+  | 'warn'
+  | 'unwarn'
+  | 'clearwarn'
+  | 'slowmode'
+  | 'unlock'
+  | 'purge'
+  | 'softban'
+  | 'tempban'
+  | 'tempmute'
+  | 'timeout'
+  | 'nickname'
+  | 'role_add'
+  | 'role_remove'
+  | 'other';
 
 export interface IModerationLogMetadata {
   roleId?: string;

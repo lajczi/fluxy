@@ -6,7 +6,6 @@ export function set(guildId: string, count: number): void {
   counts.set(guildId, count);
 }
 
-
 export async function fetchAndSetMemberCount(guildId: string, client: any): Promise<number | null> {
   try {
     const guildData: any = await client.rest.get(Routes.guild(guildId));
@@ -15,8 +14,7 @@ export async function fetchAndSetMemberCount(guildId: string, client: any): Prom
       counts.set(guildId, count);
       return count;
     }
-  } catch {
-  }
+  } catch {}
 
   try {
     let total = 0;

@@ -15,7 +15,7 @@ const command: Command = {
   async execute(message, _args, client) {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.clearprefix.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.clearprefix.serverOnly')));
 
     try {
       const cached: any = await settingsCache.get(guild.id).catch(() => null);
@@ -35,7 +35,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.admin.clearprefix.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

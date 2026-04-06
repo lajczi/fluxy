@@ -46,7 +46,6 @@ const LockdownStateMock = LockdownState as any;
 const GuildSettingsMock = GuildSettings as any;
 const isNetworkErrorMock = isNetworkError as jest.Mock;
 
-
 function makeChannel(id: string, name: string, overwrites: any[] = []) {
   return {
     id,
@@ -60,7 +59,7 @@ function makeChannel(id: string, name: string, overwrites: any[] = []) {
 
 function makeGuild(channels: any[] = [], members: Record<string, any> = {}) {
   const channelMap = new Map();
-  channels.forEach(ch => channelMap.set(ch.id, ch));
+  channels.forEach((ch) => channelMap.set(ch.id, ch));
   return {
     id: 'guild123',
     name: 'Test Server',
@@ -84,7 +83,7 @@ function makeMessage(authorId = 'owner123') {
     author: { id: authorId },
     reply: jest.fn((content: any) => {
       const msg = {
-        content: typeof content === 'string' ? content : content?.content ?? null,
+        content: typeof content === 'string' ? content : (content?.content ?? null),
         embeds: content?.embeds ?? [],
         edit: jest.fn().mockResolvedValue(undefined),
       };
@@ -120,7 +119,6 @@ function makeSettings(lockdownRoles: string[] = []) {
   };
 }
 
-
 describe('lockdown command - large server support', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -147,9 +145,12 @@ describe('lockdown command - large server support', () => {
       await lockdown.execute(message, [], {});
 
       for (const ch of channels) {
-        expect(ch.editPermission).toHaveBeenCalledWith('guild123', expect.objectContaining({
-          type: 0,
-        }));
+        expect(ch.editPermission).toHaveBeenCalledWith(
+          'guild123',
+          expect.objectContaining({
+            type: 0,
+          }),
+        );
       }
 
       expect(state.active).toBe(true);
@@ -158,10 +159,7 @@ describe('lockdown command - large server support', () => {
     });
 
     test('locks channels for multiple roles', async () => {
-      const channels = [
-        makeChannel('ch1', 'general'),
-        makeChannel('ch2', 'chat'),
-      ];
+      const channels = [makeChannel('ch1', 'general'), makeChannel('ch2', 'chat')];
 
       const guild = makeGuild(channels);
       const state = makeState(false);
@@ -184,11 +182,7 @@ describe('lockdown command - large server support', () => {
     });
 
     test('preserves existing permission overwrites in snapshots', async () => {
-      const channels = [
-        makeChannel('ch1', 'general', [
-          { id: 'guild123', type: 0, allow: '2048', deny: '64' },
-        ]),
-      ];
+      const channels = [makeChannel('ch1', 'general', [{ id: 'guild123', type: 0, allow: '2048', deny: '64' }])];
 
       const guild = makeGuild(channels);
       const state = makeState(false);
@@ -208,11 +202,7 @@ describe('lockdown command - large server support', () => {
     });
 
     test('counts failures but continues processing other channels', async () => {
-      const channels = [
-        makeChannel('ch1', 'general'),
-        makeChannel('ch2', 'broken'),
-        makeChannel('ch3', 'working'),
-      ];
+      const channels = [makeChannel('ch1', 'general'), makeChannel('ch2', 'broken'), makeChannel('ch3', 'working')];
       channels[1].editPermission.mockRejectedValue(new Error('Permission denied'));
 
       const guild = makeGuild(channels);
@@ -240,9 +230,7 @@ describe('lockdown command - large server support', () => {
       rateLimitErr.name = 'RateLimitError';
       rateLimitErr.retryAfter = 0.01;
 
-      channels[0].editPermission
-        .mockRejectedValueOnce(rateLimitErr)
-        .mockResolvedValueOnce(undefined);
+      channels[0].editPermission.mockRejectedValueOnce(rateLimitErr).mockResolvedValueOnce(undefined);
 
       const guild = makeGuild(channels);
       const state = makeState(false);
@@ -266,9 +254,7 @@ describe('lockdown command - large server support', () => {
       netErr.code = 'ECONNRESET';
       isNetworkErrorMock.mockImplementation((err: any) => err === netErr);
 
-      channels[0].editPermission
-        .mockRejectedValueOnce(netErr)
-        .mockResolvedValueOnce(undefined);
+      channels[0].editPermission.mockRejectedValueOnce(netErr).mockResolvedValueOnce(undefined);
 
       const guild = makeGuild(channels);
       const state = makeState(false);
@@ -288,11 +274,7 @@ describe('lockdown command - large server support', () => {
 
   describe('unlockServer batched processing', () => {
     test('unlocks all channels and restores overwrites', async () => {
-      const channels = [
-        makeChannel('ch1', 'general'),
-        makeChannel('ch2', 'chat'),
-        makeChannel('ch3', 'memes'),
-      ];
+      const channels = [makeChannel('ch1', 'general'), makeChannel('ch2', 'chat'), makeChannel('ch3', 'memes')];
 
       const guild = makeGuild(channels);
       const snapshots = [
@@ -358,9 +340,7 @@ describe('lockdown command - large server support', () => {
       rateLimitErr.name = 'RateLimitError';
       rateLimitErr.retryAfter = 0.01;
 
-      channels[0].editPermission
-        .mockRejectedValueOnce(rateLimitErr)
-        .mockResolvedValueOnce(undefined);
+      channels[0].editPermission.mockRejectedValueOnce(rateLimitErr).mockResolvedValueOnce(undefined);
 
       const guild = makeGuild(channels);
       const snapshots = [
@@ -383,9 +363,7 @@ describe('lockdown command - large server support', () => {
     test('backward compat: snapshots without roleId default to guild.id', async () => {
       const channels = [makeChannel('ch1', 'general')];
       const guild = makeGuild(channels);
-      const snapshots = [
-        { channelId: 'ch1', previousAllow: '0', previousDeny: '0', hadOverwrite: true },
-      ];
+      const snapshots = [{ channelId: 'ch1', previousAllow: '0', previousDeny: '0', hadOverwrite: true }];
       const state = makeState(true, snapshots);
       const settings = makeSettings();
       const message = makeMessage();
@@ -423,7 +401,7 @@ describe('lockdown command - large server support', () => {
 
       const editCalls = statusMsg.edit.mock.calls;
       const hasProgressUpdate = editCalls.some((call: any) => {
-        const content = typeof call[0] === 'string' ? call[0] : call[0]?.content ?? '';
+        const content = typeof call[0] === 'string' ? call[0] : (call[0]?.content ?? '');
         return content.includes('Locking') || content.includes('overwrites');
       });
       expect(hasProgressUpdate).toBe(true);
@@ -445,7 +423,7 @@ describe('lockdown command - large server support', () => {
 
       expect(message.reply).toHaveBeenCalledWith(
         'No text channels found to lock down. This usually means the bot could not fetch channels from the Fluxer API.\n' +
-        'Check that the bot has **View Channels** permission and try again in a moment.'
+          'Check that the bot has **View Channels** permission and try again in a moment.',
       );
     });
 

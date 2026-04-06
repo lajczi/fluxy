@@ -36,9 +36,12 @@ function makeMockGuild(channel: any) {
 }
 
 const silenceLogs = () => {
-  const logSpy  = jest.spyOn(console, 'log').mockImplementation(() => {});
+  const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
   const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-  return () => { logSpy.mockRestore(); warnSpy.mockRestore(); };
+  return () => {
+    logSpy.mockRestore();
+    warnSpy.mockRestore();
+  };
 };
 
 describe('embedQueue.enqueue', () => {
@@ -68,8 +71,8 @@ describe('embedQueue.start + processQueue - success', () => {
   test('sends queued embed to the channel when processed', async () => {
     const restore = silenceLogs();
     const mockChannel = makeMockChannel();
-    const mockGuild   = makeMockGuild(mockChannel);
-    const mockClient  = makeMockClient({ guild: mockGuild });
+    const mockGuild = makeMockGuild(mockChannel);
+    const mockClient = makeMockClient({ guild: mockGuild });
 
     embedQueue.start(mockClient);
     embedQueue.enqueue('g1', 'c1', { title: 'hello' });
@@ -86,8 +89,8 @@ describe('embedQueue.start + processQueue - success', () => {
   test('successfully sent entry is removed from queue (not retried)', async () => {
     const restore = silenceLogs();
     const mockChannel = makeMockChannel();
-    const mockGuild   = makeMockGuild(mockChannel);
-    const mockClient  = makeMockClient({ guild: mockGuild });
+    const mockGuild = makeMockGuild(mockChannel);
+    const mockClient = makeMockClient({ guild: mockGuild });
 
     embedQueue.start(mockClient);
     embedQueue.enqueue('g1', 'c1', { title: 'once' });
@@ -103,8 +106,8 @@ describe('embedQueue.start + processQueue - success', () => {
   test('fetches channel via client.channels.fetch when not in guild cache', async () => {
     const restore = silenceLogs();
     const mockChannel = makeMockChannel();
-    const mockGuild   = makeMockGuild(null);
-    const mockClient  = makeMockClient({ guild: mockGuild, channel: mockChannel });
+    const mockGuild = makeMockGuild(null);
+    const mockClient = makeMockClient({ guild: mockGuild, channel: mockChannel });
 
     embedQueue.start(mockClient);
     embedQueue.enqueue('g1', 'c1', { title: 'fetched' });
@@ -163,8 +166,8 @@ describe('embedQueue.start + processQueue - send errors', () => {
     const restore = silenceLogs();
     const networkErr = new Error('ECONNRESET');
     const mockChannel = makeMockChannel(jest.fn().mockRejectedValue(networkErr));
-    const mockGuild   = makeMockGuild(mockChannel);
-    const mockClient  = makeMockClient({ guild: mockGuild });
+    const mockGuild = makeMockGuild(mockChannel);
+    const mockClient = makeMockClient({ guild: mockGuild });
 
     mockIsNetworkError.mockReturnValue(true);
 
@@ -184,8 +187,8 @@ describe('embedQueue.start + processQueue - send errors', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const permErr = new Error('Missing Permissions');
     const mockChannel = makeMockChannel(jest.fn().mockRejectedValue(permErr));
-    const mockGuild   = makeMockGuild(mockChannel);
-    const mockClient  = makeMockClient({ guild: mockGuild });
+    const mockGuild = makeMockGuild(mockChannel);
+    const mockClient = makeMockClient({ guild: mockGuild });
 
     mockIsNetworkError.mockReturnValue(false);
 

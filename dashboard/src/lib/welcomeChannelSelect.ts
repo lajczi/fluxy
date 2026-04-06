@@ -22,15 +22,11 @@ function isWelcomeSelectableChannel(channel: GuildChannel): boolean {
 }
 
 export function buildWelcomeChannelSelectData(channels: GuildDetail['channels']): WelcomeChannelSelectData {
-  const categories = channels
-    .filter(channel => channel.type === 4)
-    .sort((a, b) => a.position - b.position);
+  const categories = channels.filter((channel) => channel.type === 4).sort((a, b) => a.position - b.position);
 
-  const selectableChannels = channels
-    .filter(isWelcomeSelectableChannel)
-    .sort((a, b) => a.position - b.position);
+  const selectableChannels = channels.filter(isWelcomeSelectableChannel).sort((a, b) => a.position - b.position);
 
-  const uncategorized = selectableChannels.filter(channel => !parentIdOf(channel));
+  const uncategorized = selectableChannels.filter((channel) => !parentIdOf(channel));
 
   const options: WelcomeChannelOption[] = [];
   const includedIds = new Set<string>();
@@ -43,7 +39,7 @@ export function buildWelcomeChannelSelectData(channels: GuildDetail['channels'])
   for (const category of categories) {
     options.push({ id: category.id, label: category.name.toUpperCase(), isCategory: true });
 
-    const children = selectableChannels.filter(channel => parentIdOf(channel) === category.id);
+    const children = selectableChannels.filter((channel) => parentIdOf(channel) === category.id);
     for (const channel of children) {
       if (includedIds.has(channel.id)) continue;
       options.push({ id: channel.id, label: `  # ${channel.name}`, isCategory: false });

@@ -69,18 +69,17 @@ export async function generateCaptcha(): Promise<CaptchaResult> {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  const fontFamily = GlobalFonts.families.some((f: any) => f.family === FONT_FAMILY)
-    ? FONT_FAMILY : 'sans-serif';
+  const fontFamily = GlobalFonts.families.some((f: any) => f.family === FONT_FAMILY) ? FONT_FAMILY : 'sans-serif';
   const fontSize = 52;
   const letterSpacing = 52;
-  const startX = (WIDTH - (code.length * letterSpacing)) / 2 + letterSpacing / 2;
+  const startX = (WIDTH - code.length * letterSpacing) / 2 + letterSpacing / 2;
   const centerY = HEIGHT / 2;
 
   for (let i = 0; i < code.length; i++) {
     const char = code[i];
     const x = startX + i * letterSpacing;
     const y = centerY + (Math.random() - 0.5) * 20; // random vertical jitter ±10px
-    const rotation = (Math.random() - 0.5) * 0.5;   // ±~14 degrees
+    const rotation = (Math.random() - 0.5) * 0.5; // ±~14 degrees
 
     ctx.save();
     ctx.translate(x, y);
@@ -139,6 +138,6 @@ export async function generateCaptcha(): Promise<CaptchaResult> {
   ctx.roundRect(1, 1, WIDTH - 2, HEIGHT - 2, borderRadius);
   ctx.stroke();
 
-  const image = await canvas.encode('png') as unknown as Buffer;
+  const image = (await canvas.encode('png')) as unknown as Buffer;
   return { code, image };
 }

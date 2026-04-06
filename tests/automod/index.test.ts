@@ -30,8 +30,13 @@ function makeClient() {
   };
 }
 
-let automod: any, settingsCache: any, hasAnyPermission: any,
-    antiLink: any, antiSpam: any, keywordWarning: any, ghostPing: any;
+let automod: any,
+  settingsCache: any,
+  hasAnyPermission: any,
+  antiLink: any,
+  antiSpam: any,
+  keywordWarning: any,
+  ghostPing: any;
 
 beforeEach(() => {
   jest.resetModules();

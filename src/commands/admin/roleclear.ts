@@ -15,33 +15,37 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.roleclear.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.roleclear.serverOnly')));
 
     const cached: any = await settingsCache.get(guild.id).catch(() => null);
     const lang = normalizeLocale(cached?.language);
 
     const roleArg = args[0];
-    if (!roleArg) return void await message.reply(t(lang, 'commands.admin.roleclear.usage', { prefix }));
+    if (!roleArg) return void (await message.reply(t(lang, 'commands.admin.roleclear.usage', { prefix })));
 
     const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
     let roleId: string;
     if (roleMention) roleId = roleMention[1];
     else if (/^\d{17,19}$/.test(roleArg)) roleId = roleArg;
-    else return void await message.reply(t(lang, 'commands.admin.roleclear.invalidRole'));
+    else return void (await message.reply(t(lang, 'commands.admin.roleclear.invalidRole')));
 
     let role = guild.roles?.get(roleId);
     if (!role) {
-      try { role = await guild.fetchRole(roleId); } catch {}
+      try {
+        role = await guild.fetchRole(roleId);
+      } catch {}
     }
-    if (!role) return void await message.reply(t(lang, 'commands.admin.roleclear.roleDoesNotExist'));
+    if (!role) return void (await message.reply(t(lang, 'commands.admin.roleclear.roleDoesNotExist')));
 
     let moderator = guild.members?.get(message.author.id);
     if (!moderator) {
-      try { moderator = await guild.fetchMember(message.author.id); } catch {}
+      try {
+        moderator = await guild.fetchMember(message.author.id);
+      } catch {}
     }
     if (moderator) {
       const check = canManageRole(moderator, role, guild);
-      if (!check.allowed) return void await message.reply(check.reason || 'You cannot manage that role.');
+      if (!check.allowed) return void (await message.reply(check.reason || 'You cannot manage that role.'));
     }
 
     await message.reply(t(lang, 'commands.admin.roleclear.removing', { roleName: role.name }));
@@ -64,7 +68,7 @@ const command: Command = {
       } else {
         console.error(`[${guildName}] Error in !roleclear: ${err.message || err}`);
       }
-      return void await message.reply(t(lang, 'commands.admin.roleclear.failedFetchMembers'));
+      return void (await message.reply(t(lang, 'commands.admin.roleclear.failedFetchMembers')));
     }
 
     const hasRole = members.filter((m: any) => {
@@ -74,33 +78,36 @@ const command: Command = {
     });
 
     if (hasRole.length === 0) {
-      return void await message.reply(t(lang, 'commands.admin.roleclear.noMembersHaveRole', { roleName: role.name }));
+      return void (await message.reply(t(lang, 'commands.admin.roleclear.noMembersHaveRole', { roleName: role.name })));
     }
 
-    let removed = 0, failed = 0;
+    let removed = 0,
+      failed = 0;
 
     const BATCH_SIZE = 5;
     const BATCH_DELAY_MS = 1000;
 
     for (let i = 0; i < hasRole.length; i += BATCH_SIZE) {
       const batch = hasRole.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(async (m: any) => {
-        try {
-          await m.removeRole(roleId);
-          removed++;
-        } catch {
-          failed++;
-        }
-      }));
+      await Promise.all(
+        batch.map(async (m: any) => {
+          try {
+            await m.removeRole(roleId);
+            removed++;
+          } catch {
+            failed++;
+          }
+        }),
+      );
       if (i + BATCH_SIZE < hasRole.length) {
-        await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+        await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
       }
     }
 
     let result = t(lang, 'commands.admin.roleclear.donePrefix', { roleName: role.name, removed });
     if (failed > 0) result += t(lang, 'commands.admin.roleclear.doneFailedSuffix', { failed });
-    return void await message.reply(result);
-  }
+    return void (await message.reply(result));
+  },
 };
 
 export default command;

@@ -142,14 +142,16 @@ describe('help command pagination', () => {
 
   test('shows command detail for help <command>', async () => {
     const commandHandler = makeCommandHandler({
-      general: [{
-        ...buildCommand('help', 'general'),
-        description: [
-          'Show every command. Extra details that should not stay in the embed.',
-          '',
-          'Long-form help text.',
-        ],
-      }],
+      general: [
+        {
+          ...buildCommand('help', 'general'),
+          description: [
+            'Show every command. Extra details that should not stay in the embed.',
+            '',
+            'Long-form help text.',
+          ],
+        },
+      ],
     });
 
     const client: any = { commandHandler };

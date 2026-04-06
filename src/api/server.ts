@@ -42,70 +42,71 @@ export async function startApiServer(client: Client, commandHandler: CommandHand
     next();
   });
 
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://storage.ko-fi.com",
-          "https://static.cloudflareinsights.com",
-          "https://meow.dorcus.digital",
-          "blob:",
-        ],
-        scriptSrcElem: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://storage.ko-fi.com",
-          "https://static.cloudflareinsights.com",
-          "https://meow.dorcus.digital",
-        ],
-        styleSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://storage.ko-fi.com",
-          "https://static.cloudflareinsights.com",
-          "https://fonts.googleapis.com",
-        ],
-        styleSrcElem: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://storage.ko-fi.com",
-          "https://static.cloudflareinsights.com",
-          "https://fonts.googleapis.com",
-        ],
-        fontSrc: [
-          "'self'",
-          "https://fonts.gstatic.com",
-        ],
-        imgSrc: [
-          "'self'",
-          "https://fluxerusercontent.com",
-          "https://cdn.jsdelivr.net",
-          "https://storage.ko-fi.com",
-          "data:",
-        ],
-        connectSrc: [
-          "'self'",
-          "wss:",
-          "https://api.fluxer.app",
-          "https://meow.dorcus.digital",
-          "https://*.posthog.com",
-          "https://bugs.fluxy.gay",
-        ],
-        frameSrc: ["'self'", "https://ko-fi.com", "https://storage.ko-fi.com"],
-        workerSrc: ["'self'", "blob:"],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            'https://storage.ko-fi.com',
+            'https://static.cloudflareinsights.com',
+            'https://meow.dorcus.digital',
+            'blob:',
+          ],
+          scriptSrcElem: [
+            "'self'",
+            "'unsafe-inline'",
+            'https://storage.ko-fi.com',
+            'https://static.cloudflareinsights.com',
+            'https://meow.dorcus.digital',
+          ],
+          styleSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            'https://storage.ko-fi.com',
+            'https://static.cloudflareinsights.com',
+            'https://fonts.googleapis.com',
+          ],
+          styleSrcElem: [
+            "'self'",
+            "'unsafe-inline'",
+            'https://storage.ko-fi.com',
+            'https://static.cloudflareinsights.com',
+            'https://fonts.googleapis.com',
+          ],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          imgSrc: [
+            "'self'",
+            'https://fluxerusercontent.com',
+            'https://cdn.jsdelivr.net',
+            'https://storage.ko-fi.com',
+            'data:',
+          ],
+          connectSrc: [
+            "'self'",
+            'wss:',
+            'https://api.fluxer.app',
+            'https://meow.dorcus.digital',
+            'https://*.posthog.com',
+            'https://bugs.fluxy.gay',
+          ],
+          frameSrc: ["'self'", 'https://ko-fi.com', 'https://storage.ko-fi.com'],
+          workerSrc: ["'self'", 'blob:'],
+        },
       },
-    },
-    crossOriginEmbedderPolicy: false,
-  }));
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   app.use(compression());
-  app.use(cors({
-    origin: config.api.dashboardUrl || false,
-    credentials: true,
-  }));
+  app.use(
+    cors({
+      origin: config.api.dashboardUrl || false,
+      credentials: true,
+    }),
+  );
   app.use('/api/guilds', express.json({ limit: '5mb' }));
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
@@ -125,14 +126,19 @@ export async function startApiServer(client: Client, commandHandler: CommandHand
   app.use('/api/data', authenticate, createDataRouter());
 
   const dashboardPath = path.join(__dirname, '..', '..', 'dashboard', 'dist');
-  app.use('/assets', express.static(path.join(dashboardPath, 'assets'), {
-    maxAge: '1y',
-    immutable: true,
-  }));
-  app.use(express.static(dashboardPath, {
-    maxAge: '5m',
-    index: false,
-  }));
+  app.use(
+    '/assets',
+    express.static(path.join(dashboardPath, 'assets'), {
+      maxAge: '1y',
+      immutable: true,
+    }),
+  );
+  app.use(
+    express.static(dashboardPath, {
+      maxAge: '5m',
+      index: false,
+    }),
+  );
 
   app.get('/{*path}', (_req, res) => {
     const indexPath = path.join(dashboardPath, 'index.html');

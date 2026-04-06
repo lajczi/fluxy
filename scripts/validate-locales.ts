@@ -35,12 +35,12 @@ function loadJson(p: string): Json {
 }
 
 function isOptionalEnglishFallbackKey(key: string): boolean {
-  return OPTIONAL_ENGLISH_FALLBACK_PREFIXES.some(prefix => key.startsWith(prefix));
+  return OPTIONAL_ENGLISH_FALLBACK_PREFIXES.some((prefix) => key.startsWith(prefix));
 }
 
 function main() {
   const localesDir = path.join(process.cwd(), 'src', 'locales');
-  const files = fs.readdirSync(localesDir).filter(f => f.endsWith('.json'));
+  const files = fs.readdirSync(localesDir).filter((f) => f.endsWith('.json'));
   if (!files.includes('en.json')) {
     console.error('Missing src/locales/en.json');
     process.exit(1);
@@ -58,8 +58,8 @@ function main() {
     const flat = flatten(loadJson(locPath));
 
     const keys = Object.keys(flat).sort();
-    const missing = enKeys.filter(k => !(k in flat) && !isOptionalEnglishFallbackKey(k));
-    const extra = keys.filter(k => !(k in enFlat));
+    const missing = enKeys.filter((k) => !(k in flat) && !isOptionalEnglishFallbackKey(k));
+    const extra = keys.filter((k) => !(k in enFlat));
 
     if (missing.length) {
       ok = false;

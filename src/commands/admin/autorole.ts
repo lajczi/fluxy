@@ -18,12 +18,12 @@ const command: Command = {
     if (!guild && (message as any).guildId) {
       guild = await client.guilds.fetch((message as any).guildId);
     }
-    if (!guild) return void await message.reply(t('en', 'commands.admin.autorole.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.autorole.serverOnly')));
 
     const sub = args[0]?.toLowerCase();
 
     if (!sub || !['set', 'disable', 'status'].includes(sub)) {
-      return void await message.reply(t('en', 'commands.admin.autorole.usage', { prefix }));
+      return void (await message.reply(t('en', 'commands.admin.autorole.usage', { prefix })));
     }
 
     try {
@@ -32,7 +32,8 @@ const command: Command = {
 
       if (sub === 'set') {
         const roleArg = args[1];
-        if (!roleArg) return void await message.reply(t(lang, 'commands.admin.autorole.roleRequiredUsage', { prefix }));
+        if (!roleArg)
+          return void (await message.reply(t(lang, 'commands.admin.autorole.roleRequiredUsage', { prefix })));
 
         const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
         let roleId: string;
@@ -41,38 +42,45 @@ const command: Command = {
         } else if (/^\d{17,19}$/.test(roleArg)) {
           roleId = roleArg;
         } else {
-          return void await message.reply(t(lang, 'commands.admin.autorole.invalidRole'));
+          return void (await message.reply(t(lang, 'commands.admin.autorole.invalidRole')));
         }
 
         let role = guild.roles?.get(roleId);
         if (!role) {
           try {
             role = await guild.fetchRole(roleId);
-          } catch {
-          }
+          } catch {}
         }
-        if (!role) return void await message.reply(t(lang, 'commands.admin.autorole.roleDoesNotExist'));
+        if (!role) return void (await message.reply(t(lang, 'commands.admin.autorole.roleDoesNotExist')));
 
         let commandMember = guild.members?.get(message.author.id);
         if (!commandMember) {
-          try { commandMember = await guild.fetchMember(message.author.id); } catch {}
+          try {
+            commandMember = await guild.fetchMember(message.author.id);
+          } catch {}
         }
         if (commandMember) {
           const check = canManageRole(commandMember, role, guild);
-          if (!check.allowed) return void await message.reply(check.reason || t(lang, 'commands.admin.autorole.cannotManageRoleFallback'));
+          if (!check.allowed)
+            return void (await message.reply(
+              check.reason || t(lang, 'commands.admin.autorole.cannotManageRoleFallback'),
+            ));
         }
 
         let hierarchyWarning = '';
         const botUserId = client.user?.id;
         let botMember = botUserId ? guild.members?.get(botUserId) : null;
         if (!botMember && botUserId) {
-          try { botMember = await guild.fetchMember(botUserId); } catch {}
+          try {
+            botMember = await guild.fetchMember(botUserId);
+          } catch {}
         }
         if (botMember) {
           const botRoleIds = botMember.roles?.roleIds ?? [];
-          const botHighestPos = botRoleIds.length > 0
-            ? Math.max(0, ...botRoleIds.map((id: string) => guild.roles?.get(id)?.position || 0))
-            : 0;
+          const botHighestPos =
+            botRoleIds.length > 0
+              ? Math.max(0, ...botRoleIds.map((id: string) => guild.roles?.get(id)?.position || 0))
+              : 0;
           if (role.position >= botHighestPos) {
             hierarchyWarning = t(lang, 'commands.admin.autorole.hierarchyWarning', { roleName: role.name });
           }
@@ -82,31 +90,35 @@ const command: Command = {
         await settings.save();
         settingsCache.invalidate(guild.id);
 
-        return void await message.reply(t(lang, 'commands.admin.autorole.setDone', { roleName: role.name }) + hierarchyWarning);
+        return void (await message.reply(
+          t(lang, 'commands.admin.autorole.setDone', { roleName: role.name }) + hierarchyWarning,
+        ));
       }
 
       if (sub === 'disable') {
-        if (!settings.autoroleId) return void await message.reply(t(lang, 'commands.admin.autorole.disabledNotEnabled'));
+        if (!settings.autoroleId)
+          return void (await message.reply(t(lang, 'commands.admin.autorole.disabledNotEnabled')));
 
         settings.autoroleId = null;
         await settings.save();
         settingsCache.invalidate(guild.id);
 
-        return void await message.reply(t(lang, 'commands.admin.autorole.disabledDone'));
+        return void (await message.reply(t(lang, 'commands.admin.autorole.disabledDone')));
       }
 
       if (sub === 'status') {
         if (!settings.autoroleId) {
-          return void await message.reply(t(lang, 'commands.admin.autorole.statusDisabled', { prefix }));
+          return void (await message.reply(t(lang, 'commands.admin.autorole.statusDisabled', { prefix })));
         }
 
         let roleName = settings.autoroleId;
         const role = guild.roles?.get(settings.autoroleId);
         if (role) roleName = role.name;
 
-        return void await message.reply(t(lang, 'commands.admin.autorole.statusEnabled', { roleName, roleId: settings.autoroleId }));
+        return void (await message.reply(
+          t(lang, 'commands.admin.autorole.statusEnabled', { roleName, roleId: settings.autoroleId }),
+        ));
       }
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -118,7 +130,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.admin.autorole.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

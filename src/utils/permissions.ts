@@ -41,7 +41,10 @@ function getMemberRoleIds(member: MemberLike | null): string[] {
   }
   if (typeof r.keys === 'function') return [...r.keys()];
   if (typeof r.toArray === 'function') {
-    return r.toArray().map((x: any) => (typeof x === 'string' ? x : x?.id) ?? '').filter(Boolean);
+    return r
+      .toArray()
+      .map((x: any) => (typeof x === 'string' ? x : x?.id) ?? '')
+      .filter(Boolean);
   }
   if (r._roles && Array.isArray(r._roles)) return r._roles;
   return [];
@@ -72,33 +75,36 @@ export function getMemberHighestRolePosition(member: MemberLike | null, guild: G
 
 export function hasPermission(member: MemberLike | null, permission: string): boolean {
   if (!member || !member.permissions) return false;
-  
+
   const flag = (PermissionFlags as unknown as Record<string, bigint>)[permission];
   if (!flag) {
     console.warn(`Unknown permission flag: ${permission}`);
     return false;
   }
-  
+
   return member.permissions.has(flag);
 }
 
 export function hasAnyPermission(member: MemberLike | null, permissions: string[]): boolean {
   if (!member || !member.permissions) return false;
-  
-  return permissions.some(perm => hasPermission(member, perm));
+
+  return permissions.some((perm) => hasPermission(member, perm));
 }
 
 export function hasAllPermissions(member: MemberLike | null, permissions: string[]): boolean {
   if (!member || !member.permissions) return false;
-  
-  return permissions.every(perm => hasPermission(member, perm));
+
+  return permissions.every((perm) => hasPermission(member, perm));
 }
 
 export function isAdministrator(member: MemberLike | null): boolean {
   return hasPermission(member, 'Administrator');
 }
 
-export function canModerate(moderator: MemberLike, target: MemberLike): { canModerate: boolean; reason: string | null } {
+export function canModerate(
+  moderator: MemberLike,
+  target: MemberLike,
+): { canModerate: boolean; reason: string | null } {
   if (moderator.id === target.id) {
     return { canModerate: false, reason: 'Cannot moderate yourself' };
   }
@@ -106,7 +112,7 @@ export function canModerate(moderator: MemberLike, target: MemberLike): { canMod
   if (target.guild && target.id === target.guild.ownerId) {
     return { canModerate: false, reason: 'Cannot moderate the server owner' };
   }
-  
+
   const guild = moderator.guild;
   const modRoleIds = getMemberRoleIds(moderator);
   const targetRoleIds = getMemberRoleIds(target);
@@ -130,7 +136,7 @@ export function canModerate(moderator: MemberLike, target: MemberLike): { canMod
       }
     }
   }
-  
+
   return { canModerate: true, reason: null };
 }
 

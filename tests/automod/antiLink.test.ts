@@ -127,7 +127,7 @@ describe('antiLink - execute (actions)', () => {
     expect(msg.channel.send).toHaveBeenCalledWith(
       expect.objectContaining({
         content: expect.stringContaining('No external links'),
-      })
+      }),
     );
   });
 });

@@ -13,7 +13,6 @@ async function invalidate(guildId: string): Promise<void> {
   settingsCache.invalidate(guildId);
 }
 
-
 async function showList(message: any, guild: any, prefix = '!') {
   const settings = await getSettings(guild.id);
   const lang = normalizeLocale(settings?.language);
@@ -26,16 +25,16 @@ async function showList(message: any, guild: any, prefix = '!') {
   const actionLine = t(lang, 'commands.admin.keywords.actionLine', { action: kw?.action || 'delete+warn' });
 
   if (!keywords.length) {
-    return message.reply(
-      t(lang, 'commands.admin.keywords.showListEmpty', { statusLine, actionLine, prefix })
-    );
+    return message.reply(t(lang, 'commands.admin.keywords.showListEmpty', { statusLine, actionLine, prefix }));
   }
 
-  const list = keywords.map((k: any, i: number) => {
-    const tag = k.isRegex ? '`regex`' : '`plain`';
-    const lbl = k.label ? ` *(${k.label})*` : '';
-    return `**${i + 1}.** ${tag} \`${k.pattern}\`${lbl}`;
-  }).join('\n');
+  const list = keywords
+    .map((k: any, i: number) => {
+      const tag = k.isRegex ? '`regex`' : '`plain`';
+      const lbl = k.label ? ` *(${k.label})*` : '';
+      return `**${i + 1}.** ${tag} \`${k.pattern}\`${lbl}`;
+    })
+    .join('\n');
 
   return message.reply(
     t(lang, 'commands.admin.keywords.showList', {
@@ -43,8 +42,8 @@ async function showList(message: any, guild: any, prefix = '!') {
       actionLine,
       list,
       usedCount: keywords.length,
-      max: MAX_KEYWORDS
-    })
+      max: MAX_KEYWORDS,
+    }),
   );
 }
 
@@ -57,7 +56,7 @@ async function setEnabled(message: any, guild: any, enabled: boolean) {
   return message.reply(
     enabled
       ? t(lang, 'commands.admin.keywords.setEnabledEnabled')
-      : t(lang, 'commands.admin.keywords.setEnabledDisabled')
+      : t(lang, 'commands.admin.keywords.setEnabledDisabled'),
   );
 }
 
@@ -114,8 +113,8 @@ async function addKeyword(message: any, guild: any, args: string[], prefix = '!'
     t(lang, 'commands.admin.keywords.added', {
       tag,
       pattern,
-      prefix
-    })
+      prefix,
+    }),
   );
 }
 
@@ -154,14 +153,14 @@ async function setAction(message: any, guild: any, action: string) {
   const descriptions: Record<string, string> = {
     warn: t(lang, 'commands.admin.keywords.actionWarn'),
     delete: t(lang, 'commands.admin.keywords.actionDelete'),
-    'delete+warn': t(lang, 'commands.admin.keywords.actionDeleteWarn')
+    'delete+warn': t(lang, 'commands.admin.keywords.actionDeleteWarn'),
   };
 
   return message.reply(
     t(lang, 'commands.admin.keywords.actionSetDone', {
       action: actionLower,
-      description: descriptions[actionLower]
-    })
+      description: descriptions[actionLower],
+    }),
   );
 }
 
@@ -176,7 +175,9 @@ async function testKeywords(message: any, guild: any, text: string, prefix = '!'
     .map((k: any, i: number) => {
       let matched = false;
       if (k.isRegex) {
-        try { matched = new RegExp(k.pattern, 'i').test(text); } catch {}
+        try {
+          matched = new RegExp(k.pattern, 'i').test(text);
+        } catch {}
       } else {
         matched = text.toLowerCase().includes(k.pattern.toLowerCase());
       }
@@ -189,7 +190,7 @@ async function testKeywords(message: any, guild: any, text: string, prefix = '!'
     return message.reply(t(lang, 'commands.admin.keywords.noKeywordsMatched', { preview }));
   }
   return message.reply(
-    t(lang, 'commands.admin.keywords.testMatches', { hitsCount: hits.length, hits: hits.join('\n') })
+    t(lang, 'commands.admin.keywords.testMatches', { hitsCount: hits.length, hits: hits.join('\n') }),
   );
 }
 
@@ -214,22 +215,22 @@ const command: Command = {
 
   async execute(message, args, _client, prefix = '!') {
     const guild = (message as any).guild;
-    if (!guild) return void await message.reply(t('en', 'commands.admin.keywords.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.keywords.serverOnly')));
 
     const sub = args[0]?.toLowerCase();
 
     if (!sub || sub === 'list') return showList(message, guild, prefix);
 
-    if (sub === 'enable')  return setEnabled(message, guild, true);
+    if (sub === 'enable') return setEnabled(message, guild, true);
     if (sub === 'disable') return setEnabled(message, guild, false);
 
-    if (sub === 'add')    return addKeyword(message, guild, args.slice(1), prefix);
+    if (sub === 'add') return addKeyword(message, guild, args.slice(1), prefix);
     if (sub === 'remove') return removeKeyword(message, guild, args[1], prefix);
     if (sub === 'action') return setAction(message, guild, args[1]);
-    if (sub === 'test')   return testKeywords(message, guild, args.slice(1).join(' '), prefix);
+    if (sub === 'test') return testKeywords(message, guild, args.slice(1).join(' '), prefix);
 
-    return void await message.reply(t('en', 'commands.admin.keywords.unknownSubcommand', { prefix }));
-  }
+    return void (await message.reply(t('en', 'commands.admin.keywords.unknownSubcommand', { prefix })));
+  },
 };
 
 export default command;

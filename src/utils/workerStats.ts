@@ -32,7 +32,7 @@ export async function getWorkerStats(client: any): Promise<WorkerStats> {
   return {
     guilds,
     members,
-    memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024 * 10) / 10,
+    memory: Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 10) / 10,
     uptime: Math.floor(process.uptime()),
   };
 }

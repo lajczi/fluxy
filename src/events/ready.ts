@@ -32,7 +32,7 @@ async function warmSettingsCache(client: any): Promise<void> {
       log.warn('Cache', `Warm batch failed: ${err.message}`);
     }
     if (i + BATCH_SIZE < guildIds.length) {
-      await new Promise(r => setImmediate(r));
+      await new Promise((r) => setImmediate(r));
     }
   }
 
@@ -58,11 +58,11 @@ function printStatus(client: any, startedAt: number): void {
   const cache = settingsCache.getStats();
 
   log.box('Fluxy', [
-    { label: 'Status',     value: 'Online' },
-    { label: 'Uptime',     value: uptime },
-    { label: 'Guilds',     value: String(guilds) },
-    { label: 'Memory',     value: `${memMB} MB` },
-    { label: 'Cache',      value: `${(cache as any).validEntries}/${guilds} guilds cached` },
+    { label: 'Status', value: 'Online' },
+    { label: 'Uptime', value: uptime },
+    { label: 'Guilds', value: String(guilds) },
+    { label: 'Memory', value: `${memMB} MB` },
+    { label: 'Cache', value: `${(cache as any).validEntries}/${guilds} guilds cached` },
   ]);
 }
 
@@ -110,7 +110,7 @@ const event: BotEvent = {
       printStatus(client, startedAt);
       updatePresence(client).catch(() => {});
     }, HEARTBEAT_INTERVAL);
-  }
+  },
 };
 
 export default event;

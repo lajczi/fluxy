@@ -8,7 +8,8 @@ import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'warnings',
-  description: 'View the warning history for a user \u2014 shows who issued each warning and the reason. Leave blank to see your own',
+  description:
+    'View the warning history for a user \u2014 shows who issued each warning and the reason. Leave blank to see your own',
   usage: '[@user or user ID]',
   category: 'moderation',
   permissions: ['ModerateMembers'],
@@ -21,7 +22,7 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.moderation.warnings.serverOnly'));
+      return void (await message.reply(t('en', 'commands.moderation.warnings.serverOnly')));
     }
 
     const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
@@ -33,7 +34,7 @@ const command: Command = {
     if (args[0]) {
       const parsed = parseUserId(args[0]);
       if (!parsed) {
-        return void await message.reply(t(lang, 'commands.moderation.warnings.invalidUser'));
+        return void (await message.reply(t(lang, 'commands.moderation.warnings.invalidUser')));
       }
       userId = parsed;
     } else {
@@ -61,7 +62,7 @@ const command: Command = {
         const totalWarnings = warnings.length;
 
         embed.setDescription(
-          t(lang, 'commands.moderation.warnings.showing', { shownCount: displayWarnings.length, totalWarnings })
+          t(lang, 'commands.moderation.warnings.showing', { shownCount: displayWarnings.length, totalWarnings }),
         );
 
         const warningList: string[] = [];
@@ -74,20 +75,19 @@ const command: Command = {
 
           warningList.push(`**${i + 1}.** ${warning.reason}`);
           warningList.push(
-            `   \u2514 ${t(lang, 'commands.moderation.warnings.moderatorLabel')}: ${modMention} | ${t(lang, 'commands.moderation.warnings.dateLabel')}: ${date}`
+            `   \u2514 ${t(lang, 'commands.moderation.warnings.moderatorLabel')}: ${modMention} | ${t(lang, 'commands.moderation.warnings.dateLabel')}: ${date}`,
           );
         }
 
         embed.addFields({
           name: t(lang, 'commands.moderation.warnings.fieldRecentWarnings'),
-          value: warningList.join('\n') || t(lang, 'commands.moderation.warnings.none')
+          value: warningList.join('\n') || t(lang, 'commands.moderation.warnings.none'),
         });
 
         embed.setFooter({ text: t(lang, 'commands.moderation.warnings.footerTotalWarnings', { totalWarnings }) });
       }
 
       await message.reply({ embeds: [embed] });
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -97,7 +97,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.moderation.warnings.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

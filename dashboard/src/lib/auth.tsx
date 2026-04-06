@@ -84,7 +84,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    try { await api.post('/auth/logout'); } catch { /* ignore */ }
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      /* ignore */
+    }
     setUser(null);
     GlitchTip.setUser(null);
     getPosthog()?.reset();

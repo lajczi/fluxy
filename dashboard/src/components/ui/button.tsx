@@ -8,11 +8,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow hover:bg-[hsl(var(--primary))]/90 hover:shadow-md hover:shadow-blue-500/20 active:bg-[hsl(var(--primary))]/80',
-        destructive: 'bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] shadow-sm hover:bg-[hsl(var(--destructive))]/90 hover:shadow-md hover:shadow-red-500/20 active:bg-[hsl(var(--destructive))]/80',
-        outline: 'border border-[hsl(var(--input))] bg-transparent shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] hover:border-[hsl(var(--ring))]/50 active:bg-[hsl(var(--accent))]/80',
-        secondary: 'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] shadow-sm hover:bg-[hsl(var(--secondary))]/80 active:bg-[hsl(var(--secondary))]/60',
-        ghost: 'hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] active:bg-[hsl(var(--accent))]/80',
+        default:
+          'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow hover:bg-[hsl(var(--primary))]/90 hover:shadow-md hover:shadow-blue-500/20 active:bg-[hsl(var(--primary))]/80',
+        destructive:
+          'bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] shadow-sm hover:bg-[hsl(var(--destructive))]/90 hover:shadow-md hover:shadow-red-500/20 active:bg-[hsl(var(--destructive))]/80',
+        outline:
+          'border border-[hsl(var(--input))] bg-transparent shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] hover:border-[hsl(var(--ring))]/50 active:bg-[hsl(var(--accent))]/80',
+        secondary:
+          'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] shadow-sm hover:bg-[hsl(var(--secondary))]/80 active:bg-[hsl(var(--secondary))]/60',
+        ghost:
+          'hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] active:bg-[hsl(var(--accent))]/80',
         link: 'text-[hsl(var(--primary))] underline-offset-4 hover:underline active:opacity-70',
       },
       size: {
@@ -30,21 +35,14 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
-    return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
-    );
+    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
   },
 );
 Button.displayName = 'Button';

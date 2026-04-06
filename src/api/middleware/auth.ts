@@ -12,12 +12,15 @@ function authT(key: string): string {
   return t('en', `auditCatalog.api.middleware.auth.${key}`);
 }
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, val] of tokenCache) {
-    if (val.expiresAt <= now) tokenCache.delete(key);
-  }
-}, 5 * 60 * 1000).unref();
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, val] of tokenCache) {
+      if (val.expiresAt <= now) tokenCache.delete(key);
+    }
+  },
+  5 * 60 * 1000,
+).unref();
 
 function cacheToken(token: string, userId: string): void {
   if (tokenCache.size >= MAX_CACHE_SIZE) {
@@ -59,7 +62,7 @@ export async function validateFluxerToken(token: string): Promise<string | null>
 
     if (!res.ok) return null;
 
-    const user = await res.json() as { id: string };
+    const user = (await res.json()) as { id: string };
     if (!user?.id) return null;
 
     cacheToken(token, user.id);
@@ -139,8 +142,12 @@ export function createAuthMiddleware(_client: Client) {
           return;
         }
 
-        const userGuilds = await userGuildsRes.json() as Array<{ id: string; owner_id?: string; permissions?: string | null }>;
-        const guild = userGuilds.find(g => g.id === guildId);
+        const userGuilds = (await userGuildsRes.json()) as Array<{
+          id: string;
+          owner_id?: string;
+          permissions?: string | null;
+        }>;
+        const guild = userGuilds.find((g) => g.id === guildId);
 
         if (!guild) {
           res.status(403).json({ error: authT('notGuildMember') });

@@ -12,19 +12,69 @@ import { Save, Loader2, Upload, X, Eye, Palette, Image as ImageIcon, MessageSqua
 import type { WelcomeMessage, GuildDetail } from '../lib/api';
 import { buildWelcomeChannelSelectData } from '../lib/welcomeChannelSelect';
 
-const PRESETS: Record<string, { bg: [string, string, string]; accent: string; text: string; subtext: string; count: string }> = {
-  default:  { bg: ['#0f0c29', '#1a1a3e', '#24243e'], accent: '#6c72f8', text: '#ffffff', subtext: '#9999bb', count: '#666688' },
-  dark:     { bg: ['#0d0d0d', '#1a1a1a', '#262626'], accent: '#8b5cf6', text: '#f5f5f5', subtext: '#a3a3a3', count: '#737373' },
-  light:    { bg: ['#f8fafc', '#e2e8f0', '#cbd5e1'], accent: '#3b82f6', text: '#1e293b', subtext: '#64748b', count: '#94a3b8' },
-  ocean:    { bg: ['#0c1445', '#1a237e', '#0d47a1'], accent: '#00bcd4', text: '#e0f7fa', subtext: '#80cbc4', count: '#4db6ac' },
-  sunset:   { bg: ['#1a0a2e', '#3d1c56', '#5c2d82'], accent: '#ff6b6b', text: '#fff5f5', subtext: '#ffa8a8', count: '#ff8787' },
-  midnight: { bg: ['#020617', '#0f172a', '#1e293b'], accent: '#a78bfa', text: '#e2e8f0', subtext: '#94a3b8', count: '#64748b' },
-  forest:   { bg: ['#052e16', '#14532d', '#166534'], accent: '#4ade80', text: '#f0fdf4', subtext: '#86efac', count: '#6ee7b7' },
+const PRESETS: Record<
+  string,
+  { bg: [string, string, string]; accent: string; text: string; subtext: string; count: string }
+> = {
+  default: {
+    bg: ['#0f0c29', '#1a1a3e', '#24243e'],
+    accent: '#6c72f8',
+    text: '#ffffff',
+    subtext: '#9999bb',
+    count: '#666688',
+  },
+  dark: {
+    bg: ['#0d0d0d', '#1a1a1a', '#262626'],
+    accent: '#8b5cf6',
+    text: '#f5f5f5',
+    subtext: '#a3a3a3',
+    count: '#737373',
+  },
+  light: {
+    bg: ['#f8fafc', '#e2e8f0', '#cbd5e1'],
+    accent: '#3b82f6',
+    text: '#1e293b',
+    subtext: '#64748b',
+    count: '#94a3b8',
+  },
+  ocean: {
+    bg: ['#0c1445', '#1a237e', '#0d47a1'],
+    accent: '#00bcd4',
+    text: '#e0f7fa',
+    subtext: '#80cbc4',
+    count: '#4db6ac',
+  },
+  sunset: {
+    bg: ['#1a0a2e', '#3d1c56', '#5c2d82'],
+    accent: '#ff6b6b',
+    text: '#fff5f5',
+    subtext: '#ffa8a8',
+    count: '#ff8787',
+  },
+  midnight: {
+    bg: ['#020617', '#0f172a', '#1e293b'],
+    accent: '#a78bfa',
+    text: '#e2e8f0',
+    subtext: '#94a3b8',
+    count: '#64748b',
+  },
+  forest: {
+    bg: ['#052e16', '#14532d', '#166534'],
+    accent: '#4ade80',
+    text: '#f0fdf4',
+    subtext: '#86efac',
+    count: '#6ee7b7',
+  },
 };
 
 const PRESET_NAMES = Object.keys(PRESETS);
 
-function ColorInput({ label, value, onChange, placeholder }: {
+function ColorInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
   label: string;
   value: string | null;
   onChange: (v: string | null) => void;
@@ -37,12 +87,12 @@ function ColorInput({ label, value, onChange, placeholder }: {
         <input
           type="color"
           value={value || placeholder || '#6c72f8'}
-          onChange={e => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           className="h-8 w-8 rounded border border-white/10 bg-transparent cursor-pointer shrink-0"
         />
         <Input
           value={value || ''}
-          onChange={e => onChange(e.target.value || null)}
+          onChange={(e) => onChange(e.target.value || null)}
           placeholder={placeholder || 'Inherit from theme'}
           className="h-8 text-xs font-mono"
         />
@@ -56,7 +106,12 @@ function ColorInput({ label, value, onChange, placeholder }: {
   );
 }
 
-function ChannelSelect({ channels, value, onChange, placeholder = 'Select channel' }: {
+function ChannelSelect({
+  channels,
+  value,
+  onChange,
+  placeholder = 'Select channel',
+}: {
   channels: GuildDetail['channels'];
   value: string | null;
   onChange: (v: string | null) => void;
@@ -66,30 +121,39 @@ function ChannelSelect({ channels, value, onChange, placeholder = 'Select channe
   const needsFallback = !!value && value !== '__none__' && !selectableIds.includes(value);
 
   return (
-    <Select value={value ?? '__none__'} onValueChange={v => onChange(v === '__none__' ? null : v)}>
+    <Select value={value ?? '__none__'} onValueChange={(v) => onChange(v === '__none__' ? null : v)}>
       <SelectTrigger className="w-full">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="__none__">None</SelectItem>
         {needsFallback && (
-          <SelectItem key={value} value={value!}>#{channels.find(c => c.id === value)?.name || value}</SelectItem>
+          <SelectItem key={value} value={value!}>
+            #{channels.find((c) => c.id === value)?.name || value}
+          </SelectItem>
         )}
-        {options.map(item =>
+        {options.map((item) =>
           item.isCategory ? (
             <div key={item.id} className="px-2 py-1.5 text-xs font-semibold text-muted-foreground select-none">
               {item.label}
             </div>
           ) : (
-            <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>
-          )
+            <SelectItem key={item.id} value={item.id}>
+              {item.label}
+            </SelectItem>
+          ),
         )}
       </SelectContent>
     </Select>
   );
 }
 
-function RoleSelect({ roles, value, onChange, placeholder = 'Select role' }: {
+function RoleSelect({
+  roles,
+  value,
+  onChange,
+  placeholder = 'Select role',
+}: {
   roles: GuildDetail['roles'];
   value: string | null;
   onChange: (v: string | null) => void;
@@ -98,13 +162,13 @@ function RoleSelect({ roles, value, onChange, placeholder = 'Select role' }: {
   const sortedRoles = [...roles].sort((a, b) => b.position - a.position);
 
   return (
-    <Select value={value ?? '__none__'} onValueChange={v => onChange(v === '__none__' ? null : v)}>
+    <Select value={value ?? '__none__'} onValueChange={(v) => onChange(v === '__none__' ? null : v)}>
       <SelectTrigger className="w-full">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="__none__">None</SelectItem>
-        {sortedRoles.map(role => (
+        {sortedRoles.map((role) => (
           <SelectItem key={role.id} value={role.id}>
             {role.name.startsWith('@') ? role.name : `@${role.name}`}
           </SelectItem>
@@ -114,10 +178,7 @@ function RoleSelect({ roles, value, onChange, placeholder = 'Select role' }: {
   );
 }
 
-function CardPreview({ card, showRole }: {
-  card: WelcomeMessage['card'];
-  showRole: boolean;
-}) {
+function CardPreview({ card, showRole }: { card: WelcomeMessage['card']; showRole: boolean }) {
   const preset = PRESETS[card.preset || 'default'] || PRESETS.default;
   const bg1 = card.bgColor1 || preset.bg[0];
   const bg2 = card.bgColor2 || preset.bg[1];
@@ -141,31 +202,43 @@ function CardPreview({ card, showRole }: {
       }}
     >
       {/* Background */}
-      <div className="absolute inset-0" style={{
-        background: card.bgImageURL
-          ? `url(${card.bgImageURL}) center/cover`
-          : `linear-gradient(135deg, ${bg1}, ${bg2}, ${bg3})`,
-      }} />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: card.bgImageURL
+            ? `url(${card.bgImageURL}) center/cover`
+            : `linear-gradient(135deg, ${bg1}, ${bg2}, ${bg3})`,
+        }}
+      />
 
       {/* Dark overlay for bg images */}
-      {card.bgImageURL && (
-        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.45)' }} />
-      )}
+      {card.bgImageURL && <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.45)' }} />}
 
       {/* Dot pattern (only when no bg image) */}
       {!card.bgImageURL && (
-        <div className="absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.5px)', backgroundSize: '30px 30px' }}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.5px)',
+            backgroundSize: '30px 30px',
+          }}
         />
       )}
 
       {/* Accent glow behind avatar area */}
-      <div className="absolute" style={{
-        left: '10%', top: '50%', transform: 'translate(-50%, -50%)',
-        width: 320, height: 320, borderRadius: '50%',
-        background: `radial-gradient(circle, ${accent}26 0%, ${accent}00 70%)`,
-        pointerEvents: 'none',
-      }} />
+      <div
+        className="absolute"
+        style={{
+          left: '10%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 320,
+          height: 320,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${accent}26 0%, ${accent}00 70%)`,
+          pointerEvents: 'none',
+        }}
+      />
 
       {/* Top accent border */}
       <div className="absolute top-0 left-0 right-0 h-[3px] opacity-40" style={{ backgroundColor: accent }} />
@@ -176,10 +249,13 @@ function CardPreview({ card, showRole }: {
       <div className="relative flex items-center h-full" style={{ padding: '0 5% 0 8%' }}>
         {/* Avatar with ring */}
         <div className="shrink-0" style={{ marginRight: '5%' }}>
-          <div className="rounded-full" style={{
-            padding: 4,
-            border: `3px solid ${accent}`,
-          }}>
+          <div
+            className="rounded-full"
+            style={{
+              padding: 4,
+              border: `3px solid ${accent}`,
+            }}
+          >
             <img
               src="/default-avatar.png"
               alt="Avatar"
@@ -192,67 +268,81 @@ function CardPreview({ card, showRole }: {
         {/* Text block */}
         <div className="flex-1 min-w-0">
           {/* Greeting - uppercase, accent, letter-spacing */}
-          <p className="font-bold" style={{
-            color: accent,
-            fontSize: 9,
-            letterSpacing: '4px',
-            lineHeight: 1.2,
-            marginBottom: 2,
-          }}>
+          <p
+            className="font-bold"
+            style={{
+              color: accent,
+              fontSize: 9,
+              letterSpacing: '4px',
+              lineHeight: 1.2,
+              marginBottom: 2,
+            }}
+          >
             {greetingText}
           </p>
 
           {/* Username */}
-          <p className="font-bold truncate" style={{
-            color: textColor,
-            fontSize: 22,
-            lineHeight: 1.3,
-          }}>
+          <p
+            className="font-bold truncate"
+            style={{
+              color: textColor,
+              fontSize: 22,
+              lineHeight: 1.3,
+            }}
+          >
             Username
           </p>
 
           {/* Subtitle */}
-          <p style={{
-            color: subtextColor,
-            fontSize: 11,
-            lineHeight: 1.4,
-            marginTop: 1,
-          }}>
+          <p
+            style={{
+              color: subtextColor,
+              fontSize: 11,
+              lineHeight: 1.4,
+              marginTop: 1,
+            }}
+          >
             {subtitle}
           </p>
 
           {/* Member count */}
           {showMemberCount && (
-            <p style={{
-              color: countColor,
-              fontSize: 9,
-              lineHeight: 1.4,
-              marginTop: 4,
-            }}>
+            <p
+              style={{
+                color: countColor,
+                fontSize: 9,
+                lineHeight: 1.4,
+                marginTop: 4,
+              }}
+            >
               Member #427
             </p>
           )}
 
           {/* Role */}
           {showRole && (
-            <p style={{
-              color: accent,
-              fontSize: 8,
-              lineHeight: 1.4,
-              marginTop: 2,
-            }}>
+            <p
+              style={{
+                color: accent,
+                fontSize: 8,
+                lineHeight: 1.4,
+                marginTop: 2,
+              }}
+            >
               Role: Member
             </p>
           )}
 
           {/* Separator line */}
-          <div style={{
-            marginTop: 8,
-            width: '60%',
-            maxWidth: 150,
-            height: 1,
-            backgroundColor: `${accent}40`,
-          }} />
+          <div
+            style={{
+              marginTop: 8,
+              width: '60%',
+              maxWidth: 150,
+              height: 1,
+              backgroundColor: `${accent}40`,
+            }}
+          />
         </div>
       </div>
     </div>
@@ -272,13 +362,13 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const update = (patch: Partial<WelcomeMessage>) => setWelcome(prev => ({ ...prev, ...patch }));
+  const update = (patch: Partial<WelcomeMessage>) => setWelcome((prev) => ({ ...prev, ...patch }));
   const updateCard = (patch: Partial<WelcomeMessage['card']>) =>
-    setWelcome(prev => ({ ...prev, card: { ...prev.card, ...patch } }));
+    setWelcome((prev) => ({ ...prev, card: { ...prev.card, ...patch } }));
   const updateEmbed = (patch: Partial<WelcomeMessage['embed']>) =>
-    setWelcome(prev => ({ ...prev, embed: { ...prev.embed, ...patch } }));
+    setWelcome((prev) => ({ ...prev, embed: { ...prev.embed, ...patch } }));
   const updateDM = (patch: Partial<WelcomeMessage['dm']>) =>
-    setWelcome(prev => ({ ...prev, dm: { ...prev.dm, ...patch } }));
+    setWelcome((prev) => ({ ...prev, dm: { ...prev.dm, ...patch } }));
 
   const handleSave = () => onSave({ welcomeMessage: welcome });
 
@@ -332,7 +422,9 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
       {/* - Core Settings - */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Welcome Message</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" /> Welcome Message
+          </CardTitle>
           <CardDescription>Greet new members when they join your server</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -341,7 +433,7 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
               <p className="text-sm font-medium text-white">Enabled</p>
               <p className="text-xs text-gray-400">Send a welcome message when someone joins</p>
             </div>
-            <Switch checked={welcome.enabled} onCheckedChange={v => update({ enabled: v })} />
+            <Switch checked={welcome.enabled} onCheckedChange={(v) => update({ enabled: v })} />
           </div>
 
           <Separator />
@@ -349,12 +441,18 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Welcome Channel</Label>
-              <ChannelSelect channels={guild.channels} value={welcome.channelId} onChange={v => update({ channelId: v })} />
+              <ChannelSelect
+                channels={guild.channels}
+                value={welcome.channelId}
+                onChange={(v) => update({ channelId: v })}
+              />
             </div>
             <div className="space-y-2">
               <Label>Trigger</Label>
-              <Select value={welcome.trigger} onValueChange={v => update({ trigger: v as any })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={welcome.trigger} onValueChange={(v) => update({ trigger: v as any })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="join">When they join</SelectItem>
                   <SelectItem value="role">When they get a role</SelectItem>
@@ -369,7 +467,7 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
               <RoleSelect
                 roles={guild.roles}
                 value={welcome.triggerRoleId}
-                onChange={v => update({ triggerRoleId: v })}
+                onChange={(v) => update({ triggerRoleId: v })}
                 placeholder="Select the role that should trigger the welcome"
               />
               <p className="text-xs text-gray-500">
@@ -380,9 +478,15 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
 
           <div className="space-y-2">
             <Label>Welcome Message</Label>
-            <Textarea value={welcome.message || ''} onChange={e => update({ message: e.target.value })}
-              placeholder="Welcome {user} to {server}!" rows={3} />
-            <p className="text-xs text-gray-500">Variables: {'{user}'} {'{server}'} {'{count}'} {'{role}'}</p>
+            <Textarea
+              value={welcome.message || ''}
+              onChange={(e) => update({ message: e.target.value })}
+              placeholder="Welcome {user} to {server}!"
+              rows={3}
+            />
+            <p className="text-xs text-gray-500">
+              Variables: {'{user}'} {'{server}'} {'{count}'} {'{role}'}
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -391,14 +495,14 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                 <p className="text-sm font-medium text-white">Welcome Card Image</p>
                 <p className="text-xs text-gray-400">Attach a generated image card</p>
               </div>
-              <Switch checked={welcome.imageEnabled} onCheckedChange={v => update({ imageEnabled: v })} />
+              <Switch checked={welcome.imageEnabled} onCheckedChange={(v) => update({ imageEnabled: v })} />
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-[hsl(var(--muted))]">
               <div>
                 <p className="text-sm font-medium text-white">Show Role on Card</p>
                 <p className="text-xs text-gray-400">Display highest role name</p>
               </div>
-              <Switch checked={welcome.showRole} onCheckedChange={v => update({ showRole: v })} />
+              <Switch checked={welcome.showRole} onCheckedChange={(v) => update({ showRole: v })} />
             </div>
           </div>
         </CardContent>
@@ -408,8 +512,12 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
       {welcome.imageEnabled && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Palette className="h-4 w-4" /> Card Designer</CardTitle>
-            <CardDescription>Customize the look of your welcome card with themes, colors, and background images</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-4 w-4" /> Card Designer
+            </CardTitle>
+            <CardDescription>
+              Customize the look of your welcome card with themes, colors, and background images
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Live preview + theme picker side by side */}
@@ -419,17 +527,14 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                 <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <Eye className="h-3.5 w-3.5" /> Live Preview
                 </div>
-                <CardPreview
-                  card={welcome.card}
-                  showRole={welcome.showRole}
-                />
+                <CardPreview card={welcome.card} showRole={welcome.showRole} />
               </div>
 
               {/* Theme picker */}
               <div className="space-y-4">
                 <Label>Theme</Label>
                 <div className="grid grid-cols-4 gap-2">
-                  {PRESET_NAMES.map(name => {
+                  {PRESET_NAMES.map((name) => {
                     const p = PRESETS[name];
                     const isSelected = (welcome.card.preset || 'default') === name;
                     return (
@@ -464,7 +569,7 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                   <Label>Greeting Text</Label>
                   <Input
                     value={welcome.card.greetingText || ''}
-                    onChange={e => updateCard({ greetingText: e.target.value })}
+                    onChange={(e) => updateCard({ greetingText: e.target.value })}
                     placeholder="WELCOME"
                   />
                   <p className="text-xs text-gray-500">Shown above the username (max 30 chars). Displayed uppercase.</p>
@@ -475,10 +580,12 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                   <Label>Subtitle</Label>
                   <Input
                     value={welcome.card.subtitle || ''}
-                    onChange={e => updateCard({ subtitle: e.target.value || null })}
+                    onChange={(e) => updateCard({ subtitle: e.target.value || null })}
                     placeholder="to My Server"
                   />
-                  <p className="text-xs text-gray-500">Shown below the username (max 50 chars). Default: "to ServerName"</p>
+                  <p className="text-xs text-gray-500">
+                    Shown below the username (max 50 chars). Default: "to ServerName"
+                  </p>
                 </div>
 
                 {/* Show member count */}
@@ -487,7 +594,10 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                     <p className="text-sm font-medium text-white">Show Member Count</p>
                     <p className="text-xs text-gray-400">Display "Member #N" on the card</p>
                   </div>
-                  <Switch checked={welcome.card.showMemberCount} onCheckedChange={v => updateCard({ showMemberCount: v })} />
+                  <Switch
+                    checked={welcome.card.showMemberCount}
+                    onCheckedChange={(v) => updateCard({ showMemberCount: v })}
+                  />
                 </div>
               </div>
             </div>
@@ -508,7 +618,7 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
                     className="hidden"
-                    onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
+                    onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
                   />
                   <Button
                     variant="outline"
@@ -517,16 +627,18 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                     onClick={() => fileInputRef.current?.click()}
                   >
                     {uploading ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Uploading...</>
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Uploading...
+                      </>
                     ) : (
-                      <><Upload className="h-4 w-4 mr-2" /> Upload Image</>
+                      <>
+                        <Upload className="h-4 w-4 mr-2" /> Upload Image
+                      </>
                     )}
                   </Button>
                   <p className="text-xs text-gray-500">PNG, JPEG, WebP - max 4MB</p>
 
-                  {uploadError && (
-                    <p className="text-xs text-red-400">{uploadError}</p>
-                  )}
+                  {uploadError && <p className="text-xs text-red-400">{uploadError}</p>}
 
                   {/* Or paste URL */}
                   <div className="space-y-1.5">
@@ -534,13 +646,17 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                     <div className="flex gap-2">
                       <Input
                         value={welcome.card.bgImageURL || ''}
-                        onChange={e => updateCard({ bgImageURL: e.target.value || null })}
+                        onChange={(e) => updateCard({ bgImageURL: e.target.value || null })}
                         placeholder="https://example.com/background.png"
                         className="text-xs"
                       />
                       {welcome.card.bgImageURL && (
-                        <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9"
-                          onClick={() => updateCard({ bgImageURL: null })}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 h-9 w-9"
+                          onClick={() => updateCard({ bgImageURL: null })}
+                        >
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       )}
@@ -551,17 +667,22 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                 {/* Image preview */}
                 <div className="flex items-center justify-center">
                   {welcome.card.bgImageURL ? (
-                    <div className="relative rounded-lg overflow-hidden border border-white/10 w-full" style={{ aspectRatio: '16/9' }}>
+                    <div
+                      className="relative rounded-lg overflow-hidden border border-white/10 w-full"
+                      style={{ aspectRatio: '16/9' }}
+                    >
                       <img
                         src={welcome.card.bgImageURL}
                         alt="Background preview"
                         className="w-full h-full object-cover"
-                        onError={e => (e.currentTarget.style.display = 'none')}
+                        onError={(e) => (e.currentTarget.style.display = 'none')}
                       />
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center rounded-lg border border-dashed border-white/10 w-full text-gray-500 text-xs"
-                      style={{ aspectRatio: '16/9' }}>
+                    <div
+                      className="flex items-center justify-center rounded-lg border border-dashed border-white/10 w-full text-gray-500 text-xs"
+                      style={{ aspectRatio: '16/9' }}
+                    >
                       No background image set
                     </div>
                   )}
@@ -577,18 +698,57 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                 <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <Palette className="h-3.5 w-3.5" /> Custom Colors
                 </div>
-                <Badge variant="secondary" className="text-xs">Override theme defaults</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  Override theme defaults
+                </Badge>
               </div>
-              <p className="text-xs text-gray-500">Leave blank to use the selected theme's default colors. Set a color to override.</p>
+              <p className="text-xs text-gray-500">
+                Leave blank to use the selected theme's default colors. Set a color to override.
+              </p>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <ColorInput label="Background 1" value={welcome.card.bgColor1} onChange={v => updateCard({ bgColor1: v })} placeholder={currentPreset.bg[0]} />
-                <ColorInput label="Background 2" value={welcome.card.bgColor2} onChange={v => updateCard({ bgColor2: v })} placeholder={currentPreset.bg[1]} />
-                <ColorInput label="Background 3" value={welcome.card.bgColor3} onChange={v => updateCard({ bgColor3: v })} placeholder={currentPreset.bg[2]} />
-                <ColorInput label="Accent" value={welcome.card.accentColor} onChange={v => updateCard({ accentColor: v })} placeholder={currentPreset.accent} />
-                <ColorInput label="Text" value={welcome.card.textColor} onChange={v => updateCard({ textColor: v })} placeholder={currentPreset.text} />
-                <ColorInput label="Subtext" value={welcome.card.subtextColor} onChange={v => updateCard({ subtextColor: v })} placeholder={currentPreset.subtext} />
-                <ColorInput label="Count" value={welcome.card.countColor} onChange={v => updateCard({ countColor: v })} placeholder={currentPreset.count} />
+                <ColorInput
+                  label="Background 1"
+                  value={welcome.card.bgColor1}
+                  onChange={(v) => updateCard({ bgColor1: v })}
+                  placeholder={currentPreset.bg[0]}
+                />
+                <ColorInput
+                  label="Background 2"
+                  value={welcome.card.bgColor2}
+                  onChange={(v) => updateCard({ bgColor2: v })}
+                  placeholder={currentPreset.bg[1]}
+                />
+                <ColorInput
+                  label="Background 3"
+                  value={welcome.card.bgColor3}
+                  onChange={(v) => updateCard({ bgColor3: v })}
+                  placeholder={currentPreset.bg[2]}
+                />
+                <ColorInput
+                  label="Accent"
+                  value={welcome.card.accentColor}
+                  onChange={(v) => updateCard({ accentColor: v })}
+                  placeholder={currentPreset.accent}
+                />
+                <ColorInput
+                  label="Text"
+                  value={welcome.card.textColor}
+                  onChange={(v) => updateCard({ textColor: v })}
+                  placeholder={currentPreset.text}
+                />
+                <ColorInput
+                  label="Subtext"
+                  value={welcome.card.subtextColor}
+                  onChange={(v) => updateCard({ subtextColor: v })}
+                  placeholder={currentPreset.subtext}
+                />
+                <ColorInput
+                  label="Count"
+                  value={welcome.card.countColor}
+                  onChange={(v) => updateCard({ countColor: v })}
+                  placeholder={currentPreset.count}
+                />
               </div>
             </div>
           </CardContent>
@@ -598,7 +758,9 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
       {/* - Embed - */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Welcome Embed</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" /> Welcome Embed
+          </CardTitle>
           <CardDescription>Add a rich embed box below the welcome message</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -607,7 +769,7 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
               <p className="text-sm font-medium text-white">Enabled</p>
               <p className="text-xs text-gray-400">Show an embed alongside the welcome message</p>
             </div>
-            <Switch checked={welcome.embed.enabled} onCheckedChange={v => updateEmbed({ enabled: v })} />
+            <Switch checked={welcome.embed.enabled} onCheckedChange={(v) => updateEmbed({ enabled: v })} />
           </div>
           {welcome.embed.enabled && (
             <>
@@ -617,12 +779,8 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                 <div className="flex">
                   <div className="w-1 shrink-0" style={{ backgroundColor: welcome.embed.color || '#5865F2' }} />
                   <div className="p-4 space-y-2 flex-1 bg-[hsl(var(--muted))]">
-                    {welcome.embed.title && (
-                      <p className="text-sm font-semibold text-white">{welcome.embed.title}</p>
-                    )}
-                    {welcome.embed.description && (
-                      <p className="text-xs text-gray-300">{welcome.embed.description}</p>
-                    )}
+                    {welcome.embed.title && <p className="text-sm font-semibold text-white">{welcome.embed.title}</p>}
+                    {welcome.embed.description && <p className="text-xs text-gray-300">{welcome.embed.description}</p>}
                     {welcome.embed.footer && (
                       <p className="text-[10px] text-gray-500 pt-1 border-t border-white/5">{welcome.embed.footer}</p>
                     )}
@@ -634,7 +792,11 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input value={welcome.embed.title || ''} onChange={e => updateEmbed({ title: e.target.value })} placeholder="Embed title" />
+                <Input
+                  value={welcome.embed.title || ''}
+                  onChange={(e) => updateEmbed({ title: e.target.value })}
+                  placeholder="Embed title"
+                />
                 <div className="flex gap-2 items-end">
                   <div className="flex-1 space-y-1.5">
                     <Label className="text-xs">Color</Label>
@@ -642,23 +804,37 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
                       <input
                         type="color"
                         value={welcome.embed.color || '#5865F2'}
-                        onChange={e => updateEmbed({ color: e.target.value })}
+                        onChange={(e) => updateEmbed({ color: e.target.value })}
                         className="h-9 w-9 rounded border border-white/10 bg-transparent cursor-pointer shrink-0"
                       />
-                      <Input value={welcome.embed.color || ''} onChange={e => updateEmbed({ color: e.target.value })} placeholder="#5865F2" className="font-mono text-xs" />
+                      <Input
+                        value={welcome.embed.color || ''}
+                        onChange={(e) => updateEmbed({ color: e.target.value })}
+                        placeholder="#5865F2"
+                        className="font-mono text-xs"
+                      />
                     </div>
                   </div>
                 </div>
               </div>
-              <Textarea value={welcome.embed.description || ''} onChange={e => updateEmbed({ description: e.target.value })} placeholder="Embed description - supports {user}, {server}, {count}" rows={3} />
+              <Textarea
+                value={welcome.embed.description || ''}
+                onChange={(e) => updateEmbed({ description: e.target.value })}
+                placeholder="Embed description - supports {user}, {server}, {count}"
+                rows={3}
+              />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input value={welcome.embed.footer || ''} onChange={e => updateEmbed({ footer: e.target.value })} placeholder="Footer text" />
+                <Input
+                  value={welcome.embed.footer || ''}
+                  onChange={(e) => updateEmbed({ footer: e.target.value })}
+                  placeholder="Footer text"
+                />
                 <div className="flex items-center justify-between p-3 rounded-lg bg-[hsl(var(--muted))]">
                   <div>
                     <p className="text-sm font-medium text-white">Thumbnail</p>
                     <p className="text-xs text-gray-400">Show member avatar</p>
                   </div>
-                  <Switch checked={welcome.embed.thumbnail} onCheckedChange={v => updateEmbed({ thumbnail: v })} />
+                  <Switch checked={welcome.embed.thumbnail} onCheckedChange={(v) => updateEmbed({ thumbnail: v })} />
                 </div>
               </div>
             </>
@@ -669,7 +845,9 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
       {/* - DM - */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Mail className="h-4 w-4" /> Welcome DM</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-4 w-4" /> Welcome DM
+          </CardTitle>
           <CardDescription>Send a private message to new members when they join</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -678,20 +856,26 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
               <p className="text-sm font-medium text-white">Send DM on Join</p>
               <p className="text-xs text-gray-400">Direct message each new member privately</p>
             </div>
-            <Switch checked={welcome.dm.enabled} onCheckedChange={v => updateDM({ enabled: v })} />
+            <Switch checked={welcome.dm.enabled} onCheckedChange={(v) => updateDM({ enabled: v })} />
           </div>
           {welcome.dm.enabled && (
             <>
               <Separator />
-              <Textarea value={welcome.dm.message || ''} onChange={e => updateDM({ message: e.target.value })}
-                placeholder="Hey {user}, welcome to {server}! Check out #rules to get started." rows={3} />
-              <p className="text-xs text-gray-500">Variables: {'{user}'} {'{server}'} {'{count}'} {'{role}'}</p>
+              <Textarea
+                value={welcome.dm.message || ''}
+                onChange={(e) => updateDM({ message: e.target.value })}
+                placeholder="Hey {user}, welcome to {server}! Check out #rules to get started."
+                rows={3}
+              />
+              <p className="text-xs text-gray-500">
+                Variables: {'{user}'} {'{server}'} {'{count}'} {'{role}'}
+              </p>
               <div className="flex items-center justify-between p-3 rounded-lg bg-[hsl(var(--muted))]">
                 <div>
                   <p className="text-sm font-medium text-white">Include Welcome Card</p>
                   <p className="text-xs text-gray-400">Attach the welcome card image to the DM</p>
                 </div>
-                <Switch checked={welcome.dm.imageEnabled} onCheckedChange={v => updateDM({ imageEnabled: v })} />
+                <Switch checked={welcome.dm.imageEnabled} onCheckedChange={(v) => updateDM({ imageEnabled: v })} />
               </div>
             </>
           )}
@@ -702,9 +886,13 @@ export default function WelcomeEditor({ settings, guild, onSave, saving }: Welco
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           {saving ? (
-            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…</>
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…
+            </>
           ) : (
-            <><Save className="h-4 w-4 mr-2" /> Save Changes</>
+            <>
+              <Save className="h-4 w-4 mr-2" /> Save Changes
+            </>
           )}
         </Button>
       </div>

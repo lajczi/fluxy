@@ -20,45 +20,54 @@ async function save(settings: any, guildId: string): Promise<void> {
   settingsCache.invalidate(guildId);
 }
 
-function replaceVars(text: string, userId: string, guildName: string, count: number, roleName: string | null, username?: string): string {
+function replaceVars(
+  text: string,
+  userId: string,
+  guildName: string,
+  count: number,
+  roleName: string | null,
+  username?: string,
+): string {
   return text
     .replace(/\\n/g, '\n')
-    .replace(/\{user\}/gi,   `<@${userId}>`)
+    .replace(/\{user\}/gi, `<@${userId}>`)
     .replace(/\{username\}/gi, username || 'Unknown')
     .replace(/\{server\}/gi, guildName)
-    .replace(/\{count\}/gi,  String(count || 0))
-    .replace(/\{role\}/gi,   roleName || 'None');
+    .replace(/\{count\}/gi, String(count || 0))
+    .replace(/\{role\}/gi, roleName || 'None');
 }
 
 function embedReply(message: any, description: string, title?: string): Promise<any> {
-  const embed = new EmbedBuilder().setDescription(description).setColor(0x5865F2);
+  const embed = new EmbedBuilder().setDescription(description).setColor(0x5865f2);
   if (title) embed.setTitle(title);
   return message.reply({ embeds: [embed] });
 }
 
-const subcommands: Record<string, (message: any, args: string[], guild: any, settings: any, client: any, prefix: string) => Promise<any>> = {
-
+const subcommands: Record<
+  string,
+  (message: any, args: string[], guild: any, settings: any, client: any, prefix: string) => Promise<any>
+> = {
   async status(message, args, guild, settings, _client, _prefix) {
     const lang = normalizeLocale(settings?.language);
-    const wm   = settings.welcomeMessage;
+    const wm = settings.welcomeMessage;
     const card = wm.card || {};
-    const emb  = wm.embed || {};
-    const dm   = wm.dm || {};
+    const emb = wm.embed || {};
+    const dm = wm.dm || {};
 
-    const ch      = wm.channelId    ? `<#${wm.channelId}>` : 'Not set';
-    const enabled = wm.enabled      ? 'Yes' : 'No';
-    const image   = wm.imageEnabled !== false ? 'Yes' : 'No';
-    const msg     = wm.message      || 'Default';
+    const ch = wm.channelId ? `<#${wm.channelId}>` : 'Not set';
+    const enabled = wm.enabled ? 'Yes' : 'No';
+    const image = wm.imageEnabled !== false ? 'Yes' : 'No';
+    const msg = wm.message || 'Default';
 
     const trigger = wm.trigger === 'role' ? 'Role assigned' : 'Member join';
 
     const statusEmbed = new EmbedBuilder()
       .setTitle(t(lang, 'auditCatalog.commands.admin.welcome.l54_setTitle'))
-      .setColor(0x5865F2)
+      .setColor(0x5865f2)
       .setDescription(
         `Enabled: **${enabled}** | Channel: ${ch}\n` +
-        `Trigger: **${trigger}** | Image card: **${image}** | Show role: **${wm.showRole ? 'Yes' : 'No'}**\n` +
-        `Text: ${msg}`
+          `Trigger: **${trigger}** | Image card: **${image}** | Show role: **${wm.showRole ? 'Yes' : 'No'}**\n` +
+          `Text: ${msg}`,
       )
       .addFields(
         {
@@ -83,7 +92,7 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
           inline: true,
         },
       )
-      .setFooter({ text: t(lang, 'auditCatalog.commands.admin.welcome.l81_setFooter') })
+      .setFooter({ text: t(lang, 'auditCatalog.commands.admin.welcome.l81_setFooter') });
 
     return message.reply({ embeds: [statusEmbed] });
   },
@@ -110,14 +119,20 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     wm.channelId = channelId;
     wm.enabled = true;
     await save(settings, guild.id);
-    return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l105_embedReply_description', { channelId }));
+    return embedReply(
+      message,
+      t(lang, 'auditCatalog.commands.admin.welcome.l105_embedReply_description', { channelId }),
+    );
   },
 
   async on(message, args, guild, settings, client, prefix) {
     const lang = normalizeLocale(settings?.language);
     const wm = settings.welcomeMessage;
     if (!wm.channelId) {
-      return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l110_embedReply_description', { prefix }));
+      return embedReply(
+        message,
+        t(lang, 'auditCatalog.commands.admin.welcome.l110_embedReply_description', { prefix }),
+      );
     }
     wm.enabled = true;
     await save(settings, guild.id);
@@ -135,21 +150,24 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     const lang = normalizeLocale(settings?.language);
     const val = args[0]?.toLowerCase();
     if (val !== 'on' && val !== 'off') {
-      return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l124_embedReply_description', { prefix }));
+      return embedReply(
+        message,
+        t(lang, 'auditCatalog.commands.admin.welcome.l124_embedReply_description', { prefix }),
+      );
     }
     settings.welcomeMessage.imageEnabled = val === 'on';
     await save(settings, guild.id);
-    return embedReply(
-      message,
-      t(lang, 'auditCatalog.commands.admin.welcome.l127_embedReply_description', { val })
-    );
+    return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l127_embedReply_description', { val }));
   },
 
   async message(message, args, guild, settings, client, prefix) {
     const lang = normalizeLocale(settings?.language);
     const val = args.join(' ').trim();
     if (!val) {
-      return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l132_embedReply_description', { prefix }));
+      return embedReply(
+        message,
+        t(lang, 'auditCatalog.commands.admin.welcome.l132_embedReply_description', { prefix }),
+      );
     }
 
     const wm = settings.welcomeMessage;
@@ -183,8 +201,8 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         return embedReply(
           message,
           t(lang, 'auditCatalog.commands.admin.welcome.l159_embedReply_description', {
-            'names.map((n: string) => `\\`${n}\\``).join(\', \')': names.map((n: string) => `\`${n}\``).join(', ')
-          })
+            "names.map((n: string) => `\\`${n}\\``).join(', ')": names.map((n: string) => `\`${n}\``).join(', '),
+          }),
         );
       }
       if (name === 'clear') {
@@ -197,8 +215,8 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         return embedReply(
           message,
           t(lang, 'auditCatalog.commands.admin.welcome.l168_embedReply_description', {
-            'names.map((n: string) => `\\`${n}\\``).join(\', \')': names.map((n: string) => `\`${n}\``).join(', ')
-          })
+            "names.map((n: string) => `\\`${n}\\``).join(', ')": names.map((n: string) => `\`${n}\``).join(', '),
+          }),
         );
       }
       card.preset = name;
@@ -209,7 +227,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'color') {
       const hex = args[1];
       if (!hex || !HEX_RE.test(hex)) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l177_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l177_embedReply_description', { prefix }),
+        );
       }
       card.accentColor = hex;
       await save(settings, guild.id);
@@ -219,7 +240,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'bgcolor') {
       const colors = args.slice(1).filter((a: string) => HEX_RE.test(a));
       if (colors.length === 0) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l185_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l185_embedReply_description', { prefix }),
+        );
       }
       card.bgColor1 = colors[0];
       card.bgColor2 = colors[1] || colors[0];
@@ -228,15 +252,18 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       return embedReply(
         message,
         t(lang, 'auditCatalog.commands.admin.welcome.l190_embedReply_description', {
-          'colors.join(\' → \')': colors.join(' → ')
-        })
+          "colors.join(' → ')": colors.join(' → '),
+        }),
       );
     }
 
     if (sub === 'textcolor') {
       const hex = args[1];
       if (!hex || !HEX_RE.test(hex)) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l195_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l195_embedReply_description', { prefix }),
+        );
       }
       card.textColor = hex;
       await save(settings, guild.id);
@@ -246,7 +273,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'greeting') {
       const text = args.slice(1).join(' ').trim();
       if (!text) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l203_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l203_embedReply_description', { prefix }),
+        );
       }
       if (text.toLowerCase() === 'clear') {
         card.greetingText = null;
@@ -261,15 +291,18 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       return embedReply(
         message,
         t(lang, 'auditCatalog.commands.admin.welcome.l212_embedReply_description', {
-          'text.toUpperCase()': text.toUpperCase()
-        })
+          'text.toUpperCase()': text.toUpperCase(),
+        }),
       );
     }
 
     if (sub === 'subtitle') {
       const text = args.slice(1).join(' ').trim();
       if (!text) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l217_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l217_embedReply_description', { prefix }),
+        );
       }
       if (text.toLowerCase() === 'clear') {
         card.subtitle = null;
@@ -287,7 +320,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'membercount') {
       const val = args[1]?.toLowerCase();
       if (val !== 'on' && val !== 'off') {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l231_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l231_embedReply_description', { prefix }),
+        );
       }
       card.showMemberCount = val === 'on';
       await save(settings, guild.id);
@@ -297,7 +333,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'countcolor') {
       const hex = args[1];
       if (!hex || !HEX_RE.test(hex)) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l239_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l239_embedReply_description', { prefix }),
+        );
       }
       card.countColor = hex;
       await save(settings, guild.id);
@@ -307,7 +346,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'subtextcolor') {
       const hex = args[1];
       if (!hex || !HEX_RE.test(hex)) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l247_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l247_embedReply_description', { prefix }),
+        );
       }
       card.subtextColor = hex;
       await save(settings, guild.id);
@@ -317,7 +359,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'background') {
       const url = args[1];
       if (!url) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l255_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l255_embedReply_description', { prefix }),
+        );
       }
       if (url.toLowerCase() === 'clear') {
         if (card.bgImageURL) bgImageCache.remove(card.bgImageURL);
@@ -331,11 +376,17 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       try {
         await bgImageCache.download(url);
       } catch (err: any) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l266_embedReply_description', { 'err.message': err.message }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l266_embedReply_description', { 'err.message': err.message }),
+        );
       }
       card.bgImageURL = url;
       await save(settings, guild.id);
-      return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l270_embedReply_description', { prefix }));
+      return embedReply(
+        message,
+        t(lang, 'auditCatalog.commands.admin.welcome.l270_embedReply_description', { prefix }),
+      );
     }
 
     if (sub === 'reset') {
@@ -345,19 +396,20 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l277_embedReply_description'));
     }
 
-    return embedReply(message,
+    return embedReply(
+      message,
       `\`${prefix}welcome card preset <name>\` - apply a theme (dark, light, ocean, sunset, midnight, forest)\n` +
-      `\`${prefix}welcome card color <hex>\` - set accent color\n` +
-      `\`${prefix}welcome card bgcolor <hex> [hex] [hex]\` - set gradient colors\n` +
-      `\`${prefix}welcome card textcolor <hex>\` - set username text color\n` +
-      `\`${prefix}welcome card subtextcolor <hex>\` - set subtitle text color\n` +
-      `\`${prefix}welcome card countcolor <hex>\` - set member count text color\n` +
-      `\`${prefix}welcome card greeting <text>\` - replace "WELCOME" text on card (emoji supported 🎉)\n` +
-      `\`${prefix}welcome card subtitle <text>\` - set subtitle text (max 50 chars)\n` +
-      `\`${prefix}welcome card membercount on/off\` - toggle member count on card\n` +
-      `\`${prefix}welcome card background <url>\` - set a custom background image\n` +
-      `\`${prefix}welcome card reset\` - reset all card settings to defaults`,
-      t(lang, 'auditCatalog.commands.admin.welcome.l292_embedReply_title')
+        `\`${prefix}welcome card color <hex>\` - set accent color\n` +
+        `\`${prefix}welcome card bgcolor <hex> [hex] [hex]\` - set gradient colors\n` +
+        `\`${prefix}welcome card textcolor <hex>\` - set username text color\n` +
+        `\`${prefix}welcome card subtextcolor <hex>\` - set subtitle text color\n` +
+        `\`${prefix}welcome card countcolor <hex>\` - set member count text color\n` +
+        `\`${prefix}welcome card greeting <text>\` - replace "WELCOME" text on card (emoji supported 🎉)\n` +
+        `\`${prefix}welcome card subtitle <text>\` - set subtitle text (max 50 chars)\n` +
+        `\`${prefix}welcome card membercount on/off\` - toggle member count on card\n` +
+        `\`${prefix}welcome card background <url>\` - set a custom background image\n` +
+        `\`${prefix}welcome card reset\` - reset all card settings to defaults`,
+      t(lang, 'auditCatalog.commands.admin.welcome.l292_embedReply_title'),
     );
   },
 
@@ -376,7 +428,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'message') {
       const val = args.slice(1).join(' ').trim();
       if (!val) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l309_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l309_embedReply_description', { prefix }),
+        );
       }
       if (val.toLowerCase() === 'clear') {
         wm.dm.message = null;
@@ -394,18 +449,22 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'image') {
       const val = args[1]?.toLowerCase();
       if (val !== 'on' && val !== 'off') {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l323_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l323_embedReply_description', { prefix }),
+        );
       }
       wm.dm.imageEnabled = val === 'on';
       await save(settings, guild.id);
       return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l326_embedReply_description', { val }));
     }
 
-    return embedReply(message,
+    return embedReply(
+      message,
       `\`${prefix}welcome dm on/off\` - enable or disable DM welcomes\n` +
-      `\`${prefix}welcome dm message <text>\` - set DM text ({user} {server} {count} {role})\n` +
-      `\`${prefix}welcome dm image on/off\` - include card image in DM`,
-      t(lang, 'auditCatalog.commands.admin.welcome.l333_embedReply_title')
+        `\`${prefix}welcome dm message <text>\` - set DM text ({user} {server} {count} {role})\n` +
+        `\`${prefix}welcome dm image on/off\` - include card image in DM`,
+      t(lang, 'auditCatalog.commands.admin.welcome.l333_embedReply_title'),
     );
   },
 
@@ -425,7 +484,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'title') {
       const val = args.slice(1).join(' ').trim();
       if (!val) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l351_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l351_embedReply_description', { prefix }),
+        );
       }
       if (val.toLowerCase() === 'clear') {
         emb.title = null;
@@ -443,7 +505,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'description') {
       const val = args.slice(1).join(' ').trim();
       if (!val) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l365_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l365_embedReply_description', { prefix }),
+        );
       }
       if (val.toLowerCase() === 'clear') {
         emb.description = null;
@@ -461,7 +526,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'color') {
       const hex = args[1];
       if (!hex || !HEX_RE.test(hex)) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l379_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l379_embedReply_description', { prefix }),
+        );
       }
       emb.color = hex;
       await save(settings, guild.id);
@@ -471,7 +539,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'footer') {
       const val = args.slice(1).join(' ').trim();
       if (!val) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l387_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l387_embedReply_description', { prefix }),
+        );
       }
       if (val.toLowerCase() === 'clear') {
         emb.footer = null;
@@ -489,7 +560,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (sub === 'thumbnail') {
       const val = args[1]?.toLowerCase();
       if (val !== 'on' && val !== 'off') {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l401_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l401_embedReply_description', { prefix }),
+        );
       }
       emb.thumbnail = val === 'on';
       await save(settings, guild.id);
@@ -502,15 +576,16 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l410_embedReply_description'));
     }
 
-    return embedReply(message,
+    return embedReply(
+      message,
       `\`${prefix}welcome embed on/off\` - toggle embed\n` +
-      `\`${prefix}welcome embed title <text>\` - set title ({user} {server} {count} {role})\n` +
-      `\`${prefix}welcome embed description <text>\` - set description\n` +
-      `\`${prefix}welcome embed color <hex>\` - set color\n` +
-      `\`${prefix}welcome embed footer <text>\` - set footer\n` +
-      `\`${prefix}welcome embed thumbnail on/off\` - show server icon\n` +
-      `\`${prefix}welcome embed clear\` - reset embed settings`,
-      t(lang, 'auditCatalog.commands.admin.welcome.l421_embedReply_title')
+        `\`${prefix}welcome embed title <text>\` - set title ({user} {server} {count} {role})\n` +
+        `\`${prefix}welcome embed description <text>\` - set description\n` +
+        `\`${prefix}welcome embed color <hex>\` - set color\n` +
+        `\`${prefix}welcome embed footer <text>\` - set footer\n` +
+        `\`${prefix}welcome embed thumbnail on/off\` - show server icon\n` +
+        `\`${prefix}welcome embed clear\` - reset embed settings`,
+      t(lang, 'auditCatalog.commands.admin.welcome.l421_embedReply_title'),
     );
   },
 
@@ -518,7 +593,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     const lang = normalizeLocale(settings?.language);
     const val = args[0]?.toLowerCase();
     if (val !== 'on' && val !== 'off') {
-      return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l428_embedReply_description', { prefix }));
+      return embedReply(
+        message,
+        t(lang, 'auditCatalog.commands.admin.welcome.l428_embedReply_description', { prefix }),
+      );
     }
     settings.welcomeMessage.showRole = val === 'on';
     await save(settings, guild.id);
@@ -539,12 +617,15 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       }
       return embedReply(
         message,
-        t(lang, 'auditCatalog.commands.admin.welcome.l446_embedReply_description', { current, prefix })
+        t(lang, 'auditCatalog.commands.admin.welcome.l446_embedReply_description', { current, prefix }),
       );
     }
 
     if (val !== 'join' && val !== 'role') {
-      return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l450_embedReply_description', { prefix }));
+      return embedReply(
+        message,
+        t(lang, 'auditCatalog.commands.admin.welcome.l450_embedReply_description', { prefix }),
+      );
     }
 
     if (val === 'role') {
@@ -561,7 +642,9 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         if (roleId) {
           const role = guild.roles?.get?.(roleId);
           if (!role) {
-            try { await guild.fetchRole(roleId); } catch {
+            try {
+              await guild.fetchRole(roleId);
+            } catch {
               return embedReply(message, t(lang, 'commands.inrole.roleNotFound'));
             }
           }
@@ -569,7 +652,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       }
 
       if (!roleId && !settings.autoroleId) {
-        return embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l475_embedReply_description', { prefix }));
+        return embedReply(
+          message,
+          t(lang, 'auditCatalog.commands.admin.welcome.l475_embedReply_description', { prefix }),
+        );
       }
 
       wm.trigger = 'role';
@@ -581,8 +667,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       return embedReply(
         message,
         t(lang, 'auditCatalog.commands.admin.welcome.l484_embedReply_description', {
-          'roleId ? `<@&${roleId}>` : `autorole: **${roleName}**`': roleId ? `<@&${roleId}>` : `autorole: **${roleName}**`
-        })
+          'roleId ? `<@&${roleId}>` : `autorole: **${roleName}**`': roleId
+            ? `<@&${roleId}>`
+            : `autorole: **${roleName}**`,
+        }),
       );
     }
 
@@ -598,12 +686,13 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
   async test(message, args, guild, settings, client, prefix) {
     const lang = normalizeLocale(settings?.language);
-    const wm   = settings.welcomeMessage;
+    const wm = settings.welcomeMessage;
     const user = message.author;
     const count = memberCounter.get(guild.id) ?? 0;
-    const avatarURL = (user as any).displayAvatarURL?.({ size: 256, format: 'png' })
-      ?? (user as any).avatarURL
-      ?? '/assets/default-avatar.png';
+    const avatarURL =
+      (user as any).displayAvatarURL?.({ size: 256, format: 'png' }) ??
+      (user as any).avatarURL ??
+      '/assets/default-avatar.png';
 
     let roleName: string | null = null;
     if (wm.showRole) {
@@ -619,11 +708,12 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (wm.imageEnabled !== false) {
       try {
         const buffer = await generateWelcomeCard({
-          username:    (message as any).member?.displayName || (user as any).globalName || (user as any).username || 'New Member',
+          username:
+            (message as any).member?.displayName || (user as any).globalName || (user as any).username || 'New Member',
           avatarURL,
-          serverName:  guild.name,
+          serverName: guild.name,
           memberCount: typeof count === 'number' ? count : 0,
-          card:        wm.card || {},
+          card: wm.card || {},
           roleName,
         });
         sendOpts.files = [{ name: 'welcome.png', data: buffer }];
@@ -643,7 +733,8 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       const embConf = wm.embed;
       const embed = new EmbedBuilder();
       if (embConf.title) embed.setTitle(replaceVars(embConf.title, user.id, guild.name, count, roleName));
-      if (embConf.description) embed.setDescription(replaceVars(embConf.description, user.id, guild.name, count, roleName));
+      if (embConf.description)
+        embed.setDescription(replaceVars(embConf.description, user.id, guild.name, count, roleName));
       if (embConf.color) embed.setColor(parseInt(embConf.color.replace('#', ''), 16));
       if (embConf.footer) embed.setFooter({ text: replaceVars(embConf.footer, user.id, guild.name, count, roleName) });
       if (embConf.thumbnail) {
@@ -663,13 +754,14 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
   async testdm(message, args, guild, settings, _client, _prefix) {
     const lang = normalizeLocale(settings?.language);
-    const wm   = settings.welcomeMessage;
-    const dm   = wm.dm || {};
+    const wm = settings.welcomeMessage;
+    const dm = wm.dm || {};
     const user = message.author;
     const count = memberCounter.get(guild.id) ?? 0;
-    const avatarURL = (user as any).displayAvatarURL?.({ size: 256, format: 'png' })
-      ?? (user as any).avatarURL
-      ?? '/assets/default-avatar.png';
+    const avatarURL =
+      (user as any).displayAvatarURL?.({ size: 256, format: 'png' }) ??
+      (user as any).avatarURL ??
+      '/assets/default-avatar.png';
 
     let roleName: string | null = null;
     if (wm.showRole && settings.autoroleId) {
@@ -690,11 +782,12 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (dm.imageEnabled !== false && wm.imageEnabled !== false) {
       try {
         const buffer = await generateWelcomeCard({
-          username:    (message as any).member?.displayName || (user as any).globalName || (user as any).username || 'New Member',
+          username:
+            (message as any).member?.displayName || (user as any).globalName || (user as any).username || 'New Member',
           avatarURL,
-          serverName:  guild.name,
+          serverName: guild.name,
           memberCount: typeof count === 'number' ? count : 0,
-          card:        wm.card || {},
+          card: wm.card || {},
           roleName,
         });
         dmOpts.files = [{ name: 'welcome.png', data: buffer }];
@@ -712,23 +805,23 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
   },
 };
 
-
 function showHelp(message: any, prefix = '!', lang = 'en') {
-  return embedReply(message,
+  return embedReply(
+    message,
     `\`${prefix}welcome status\` - show current configuration\n` +
-    `\`${prefix}welcome channel <#channel>\` - set welcome channel\n` +
-    `\`${prefix}welcome on/off\` - enable or disable\n` +
-    `\`${prefix}welcome image on/off\` - toggle the card image\n` +
-    `\`${prefix}welcome message <text>\` - set custom text ({user} {server} {count} {role})\n` +
-    `\`${prefix}welcome card\` - customize card appearance (preset, colors, background, greeting)\n` +
-    `\`${prefix}welcome embed\` - configure a welcome embed\n` +
-    `\`${prefix}welcome dm\` - configure DM welcoming\n` +
-    `\`${prefix}welcome role on/off\` - show auto-role on card\n` +
-    `\`${prefix}welcome trigger join/role\` - trigger on member join or role assignment\n` +
-    `\`${prefix}welcome goodbye\` - configure goodbye messages (or use \`${prefix}goodbye\`)\n` +
-    `\`${prefix}welcome test\` - preview the welcome card\n` +
-    `\`${prefix}welcome test dm\` - preview the DM welcome message`,
-    t(lang, 'auditCatalog.commands.admin.welcome.l627_embedReply_title')
+      `\`${prefix}welcome channel <#channel>\` - set welcome channel\n` +
+      `\`${prefix}welcome on/off\` - enable or disable\n` +
+      `\`${prefix}welcome image on/off\` - toggle the card image\n` +
+      `\`${prefix}welcome message <text>\` - set custom text ({user} {server} {count} {role})\n` +
+      `\`${prefix}welcome card\` - customize card appearance (preset, colors, background, greeting)\n` +
+      `\`${prefix}welcome embed\` - configure a welcome embed\n` +
+      `\`${prefix}welcome dm\` - configure DM welcoming\n` +
+      `\`${prefix}welcome role on/off\` - show auto-role on card\n` +
+      `\`${prefix}welcome trigger join/role\` - trigger on member join or role assignment\n` +
+      `\`${prefix}welcome goodbye\` - configure goodbye messages (or use \`${prefix}goodbye\`)\n` +
+      `\`${prefix}welcome test\` - preview the welcome card\n` +
+      `\`${prefix}welcome test dm\` - preview the DM welcome message`,
+    t(lang, 'auditCatalog.commands.admin.welcome.l627_embedReply_title'),
   );
 }
 
@@ -761,7 +854,7 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await embedReply(message, t('en', 'commands.admin.keywords.serverOnly'));
+    if (!guild) return void (await embedReply(message, t('en', 'commands.admin.keywords.serverOnly')));
 
     const settings: any = await GuildSettings.getOrCreate(guild.id);
     const lang = normalizeLocale(settings?.language);
@@ -778,7 +871,14 @@ const command: Command = {
     }
 
     try {
-      await subcommands[sub](message, sub === 'testdm' ? args.slice(2) : args.slice(1), guild, settings, client, prefix);
+      await subcommands[sub](
+        message,
+        sub === 'testdm' ? args.slice(2) : args.slice(1),
+        guild,
+        settings,
+        client,
+        prefix,
+      );
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -788,7 +888,7 @@ const command: Command = {
         embedReply(message, t(lang, 'auditCatalog.commands.admin.welcome.l682_embedReply_description')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

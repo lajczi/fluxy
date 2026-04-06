@@ -16,25 +16,27 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.inrole.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.inrole.serverOnly')));
     const settings = await settingsCache.get(guild.id).catch(() => null);
     const lang = normalizeLocale(settings?.language);
 
     const roleArg = args[0];
-    if (!roleArg) return void await message.reply(t(lang, 'commands.inrole.usage', { prefix }));
+    if (!roleArg) return void (await message.reply(t(lang, 'commands.inrole.usage', { prefix })));
 
     const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
     let roleId: string;
     if (roleMention) roleId = roleMention[1];
     else if (/^\d{17,19}$/.test(roleArg)) roleId = roleArg;
-    else return void await message.reply(t(lang, 'commands.inrole.invalidRoleInput'));
+    else return void (await message.reply(t(lang, 'commands.inrole.invalidRoleInput')));
 
     try {
       let role: any = guild.roles?.get(roleId);
       if (!role) {
-        try { role = await guild.fetchRole(roleId); } catch {}
+        try {
+          role = await guild.fetchRole(roleId);
+        } catch {}
       }
-      if (!role) return void await message.reply(t(lang, 'commands.inrole.roleNotFound'));
+      if (!role) return void (await message.reply(t(lang, 'commands.inrole.roleNotFound')));
 
       let members: any[];
       try {
@@ -54,7 +56,7 @@ const command: Command = {
         } else {
           console.error(`[${guildName}] Error in !inrole: ${err.message || err}`);
         }
-        return void await message.reply(t(lang, 'commands.inrole.membersFetchFailed'));
+        return void (await message.reply(t(lang, 'commands.inrole.membersFetchFailed')));
       }
 
       const withRole = members.filter((m: any) => {
@@ -64,7 +66,7 @@ const command: Command = {
       });
 
       if (withRole.length === 0) {
-        return void await message.reply(t(lang, 'commands.inrole.noneWithRole', { roleName: role.name }));
+        return void (await message.reply(t(lang, 'commands.inrole.noneWithRole', { roleName: role.name })));
       }
 
       const PAGE_SIZE = 50;
@@ -73,8 +75,9 @@ const command: Command = {
       let page = 1;
       if (args[1]) {
         const parsed = parseInt(args[1], 10);
-        if (isNaN(parsed) || parsed < 1) return void await message.reply(t(lang, 'commands.inrole.invalidPage'));
-        if (parsed > totalPages) return void await message.reply(t(lang, 'commands.inrole.pageTooHigh', { totalPages }));
+        if (isNaN(parsed) || parsed < 1) return void (await message.reply(t(lang, 'commands.inrole.invalidPage')));
+        if (parsed > totalPages)
+          return void (await message.reply(t(lang, 'commands.inrole.pageTooHigh', { totalPages })));
         page = parsed;
       }
 
@@ -82,13 +85,11 @@ const command: Command = {
         const start = pageIndex * PAGE_SIZE;
         const displayed = withRole.slice(start, start + PAGE_SIZE);
 
-        const list = displayed
-          .map((m: any) => m.user ? `<@${m.id}> (${m.user.username})` : `<@${m.id}>`)
-          .join('\n');
+        const list = displayed.map((m: any) => (m.user ? `<@${m.id}> (${m.user.username})` : `<@${m.id}>`)).join('\n');
 
         return new EmbedBuilder()
           .setTitle(t(lang, 'commands.inrole.embedTitle', { roleName: role.name }))
-          .setColor(role.color || 0x5865F2)
+          .setColor(role.color || 0x5865f2)
           .setDescription(list)
           .setFooter({
             text: joinCompactFooterParts([
@@ -118,7 +119,6 @@ const command: Command = {
       }
 
       return;
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -128,7 +128,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.inrole.genericError')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

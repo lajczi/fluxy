@@ -61,37 +61,55 @@ export function MyData() {
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
           <Shield className="h-5 w-5" /> Your Data
         </h1>
-        <p className="text-sm text-gray-400 mt-1">
-          View, export, or delete all the data Fluxy stores about you.
-        </p>
+        <p className="text-sm text-gray-400 mt-1">View, export, or delete all the data Fluxy stores about you.</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Database className="h-4 w-4" /> What we store</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-4 w-4" /> What we store
+          </CardTitle>
           <CardDescription>Fluxy only stores data needed for its features to work</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-gray-300">
-          <p>- <strong>Personal settings</strong> (custom prefix)</p>
-          <p>- <strong>Warnings</strong> you have received in servers</p>
-          <p>- <strong>Moderation logs</strong> involving you (as target or moderator)</p>
-          <p>- <strong>Ticket messages</strong> you sent in support tickets</p>
-          <p>- <strong>Command usage</strong> statistics</p>
-          <p>- <strong>Global ban entry</strong> (if applicable)</p>
+          <p>
+            - <strong>Personal settings</strong> (custom prefix)
+          </p>
+          <p>
+            - <strong>Warnings</strong> you have received in servers
+          </p>
+          <p>
+            - <strong>Moderation logs</strong> involving you (as target or moderator)
+          </p>
+          <p>
+            - <strong>Ticket messages</strong> you sent in support tickets
+          </p>
+          <p>
+            - <strong>Command usage</strong> statistics
+          </p>
+          <p>
+            - <strong>Global ban entry</strong> (if applicable)
+          </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Download className="h-4 w-4" /> Export your data</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-4 w-4" /> Export your data
+          </CardTitle>
           <CardDescription>Download a JSON file with everything Fluxy has stored about you</CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={handleExport} disabled={exporting}>
             {exporting ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Exporting...</>
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Exporting...
+              </>
             ) : (
-              <><Download className="h-4 w-4 mr-2" /> Download my data</>
+              <>
+                <Download className="h-4 w-4 mr-2" /> Download my data
+              </>
             )}
           </Button>
         </CardContent>
@@ -99,7 +117,9 @@ export function MyData() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-400"><Trash2 className="h-4 w-4" /> Delete your data</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-red-400">
+            <Trash2 className="h-4 w-4" /> Delete your data
+          </CardTitle>
           <CardDescription>Permanently remove all your data from Fluxy</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -123,31 +143,29 @@ export function MyData() {
             </div>
           )}
 
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={deleting}
-          >
+          <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
             {deleting ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Deleting...</>
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Deleting...
+              </>
             ) : confirmDelete ? (
-              <><Trash2 className="h-4 w-4 mr-2" /> Confirm permanent deletion</>
+              <>
+                <Trash2 className="h-4 w-4 mr-2" /> Confirm permanent deletion
+              </>
             ) : (
-              <><Trash2 className="h-4 w-4 mr-2" /> Delete all my data</>
+              <>
+                <Trash2 className="h-4 w-4 mr-2" /> Delete all my data
+              </>
             )}
           </Button>
         </CardContent>
       </Card>
 
       {result && (
-        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">
-          {result}
-        </div>
+        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">{result}</div>
       )}
       {error && (
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
-          {error}
-        </div>
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">{error}</div>
       )}
     </div>
   );

@@ -27,7 +27,6 @@ const lastSingleAlert = new Map<string, number>();
 const recentlyAlerted = new Map<string, number>();
 const flushTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-
 export function scoreMember(member: any): { score: number; reasons: string[]; accountAgeDays: number | null } {
   const user = member.user || member;
   const username: string = user.username || user.global_name || '';
@@ -105,7 +104,7 @@ export function checkAndAlert(
 
   if (buffer.length >= BATCH_SIZE) {
     for (const e of buffer) {
-      if (!e.reasons.some(r => r.includes('Burst'))) {
+      if (!e.reasons.some((r) => r.includes('Burst'))) {
         e.score += 10;
         e.reasons.push(`Burst: ${buffer.length} suspects in 60s (+10)`);
       }
@@ -113,7 +112,7 @@ export function checkAndAlert(
     clearFlushTimer(guildId);
     const batch = [...buffer];
     buffer.length = 0;
-    sendSuspectAlert(client, guild, batch).catch(() => { });
+    sendSuspectAlert(client, guild, batch).catch(() => {});
     return;
   }
 
@@ -131,34 +130,40 @@ export function checkAndAlert(
 
       const toSend = [...buf];
       buf.length = 0;
-      sendSuspectAlert(client, guild, toSend).catch(() => { });
+      sendSuspectAlert(client, guild, toSend).catch(() => {});
     }, 10_000);
     flushTimers.set(guildId, timer);
   }
 }
 
-
 async function sendSuspectAlert(client: any, guild: any, suspects: SuspectEntry[]): Promise<void> {
   if (suspects.length === 0) return;
 
-  const lines = suspects.map(s => {
-    const age = s.accountAgeDays !== null
-      ? (s.accountAgeDays < 1 ? `< 1 day` : `${Math.floor(s.accountAgeDays)}d`)
-      : '?';
+  const lines = suspects.map((s) => {
+    const age =
+      s.accountAgeDays !== null ? (s.accountAgeDays < 1 ? `< 1 day` : `${Math.floor(s.accountAgeDays)}d`) : '?';
     return `\`${s.userId}\` **${s.username}** - score ${s.score}, age ${age}\n> ${s.reasons.join(', ')}`;
   });
 
-  const idList = suspects.map(s => s.userId).join(',');
+  const idList = suspects.map((s) => s.userId).join(',');
 
   const ownerEmbed = new EmbedBuilder()
-    .setTitle(t('en', 'auditCatalog.utils.suspiciousDetector.l153_setTitle', { "suspects.length > 1 ? 's' : ''": suspects.length > 1 ? 's' : '', 'guild.name': guild.name }))
+    .setTitle(
+      t('en', 'auditCatalog.utils.suspiciousDetector.l153_setTitle', {
+        "suspects.length > 1 ? 's' : ''": suspects.length > 1 ? 's' : '',
+        'guild.name': guild.name,
+      }),
+    )
     .setDescription(
       `**${suspects.length}** suspicious account${suspects.length > 1 ? 's' : ''} joined **${guild.name}** (\`${guild.id}\`)\n\n` +
-      lines.join('\n\n'),
+        lines.join('\n\n'),
     )
     .addFields({
       name: t('en', 'auditCatalog.utils.suspiciousDetector.l159_addFields_name'),
-      value: t('en', 'auditCatalog.utils.suspiciousDetector.l160_addFields_value', { "idList.length > 900 ? idList.slice(0, 900) + '...' : idList": idList.length > 900 ? idList.slice(0, 900) + '...' : idList }),
+      value: t('en', 'auditCatalog.utils.suspiciousDetector.l160_addFields_value', {
+        "idList.length > 900 ? idList.slice(0, 900) + '...' : idList":
+          idList.length > 900 ? idList.slice(0, 900) + '...' : idList,
+      }),
       inline: false,
     })
     .setColor(0xffa500)
@@ -168,7 +173,7 @@ async function sendSuspectAlert(client: any, guild: any, suspects: SuspectEntry[
     try {
       const dm = await client.users.createDM?.(config.ownerId);
       if (dm) await dm.send({ embeds: [ownerEmbed] });
-    } catch { }
+    } catch {}
   }
 
   const guildOwnerId = guild.ownerId || (guild as any).owner_id;
@@ -178,8 +183,13 @@ async function sendSuspectAlert(client: any, guild: any, suspects: SuspectEntry[
         .setTitle(t('en', 'auditCatalog.utils.suspiciousDetector.l177_setTitle', { 'guild.name': guild.name }))
         .setDescription(
           `**${suspects.length}** suspicious account${suspects.length > 1 ? 's' : ''} joined your server.\n` +
-          `These accounts match patterns commonly seen in bot raids (generated names, new accounts, no avatars).\n\n` +
-          suspects.map(s => `**${s.username}** (\`${s.userId}\`) - age ${s.accountAgeDays !== null ? (s.accountAgeDays < 1 ? '< 1 day' : `${Math.floor(s.accountAgeDays)}d`) : '?'}`).join('\n'),
+            `These accounts match patterns commonly seen in bot raids (generated names, new accounts, no avatars).\n\n` +
+            suspects
+              .map(
+                (s) =>
+                  `**${s.username}** (\`${s.userId}\`) - age ${s.accountAgeDays !== null ? (s.accountAgeDays < 1 ? '< 1 day' : `${Math.floor(s.accountAgeDays)}d`) : '?'}`,
+              )
+              .join('\n'),
         )
         .setColor(0xffa500)
         .setFooter({ text: t('en', 'auditCatalog.utils.suspiciousDetector.l184_setFooter') })
@@ -187,15 +197,14 @@ async function sendSuspectAlert(client: any, guild: any, suspects: SuspectEntry[
 
       const dm = await client.users.createDM?.(guildOwnerId);
       if (dm) await dm.send({ embeds: [guildOwnerEmbed] });
-    } catch { }
+    } catch {}
   }
 
   console.warn(
     `[suspect-detect] ALERT: ${suspects.length} suspect(s) in ${guild.name} (${guild.id}): ` +
-    suspects.map(s => `${s.username}(${s.userId})`).join(', '),
+      suspects.map((s) => `${s.username}(${s.userId})`).join(', '),
   );
 }
-
 
 function getAccountAgeDays(userId: string | undefined): number | null {
   if (!userId) return null;

@@ -48,17 +48,13 @@ describe('authenticate middleware', () => {
 
   test('rejects requests with non-Bearer auth', async () => {
     const app = createApp();
-    const res = await request(app)
-      .get('/protected')
-      .set('Authorization', 'Basic abc123');
+    const res = await request(app).get('/protected').set('Authorization', 'Basic abc123');
     expect(res.status).toBe(401);
   });
 
   test('accepts admin token and sets isOwner=true', async () => {
     const app = createApp();
-    const res = await request(app)
-      .get('/protected')
-      .set('Authorization', 'Bearer test-admin-token');
+    const res = await request(app).get('/protected').set('Authorization', 'Bearer test-admin-token');
     expect(res.status).toBe(200);
     expect(res.body.userId).toBe('owner123');
     expect(res.body.isOwner).toBe(true);
@@ -71,9 +67,7 @@ describe('authenticate middleware', () => {
     });
 
     const app = createApp();
-    const res = await request(app)
-      .get('/protected')
-      .set('Authorization', 'Bearer valid-oauth-token');
+    const res = await request(app).get('/protected').set('Authorization', 'Bearer valid-oauth-token');
     expect(res.status).toBe(200);
     expect(res.body.userId).toBe('user456');
     expect(res.body.isOwner).toBe(false);
@@ -81,7 +75,7 @@ describe('authenticate middleware', () => {
       'https://api.fluxer.app/users/@me',
       expect.objectContaining({
         headers: { Authorization: 'Bearer valid-oauth-token' },
-      })
+      }),
     );
   });
 
@@ -89,9 +83,7 @@ describe('authenticate middleware', () => {
     mockFetch.mockResolvedValueOnce({ ok: false });
 
     const app = createApp();
-    const res = await request(app)
-      .get('/protected')
-      .set('Authorization', 'Bearer invalid-token');
+    const res = await request(app).get('/protected').set('Authorization', 'Bearer invalid-token');
     expect(res.status).toBe(401);
     expect(res.body.error).toContain('Invalid or expired token');
   });
@@ -100,9 +92,7 @@ describe('authenticate middleware', () => {
     mockFetch.mockRejectedValueOnce(new Error('fetch failed'));
 
     const app = createApp();
-    const res = await request(app)
-      .get('/protected')
-      .set('Authorization', 'Bearer some-token');
+    const res = await request(app).get('/protected').set('Authorization', 'Bearer some-token');
     expect(res.status).toBe(401);
   });
 
@@ -113,9 +103,7 @@ describe('authenticate middleware', () => {
     });
 
     const app = createApp();
-    const res = await request(app)
-      .get('/protected')
-      .set('Authorization', 'Bearer owner-oauth-token');
+    const res = await request(app).get('/protected').set('Authorization', 'Bearer owner-oauth-token');
     expect(res.status).toBe(200);
     expect(res.body.isOwner).toBe(true);
   });
@@ -127,12 +115,8 @@ describe('authenticate middleware', () => {
     });
 
     const app = createApp();
-    await request(app)
-      .get('/protected')
-      .set('Authorization', 'Bearer cacheable-token');
-    await request(app)
-      .get('/protected')
-      .set('Authorization', 'Bearer cacheable-token');
+    await request(app).get('/protected').set('Authorization', 'Bearer cacheable-token');
+    await request(app).get('/protected').set('Authorization', 'Bearer cacheable-token');
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
@@ -141,9 +125,7 @@ describe('authenticate middleware', () => {
 describe('requireOwner middleware', () => {
   test('allows owner access', async () => {
     const app = createApp();
-    const res = await request(app)
-      .get('/owner-only')
-      .set('Authorization', 'Bearer test-admin-token');
+    const res = await request(app).get('/owner-only').set('Authorization', 'Bearer test-admin-token');
     expect(res.status).toBe(200);
     expect(res.body.access).toBe('granted');
   });
@@ -155,9 +137,7 @@ describe('requireOwner middleware', () => {
     });
 
     const app = createApp();
-    const res = await request(app)
-      .get('/owner-only')
-      .set('Authorization', 'Bearer regular-user-token');
+    const res = await request(app).get('/owner-only').set('Authorization', 'Bearer regular-user-token');
     expect(res.status).toBe(403);
     expect(res.body.error).toContain('restricted to the bot owner');
   });

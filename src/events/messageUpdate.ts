@@ -31,25 +31,20 @@ const event: BotEvent = {
       };
 
       const fields = [
-        { name: 'Author',  value: `<@${newMessage.author.id}> (${newMessage.author.id})`, inline: true },
+        { name: 'Author', value: `<@${newMessage.author.id}> (${newMessage.author.id})`, inline: true },
         { name: 'Channel', value: `<#${channelId}>`, inline: true },
-        { name: 'Before',  value: truncate(beforeContent) },
-        { name: 'After',   value: truncate(newMessage.content) },
+        { name: 'Before', value: truncate(beforeContent) },
+        { name: 'After', value: truncate(newMessage.content) },
       ];
 
-      await logServerEvent(
-        guild,
-        'Message Edited',
-        0x3498db,
-        fields,
-        client,
-        { footer: `Message ID: ${newMessage.id}`, eventType: 'message_edit' }
-      );
-
+      await logServerEvent(guild, 'Message Edited', 0x3498db, fields, client, {
+        footer: `Message ID: ${newMessage.id}`,
+        eventType: 'message_edit',
+      });
     } catch (error) {
       console.error('Error logging message update:', error);
     }
-  }
+  },
 };
 
 export default event;

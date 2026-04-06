@@ -4,7 +4,8 @@ import { api, type BotInfo, type GuildSummary } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Server, Clock, Cpu, Zap, ChevronRight, Plus } from 'lucide-react';
 
-const BOT_INVITE_URL = 'https://web.fluxer.app/oauth2/authorize?client_id=1474069931333816428&scope=bot&permissions=4504699474930806';
+const BOT_INVITE_URL =
+  'https://web.fluxer.app/oauth2/authorize?client_id=1474069931333816428&scope=bot&permissions=4504699474930806';
 
 function formatUptime(seconds: number): string {
   const d = Math.floor(seconds / 86400);
@@ -27,16 +28,18 @@ export function Dashboard() {
     const promises: Promise<void>[] = [];
 
     promises.push(
-      api.get<GuildSummary[]>('/guilds')
+      api
+        .get<GuildSummary[]>('/guilds')
         .then(setGuilds)
-        .catch(() => { })
+        .catch(() => {}),
     );
 
     if (user?.isOwner) {
       promises.push(
-        api.get<BotInfo>('/bot/info')
+        api
+          .get<BotInfo>('/bot/info')
           .then(setInfo)
-          .catch(err => setError(err.message))
+          .catch((err) => setError(err.message)),
       );
     }
 
@@ -60,7 +63,12 @@ export function Dashboard() {
       { label: 'Servers', value: info.guilds.toLocaleString(), icon: Server, color: 'text-blue-400' },
       { label: 'Uptime', value: formatUptime(info.uptime), icon: Clock, color: 'text-green-400' },
       { label: 'Memory', value: `${info.memoryMB} MB`, icon: Cpu, color: 'text-purple-400' },
-      { label: 'Status', value: info.readyAt ? 'Online' : 'Offline', icon: Zap, color: info.readyAt ? 'text-green-400' : 'text-red-400' },
+      {
+        label: 'Status',
+        value: info.readyAt ? 'Online' : 'Offline',
+        icon: Zap,
+        color: info.readyAt ? 'text-green-400' : 'text-red-400',
+      },
     ];
 
     return (
@@ -71,7 +79,7 @@ export function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {cards.map(card => (
+          {cards.map((card) => (
             <div key={card.label} className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-5">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-400">{card.label}</p>
@@ -86,9 +94,16 @@ export function Dashboard() {
           <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-6">
             <h2 className="text-lg font-semibold text-white mb-4">Bot Info</h2>
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-gray-400">Username:</span> <span className="text-white">{info.username}</span></div>
-              <div><span className="text-gray-400">ID:</span> <span className="text-white font-mono">{info.id}</span></div>
-              <div><span className="text-gray-400">Ready at:</span> <span className="text-white">{info.readyAt ? new Date(info.readyAt).toLocaleString() : 'N/A'}</span></div>
+              <div>
+                <span className="text-gray-400">Username:</span> <span className="text-white">{info.username}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">ID:</span> <span className="text-white font-mono">{info.id}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Ready at:</span>{' '}
+                <span className="text-white">{info.readyAt ? new Date(info.readyAt).toLocaleString() : 'N/A'}</span>
+              </div>
             </div>
           </div>
         )}
@@ -96,8 +111,8 @@ export function Dashboard() {
     );
   }
 
-  const botGuilds = guilds.filter(g => g.botPresent !== false);
-  const nonBotGuilds = guilds.filter(g => g.botPresent === false);
+  const botGuilds = guilds.filter((g) => g.botPresent !== false);
+  const nonBotGuilds = guilds.filter((g) => g.botPresent === false);
 
   return (
     <div className="space-y-8">
@@ -116,7 +131,7 @@ export function Dashboard() {
           {/* Bot-present guilds - manage */}
           {botGuilds.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {botGuilds.map(guild => (
+              {botGuilds.map((guild) => (
                 <button
                   key={guild.id}
                   onClick={() => navigate(`/guilds/${guild.id}`)}
@@ -131,9 +146,7 @@ export function Dashboard() {
                       />
                     ) : (
                       <div className="h-12 w-12 rounded-full bg-[hsl(var(--border))] flex items-center justify-center">
-                        <span className="text-white font-semibold text-lg">
-                          {guild.name.charAt(0).toUpperCase()}
-                        </span>
+                        <span className="text-white font-semibold text-lg">{guild.name.charAt(0).toUpperCase()}</span>
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
@@ -157,7 +170,7 @@ export function Dashboard() {
                 </div>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {nonBotGuilds.map(guild => (
+                {nonBotGuilds.map((guild) => (
                   <a
                     key={guild.id}
                     href={`${BOT_INVITE_URL}&guild_id=${guild.id}`}

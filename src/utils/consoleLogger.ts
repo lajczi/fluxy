@@ -1,49 +1,57 @@
 export const c = {
-  reset:   '\x1b[0m',
-  bold:    '\x1b[1m',
-  dim:     '\x1b[2m',
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
   // Foreground
-  black:   '\x1b[30m',
-  red:     '\x1b[31m',
-  green:   '\x1b[32m',
-  yellow:  '\x1b[33m',
-  blue:    '\x1b[34m',
+  black: '\x1b[30m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
   magenta: '\x1b[35m',
-  cyan:    '\x1b[36m',
-  white:   '\x1b[37m',
-  gray:    '\x1b[90m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
+  gray: '\x1b[90m',
   // Bright
-  bRed:    '\x1b[91m',
-  bGreen:  '\x1b[92m',
+  bRed: '\x1b[91m',
+  bGreen: '\x1b[92m',
   bYellow: '\x1b[93m',
-  bBlue:   '\x1b[94m',
-  bMagenta:'\x1b[95m',
-  bCyan:   '\x1b[96m',
-  bWhite:  '\x1b[97m',
+  bBlue: '\x1b[94m',
+  bMagenta: '\x1b[95m',
+  bCyan: '\x1b[96m',
+  bWhite: '\x1b[97m',
   // Background
-  bgBlue:  '\x1b[44m',
+  bgBlue: '\x1b[44m',
   bgGreen: '\x1b[42m',
-  bgRed:   '\x1b[41m',
-  bgYellow:'\x1b[43m',
+  bgRed: '\x1b[41m',
+  bgYellow: '\x1b[43m',
 };
 
 // Box Drawing
 export const chars = {
-  tl: '┌', tr: '┐', bl: '└', br: '┘',
-  h: '─', v: '│',
-  dtl: '╔', dtr: '╗', dbl: '╚', dbr: '╝',
-  dh: '═', dv: '║',
+  tl: '┌',
+  tr: '┐',
+  bl: '└',
+  br: '┘',
+  h: '─',
+  v: '│',
+  dtl: '╔',
+  dtr: '╗',
+  dbl: '╚',
+  dbr: '╝',
+  dh: '═',
+  dv: '║',
 };
 
 // Symbols
 export const sym = {
-  check:  `${c.bGreen}✓${c.reset}`,
-  cross:  `${c.bRed}✗${c.reset}`,
-  warn:   `${c.bYellow}!${c.reset}`,
-  info:   `${c.bCyan}i${c.reset}`,
-  arrow:  `${c.bBlue}→${c.reset}`,
-  dot:    `${c.gray}·${c.reset}`,
-  star:   `${c.bYellow}★${c.reset}`,
+  check: `${c.bGreen}✓${c.reset}`,
+  cross: `${c.bRed}✗${c.reset}`,
+  warn: `${c.bYellow}!${c.reset}`,
+  info: `${c.bCyan}i${c.reset}`,
+  arrow: `${c.bBlue}→${c.reset}`,
+  dot: `${c.gray}·${c.reset}`,
+  star: `${c.bYellow}★${c.reset}`,
 };
 
 // Helpers
@@ -71,9 +79,9 @@ function hLine(width: number, char = chars.h): string {
 // LoG G Levels
 const LEVELS: Record<string, { label: string; color: string }> = {
   debug: { label: 'DBG', color: c.gray },
-  info:  { label: 'INF', color: c.bCyan },
-  ok:    { label: ' OK', color: c.bGreen },
-  warn:  { label: 'WRN', color: c.bYellow },
+  info: { label: 'INF', color: c.bCyan },
+  ok: { label: ' OK', color: c.bGreen },
+  warn: { label: 'WRN', color: c.bYellow },
   error: { label: 'ERR', color: c.bRed },
   fatal: { label: 'FTL', color: `${c.bold}${c.bRed}` },
 };
@@ -81,7 +89,9 @@ const LEVELS: Record<string, { label: string; color: string }> = {
 let _logBuffer: typeof import('../services/LogBuffer').default | null = null;
 function getLogBuffer() {
   if (!_logBuffer) {
-    try { _logBuffer = require('../services/LogBuffer').default; } catch {}
+    try {
+      _logBuffer = require('../services/LogBuffer').default;
+    } catch {}
   }
   return _logBuffer;
 }
@@ -96,7 +106,6 @@ function log(level: string, tag: string, ...msgs: unknown[]): void {
   if (buf) buf.push(level, tag, msgs.join(' '));
 }
 
-
 interface TableRow {
   label: string;
   value: string;
@@ -104,14 +113,14 @@ interface TableRow {
 
 const logger = {
   debug: (tag: string, ...msgs: unknown[]) => log('debug', tag, ...msgs),
-  info:  (tag: string, ...msgs: unknown[]) => log('info',  tag, ...msgs),
-  ok:    (tag: string, ...msgs: unknown[]) => log('ok',    tag, ...msgs),
-  warn:  (tag: string, ...msgs: unknown[]) => log('warn',  tag, ...msgs),
+  info: (tag: string, ...msgs: unknown[]) => log('info', tag, ...msgs),
+  ok: (tag: string, ...msgs: unknown[]) => log('ok', tag, ...msgs),
+  warn: (tag: string, ...msgs: unknown[]) => log('warn', tag, ...msgs),
   error: (tag: string, ...msgs: unknown[]) => log('error', tag, ...msgs),
   fatal: (tag: string, ...msgs: unknown[]) => log('fatal', tag, ...msgs),
 
   banner(lines: string[]) {
-    const maxLen = Math.max(...lines.map(l => stripAnsi(l).length));
+    const maxLen = Math.max(...lines.map((l) => stripAnsi(l).length));
     const w = maxLen + 4;
     console.log('');
     console.log(`  ${c.bCyan}${chars.dtl}${hLine(w, chars.dh)}${chars.dtr}${c.reset}`);
@@ -123,23 +132,21 @@ const logger = {
   },
 
   box(title: string, rows: (string | TableRow)[]) {
-    const allLines = rows.map(r => {
+    const allLines = rows.map((r) => {
       if (typeof r === 'string') return r;
       return `${pad(r.label, 20)} ${c.bWhite}${r.value}${c.reset}`;
     });
-    const maxLen = Math.max(
-      stripAnsi(title).length + 2,
-      ...allLines.map(l => stripAnsi(l).length),
-    );
+    const maxLen = Math.max(stripAnsi(title).length + 2, ...allLines.map((l) => stripAnsi(l).length));
     const w = maxLen + 4;
 
-    console.log(`  ${c.cyan}${chars.tl}${hLine(2, chars.h)} ${c.bold}${c.bCyan}${title} ${c.reset}${c.cyan}${hLine(Math.max(0, w - stripAnsi(title).length - 4), chars.h)}${chars.tr}${c.reset}`);
+    console.log(
+      `  ${c.cyan}${chars.tl}${hLine(2, chars.h)} ${c.bold}${c.bCyan}${title} ${c.reset}${c.cyan}${hLine(Math.max(0, w - stripAnsi(title).length - 4), chars.h)}${chars.tr}${c.reset}`,
+    );
     for (const line of allLines) {
       console.log(`  ${c.cyan}${chars.v}${c.reset}  ${pad(line, maxLen)}  ${c.cyan}${chars.v}${c.reset}`);
     }
     console.log(`  ${c.cyan}${chars.bl}${hLine(w, chars.h)}${chars.br}${c.reset}`);
   },
-
 
   step(label: string, ms: number | null, ok = true) {
     const icon = ok ? sym.check : sym.cross;
@@ -149,7 +156,9 @@ const logger = {
 
   divider(label?: string) {
     if (label) {
-      console.log(`\n  ${c.gray}${hLine(2, chars.h)}${c.reset} ${c.bold}${label}${c.reset} ${c.gray}${hLine(Math.max(0, 38 - label.length), chars.h)}${c.reset}`);
+      console.log(
+        `\n  ${c.gray}${hLine(2, chars.h)}${c.reset} ${c.bold}${label}${c.reset} ${c.gray}${hLine(Math.max(0, 38 - label.length), chars.h)}${c.reset}`,
+      );
     } else {
       console.log(`  ${c.gray}${hLine(40, chars.h)}${c.reset}`);
     }
@@ -157,7 +166,9 @@ const logger = {
 
   table(rows: TableRow[]) {
     for (const row of rows) {
-      console.log(`  ${c.gray}${chars.v}${c.reset}  ${pad(`${c.white}${row.label}${c.reset}`, 28)} ${c.bWhite}${row.value}${c.reset}`);
+      console.log(
+        `  ${c.gray}${chars.v}${c.reset}  ${pad(`${c.white}${row.label}${c.reset}`, 28)} ${c.bWhite}${row.value}${c.reset}`,
+      );
     }
   },
 

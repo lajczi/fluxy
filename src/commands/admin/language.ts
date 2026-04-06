@@ -21,7 +21,7 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'verification.errors.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'verification.errors.serverOnly')));
 
     const settings: any = await GuildSettings.getOrCreate(guild.id);
     const sub = args[0]?.toLowerCase();
@@ -29,35 +29,32 @@ const command: Command = {
 
     if (!sub || sub === 'help') {
       const cur = normalizeLocale(settings.language);
-      return void await message.reply(
-        t(cur, 'language.current', { language: cur }) +
-        '\n' +
-        t(cur, 'language.usage', { prefix })
-      );
+      return void (await message.reply(
+        t(cur, 'language.current', { language: cur }) + '\n' + t(cur, 'language.usage', { prefix }),
+      ));
     }
 
     if (sub === 'list') {
       const cur = normalizeLocale(settings.language);
-      return void await message.reply(t(cur, 'language.available', { available }));
+      return void (await message.reply(t(cur, 'language.available', { available })));
     }
 
     if (sub === 'set') {
       const code = (args[1] || '').trim().toLowerCase();
       const cur = normalizeLocale(settings.language);
-      if (!code) return void await message.reply(t(cur, 'language.usage', { prefix }));
+      if (!code) return void (await message.reply(t(cur, 'language.usage', { prefix })));
       const normalized = normalizeLocale(code);
       if (!listLocales().includes(normalized as any)) {
-        return void await message.reply(t(cur, 'language.invalid', { language: code, available }));
+        return void (await message.reply(t(cur, 'language.invalid', { language: code, available })));
       }
       settings.language = normalized;
       await save(settings, guild.id);
-      return void await message.reply(t(normalized, 'language.set', { language: normalized }));
+      return void (await message.reply(t(normalized, 'language.set', { language: normalized })));
     }
 
     const cur = normalizeLocale(settings.language);
-    return void await message.reply(t(cur, 'language.usage', { prefix }));
-  }
+    return void (await message.reply(t(cur, 'language.usage', { prefix })));
+  },
 };
 
 export default command;
-

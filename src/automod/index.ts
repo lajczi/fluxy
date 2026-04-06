@@ -7,11 +7,14 @@ import antiRaid from './modules/antiRaid';
 import ghostPing from './modules/ghostPing';
 import keywordWarning from './modules/keywordWarning';
 
-const AUTOMOD_PRESETS: Record<string, { antiSpam: boolean; antiLink: boolean; antiReactionSpam: boolean; maxMentions: number; maxLines: number }> = {
+const AUTOMOD_PRESETS: Record<
+  string,
+  { antiSpam: boolean; antiLink: boolean; antiReactionSpam: boolean; maxMentions: number; maxLines: number }
+> = {
   off: { antiSpam: false, antiLink: false, antiReactionSpam: false, maxMentions: 0, maxLines: 0 },
   minimal: { antiSpam: true, antiLink: false, antiReactionSpam: false, maxMentions: 5, maxLines: 10 },
   medium: { antiSpam: true, antiLink: true, antiReactionSpam: true, maxMentions: 3, maxLines: 7 },
-  high: { antiSpam: true, antiLink: true, antiReactionSpam: true, maxMentions: 2, maxLines: 5 }
+  high: { antiSpam: true, antiLink: true, antiReactionSpam: true, maxMentions: 2, maxLines: 5 },
 };
 
 const exemptCache = new Map<string, number>();
@@ -21,7 +24,10 @@ function isKnownExempt(guildId: string, userId: string): boolean {
   const key = `${guildId}-${userId}`;
   const expiry = exemptCache.get(key);
   if (!expiry) return false;
-  if (Date.now() > expiry) { exemptCache.delete(key); return false; }
+  if (Date.now() > expiry) {
+    exemptCache.delete(key);
+    return false;
+  }
   return true;
 }
 
@@ -29,10 +35,11 @@ function markExempt(guildId: string, userId: string): void {
   exemptCache.set(`${guildId}-${userId}`, Date.now() + EXEMPT_TTL);
   if (exemptCache.size > 5000) {
     const now = Date.now();
-    for (const [k, v] of exemptCache) { if (now > v) exemptCache.delete(k); }
+    for (const [k, v] of exemptCache) {
+      if (now > v) exemptCache.delete(k);
+    }
   }
 }
-
 
 function getAutomodSettings(settings: any) {
   const level = settings?.automod?.level || 'off';
@@ -49,7 +56,7 @@ function getAutomodSettings(settings: any) {
     antiSpam: settings?.automod?.antiSpam ?? preset.antiSpam,
     antiLink: settings?.automod?.antiLink ?? preset.antiLink,
     maxMentions: settings?.automod?.maxMentions ?? preset.maxMentions,
-    maxLines: settings?.automod?.maxLines ?? preset.maxLines
+    maxLines: settings?.automod?.maxLines ?? preset.maxLines,
   };
 }
 
@@ -68,7 +75,7 @@ class AutomodSystem {
       antiLink,
       antiSpam,
       antiRaid,
-      keywordWarning
+      keywordWarning,
     };
 
     this.ghostPing = ghostPing;
@@ -147,7 +154,6 @@ class AutomodSystem {
       }
 
       return violationDetected;
-
     } catch (error) {
       console.error('Error in automod check:', error);
       return false;
@@ -168,7 +174,6 @@ class AutomodSystem {
       if (channelId && settings.automod?.exemptChannels?.includes(channelId)) return;
 
       await this.ghostPing.check(message, client, settings);
-
     } catch (error) {
       console.error('Error in ghost ping detection:', error);
     }

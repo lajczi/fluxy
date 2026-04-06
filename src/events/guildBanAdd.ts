@@ -27,12 +27,12 @@ const event: BotEvent = {
           description: `<@${userId}> was banned from the server`,
           footer: `User ID: ${userId}`,
           eventType: 'member_ban',
-        }
+        },
       );
     } catch (error) {
       console.error('Error in guildBanAdd event:', error);
     }
-  }
+  },
 };
 
 export default event;

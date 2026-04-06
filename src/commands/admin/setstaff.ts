@@ -26,7 +26,7 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.setstaff.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.setstaff.serverOnly')));
 
     const sub = args[0]?.toLowerCase();
 
@@ -35,78 +35,73 @@ const command: Command = {
       const lang = normalizeLocale(settings?.language);
 
       if (!sub || sub === 'status') {
-        const ch    = settings.staffChannelId      ? `<#${settings.staffChannelId}>`      : 'Not set';
+        const ch = settings.staffChannelId ? `<#${settings.staffChannelId}>` : 'Not set';
         const inbox = settings.staffInboxChannelId ? `<#${settings.staffInboxChannelId}>` : 'Not set';
-        const role  = settings.staffRoleId         ? `<@&${settings.staffRoleId}>`        : 'Not set';
-        return void await message.reply(
-          t(lang, 'commands.admin.setstaff.status', { ch, inbox, role })
-        );
+        const role = settings.staffRoleId ? `<@&${settings.staffRoleId}>` : 'Not set';
+        return void (await message.reply(t(lang, 'commands.admin.setstaff.status', { ch, inbox, role })));
       }
 
       if (sub === 'channel') {
         const val = args[1];
-        if (!val) return void await message.reply(t(lang, 'commands.admin.setstaff.channelUsage', { prefix }));
+        if (!val) return void (await message.reply(t(lang, 'commands.admin.setstaff.channelUsage', { prefix })));
 
         if (val.toLowerCase() === 'clear') {
           settings.staffChannelId = null;
           await settings.save();
           settingsCache.invalidate(guild.id);
-          return void await message.reply(t(lang, 'commands.admin.setstaff.channelCleared'));
+          return void (await message.reply(t(lang, 'commands.admin.setstaff.channelCleared')));
         }
 
         const channelId = val.match(/^<#(\d{17,19})>$/)?.[1] ?? (/^\d{17,19}$/.test(val) ? val : null);
-        if (!channelId) return void await message.reply(t(lang, 'commands.admin.setstaff.channelInvalid'));
+        if (!channelId) return void (await message.reply(t(lang, 'commands.admin.setstaff.channelInvalid')));
 
         settings.staffChannelId = channelId;
         await settings.save();
         settingsCache.invalidate(guild.id);
-        return void await message.reply(
-          t(lang, 'commands.admin.setstaff.channelSetDone', { channelId, prefix })
-        );
+        return void (await message.reply(t(lang, 'commands.admin.setstaff.channelSetDone', { channelId, prefix })));
       }
 
       if (sub === 'role') {
         const val = args[1];
-        if (!val) return void await message.reply(t(lang, 'commands.admin.setstaff.roleUsage', { prefix }));
+        if (!val) return void (await message.reply(t(lang, 'commands.admin.setstaff.roleUsage', { prefix })));
 
         if (val.toLowerCase() === 'clear') {
           settings.staffRoleId = null;
           await settings.save();
           settingsCache.invalidate(guild.id);
-          return void await message.reply(t(lang, 'commands.admin.setstaff.roleCleared'));
+          return void (await message.reply(t(lang, 'commands.admin.setstaff.roleCleared')));
         }
 
         const roleId = val.match(/^<@&(\d{17,19})>$/)?.[1] ?? (/^\d{17,19}$/.test(val) ? val : null);
-        if (!roleId) return void await message.reply(t(lang, 'commands.admin.setstaff.roleInvalid'));
+        if (!roleId) return void (await message.reply(t(lang, 'commands.admin.setstaff.roleInvalid')));
 
         settings.staffRoleId = roleId;
         await settings.save();
         settingsCache.invalidate(guild.id);
-        return void await message.reply(t(lang, 'commands.admin.setstaff.roleSetDone', { roleId }));
+        return void (await message.reply(t(lang, 'commands.admin.setstaff.roleSetDone', { roleId })));
       }
 
       if (sub === 'reportchannel') {
         const val = args[1];
-        if (!val) return void await message.reply(t(lang, 'commands.admin.setstaff.reportChannelUsage', { prefix }));
+        if (!val) return void (await message.reply(t(lang, 'commands.admin.setstaff.reportChannelUsage', { prefix })));
 
         if (val.toLowerCase() === 'clear') {
           settings.staffInboxChannelId = null;
           await settings.save();
           settingsCache.invalidate(guild.id);
-          return void await message.reply(t(lang, 'commands.admin.setstaff.reportChannelCleared'));
+          return void (await message.reply(t(lang, 'commands.admin.setstaff.reportChannelCleared')));
         }
 
         const channelId = val.match(/^<#(\d{17,19})>$/)?.[1] ?? (/^\d{17,19}$/.test(val) ? val : null);
-        if (!channelId) return void await message.reply(t(lang, 'commands.admin.setstaff.reportChannelInvalid'));
+        if (!channelId) return void (await message.reply(t(lang, 'commands.admin.setstaff.reportChannelInvalid')));
 
         settings.staffInboxChannelId = channelId;
         await settings.save();
         settingsCache.invalidate(guild.id);
-        return void await message.reply(t(lang, 'commands.admin.setstaff.reportChannelSetDone', { channelId }));
+        return void (await message.reply(t(lang, 'commands.admin.setstaff.reportChannelSetDone', { channelId })));
       }
 
-      return void await message.reply(t(lang, 'commands.admin.setstaff.unknownSubcommand', { prefix }));
-
+      return void (await message.reply(t(lang, 'commands.admin.setstaff.unknownSubcommand', { prefix })));
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -118,7 +113,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.admin.setstaff.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

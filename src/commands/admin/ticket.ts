@@ -16,7 +16,7 @@ function checkTicketCooldown(guildId: string, userId: string): { allowed: boolea
   const key = `${guildId}:${userId}`;
   const now = Date.now();
   const lastCreated = ticketCooldowns.get(key);
-  if (lastCreated && (now - lastCreated) < TICKET_COOLDOWN_MS) {
+  if (lastCreated && now - lastCreated < TICKET_COOLDOWN_MS) {
     const remaining = Math.ceil((TICKET_COOLDOWN_MS - (now - lastCreated)) / 1000);
     const mins = Math.floor(remaining / 60);
     const secs = remaining % 60;
@@ -37,11 +37,17 @@ function getSupportRoleIds(settings: any): string[] {
   return [...ids];
 }
 
-async function getMemberWithTicketAccess(message: any, guild: any, settings: any): Promise<{ ok: boolean; reason?: string; member?: any }> {
+async function getMemberWithTicketAccess(
+  message: any,
+  guild: any,
+  settings: any,
+): Promise<{ ok: boolean; reason?: string; member?: any }> {
   const lang = normalizeLocale(settings?.language);
   let member = guild.members?.get(message.author.id);
   if (!member) {
-    try { member = await guild.fetchMember(message.author.id); } catch {}
+    try {
+      member = await guild.fetchMember(message.author.id);
+    } catch {}
   }
   if (!member) {
     return { ok: false, reason: t(lang, 'commands.admin.ticket.access.couldNotVerifyPermissionsRightNow') };
@@ -50,7 +56,8 @@ async function getMemberWithTicketAccess(message: any, guild: any, settings: any
   const supportRoleIds = getSupportRoleIds(settings);
   const memberRoleIds = member.roles?.roleIds ?? [];
   const isSupport = supportRoleIds.some((id: string) => memberRoleIds.includes(id));
-  const isAdmin = member.permissions?.has(PermissionFlags.ManageGuild) || member.permissions?.has(PermissionFlags.Administrator);
+  const isAdmin =
+    member.permissions?.has(PermissionFlags.ManageGuild) || member.permissions?.has(PermissionFlags.Administrator);
 
   if (!isSupport && !isAdmin) {
     return { ok: false, reason: t(lang, 'commands.admin.ticket.access.supportRoleOrManageServer') };
@@ -71,7 +78,14 @@ async function save(settings: any, guildId: string): Promise<void> {
   settingsCache.invalidate(guildId);
 }
 
-export async function createTicketForUser(guild: any, userId: string, settings: any, client: any, subject?: string, prefix = '!'): Promise<{ success: boolean; reason?: string; ticketNumber?: number; channelId?: string }> {
+export async function createTicketForUser(
+  guild: any,
+  userId: string,
+  settings: any,
+  client: any,
+  subject?: string,
+  prefix = '!',
+): Promise<{ success: boolean; reason?: string; ticketNumber?: number; channelId?: string }> {
   const lang = normalizeLocale(settings?.language);
   const maxOpen = settings.ticketMaxOpen || 3;
   const openTickets = await Ticket.countDocuments({ guildId: guild.id, openedBy: userId, status: 'open' });
@@ -101,12 +115,28 @@ export async function createTicketForUser(guild: any, userId: string, settings: 
   ];
 
   if (botId) {
-    overwrites.push({ id: botId, type: 1, allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ManageMessages | PermissionFlags.EmbedLinks | PermissionFlags.ReadMessageHistory), deny: '0' });
+    overwrites.push({
+      id: botId,
+      type: 1,
+      allow: String(
+        PermissionFlags.ViewChannel |
+          PermissionFlags.SendMessages |
+          PermissionFlags.ManageMessages |
+          PermissionFlags.EmbedLinks |
+          PermissionFlags.ReadMessageHistory,
+      ),
+      deny: '0',
+    });
   }
 
   const supportRoleIds = getSupportRoleIds(settings);
   for (const roleId of supportRoleIds) {
-    overwrites.push({ id: roleId, type: 0, allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages), deny: '0' });
+    overwrites.push({
+      id: roleId,
+      type: 0,
+      allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages),
+      deny: '0',
+    });
   }
 
   let channel: any;
@@ -134,11 +164,12 @@ export async function createTicketForUser(guild: any, userId: string, settings: 
     participants: [userId],
   });
 
-  const replaceVars = (text: string) => text
-    .replace(/\{user\}/gi, `<@${userId}>`)
-    .replace(/\{server\}/gi, guild.name)
-    .replace(/\{ticket\}/gi, `#${ticketNumber}`)
-    .replace(/\\n/g, '\n');
+  const replaceVars = (text: string) =>
+    text
+      .replace(/\{user\}/gi, `<@${userId}>`)
+      .replace(/\{server\}/gi, guild.name)
+      .replace(/\{ticket\}/gi, `#${ticketNumber}`)
+      .replace(/\\n/g, '\n');
 
   let openMsg: string;
   if (settings.ticketOpenMessage) {
@@ -150,21 +181,25 @@ export async function createTicketForUser(guild: any, userId: string, settings: 
   const embed = new EmbedBuilder()
     .setTitle(t(lang, 'commands.admin.ticket.user.ticketEmbed.title', { ticketNumber }))
     .setDescription(openMsg)
-    .setColor(0x5865F2)
+    .setColor(0x5865f2);
 
   if (subject) {
-    embed.addFields({ name: t(lang, 'commands.admin.ticket.user.ticketEmbed.subjectField'), value: subject, inline: false });
+    embed.addFields({
+      name: t(lang, 'commands.admin.ticket.user.ticketEmbed.subjectField'),
+      value: subject,
+      inline: false,
+    });
   }
 
   try {
     await channel.send({ embeds: [embed] });
-  } catch { }
+  } catch {}
 
   if (supportRoleIds.length > 0) {
     try {
       const ping = await channel.send({ content: supportRoleIds.map((id: string) => `<@&${id}>`).join(' ') });
-      setTimeout(() => ping.delete().catch(() => { }), 3000);
-    } catch { }
+      setTimeout(() => ping.delete().catch(() => {}), 3000);
+    } catch {}
   }
 
   setTicketCooldown(guild.id, userId);
@@ -178,7 +213,7 @@ async function postTicketPanel(targetChannel: any, guild: any, settings: any, cl
   const embed = new EmbedBuilder()
     .setTitle(t(lang, 'commands.admin.ticket.user.panelEmbed.title'))
     .setDescription(t(lang, 'commands.admin.ticket.user.panelEmbed.description', { emoji }))
-    .setColor(0x5865F2)
+    .setColor(0x5865f2)
     .setFooter({ text: t(lang, 'commands.admin.ticket.user.panelEmbed.footer') });
 
   const panelMsg = await targetChannel.send({ embeds: [embed] });
@@ -188,14 +223,14 @@ async function postTicketPanel(targetChannel: any, guild: any, settings: any, cl
     try {
       const resolved = await client.resolveEmoji(emoji, guild.id);
       if (typeof resolved === 'string' && resolved.trim()) emojiForReact = resolved.trim();
-    } catch { /* use raw */ }
+    } catch {
+      /* use raw */
+    }
   }
 
   const restPutReaction = async () => {
     const encoded = encodeReactionForRoute(emojiForReact);
-    await client.rest.put(
-      `${Routes.channelMessageReaction(targetChannel.id, panelMsg.id, encoded)}/@me`
-    );
+    await client.rest.put(`${Routes.channelMessageReaction(targetChannel.id, panelMsg.id, encoded)}/@me`);
   };
 
   try {
@@ -216,8 +251,10 @@ async function postTicketPanel(targetChannel: any, guild: any, settings: any, cl
   return panelMsg;
 }
 
-const subcommands: Record<string, (message: any, args: string[], guild: any, settings: any, client: any, prefix: string) => Promise<any>> = {
-
+const subcommands: Record<
+  string,
+  (message: any, args: string[], guild: any, settings: any, client: any, prefix: string) => Promise<any>
+> = {
   async setup(message, args, guild, settings, client, prefix) {
     const sub = args[0]?.toLowerCase();
     const lang = normalizeLocale(settings?.language);
@@ -260,14 +297,29 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
           const botId = client.user?.id;
 
           const overwrites: any[] = [
-            { id: everyoneRoleId, type: 0, allow: String(PermissionFlags.ViewChannel | PermissionFlags.AddReactions | PermissionFlags.ReadMessageHistory), deny: String(PermissionFlags.SendMessages) },
+            {
+              id: everyoneRoleId,
+              type: 0,
+              allow: String(
+                PermissionFlags.ViewChannel | PermissionFlags.AddReactions | PermissionFlags.ReadMessageHistory,
+              ),
+              deny: String(PermissionFlags.SendMessages),
+            },
           ];
 
           if (botId) {
             overwrites.push({
               id: botId,
               type: 1,
-              allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ManageMessages | PermissionFlags.ManageChannels | PermissionFlags.AddReactions | PermissionFlags.ReadMessageHistory | PermissionFlags.EmbedLinks),
+              allow: String(
+                PermissionFlags.ViewChannel |
+                  PermissionFlags.SendMessages |
+                  PermissionFlags.ManageMessages |
+                  PermissionFlags.ManageChannels |
+                  PermissionFlags.AddReactions |
+                  PermissionFlags.ReadMessageHistory |
+                  PermissionFlags.EmbedLinks,
+              ),
               deny: '0',
             });
           }
@@ -302,10 +354,13 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
           await targetChannel.editPermission(botId, {
             type: 1,
             allow: String(
-              PermissionFlags.ViewChannel | PermissionFlags.SendMessages |
-              PermissionFlags.ManageMessages | PermissionFlags.ManageChannels |
-              PermissionFlags.AddReactions | PermissionFlags.ReadMessageHistory |
-              PermissionFlags.EmbedLinks
+              PermissionFlags.ViewChannel |
+                PermissionFlags.SendMessages |
+                PermissionFlags.ManageMessages |
+                PermissionFlags.ManageChannels |
+                PermissionFlags.AddReactions |
+                PermissionFlags.ReadMessageHistory |
+                PermissionFlags.EmbedLinks,
             ),
           });
         } catch {
@@ -327,12 +382,13 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
       if (!action) {
         const roleIds = getSupportRoleIds(settings);
-        if (roleIds.length === 0) return message.reply(t(lang, 'commands.admin.ticket.setup.role.noSupportRoles', { prefix }));
+        if (roleIds.length === 0)
+          return message.reply(t(lang, 'commands.admin.ticket.setup.role.noSupportRoles', { prefix }));
         return message.reply(
           t(lang, 'commands.admin.ticket.setup.role.list', {
             count: roleIds.length,
             roleList: roleIds.map((id: string) => `<@&${id}>`).join(', '),
-          })
+          }),
         );
       }
 
@@ -348,13 +404,14 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         const roleId = val.match(/^<@&(\d{17,19})>$/)?.[1] ?? (val.match(/^\d{17,19}$/)?.[0] || null);
         if (!roleId) return message.reply(t(lang, 'commands.admin.ticket.setup.role.invalidRoleId'));
         const current = getSupportRoleIds(settings);
-        if (current.includes(roleId)) return message.reply(t(lang, 'commands.admin.ticket.setup.role.alreadySupportRole', { roleId }));
+        if (current.includes(roleId))
+          return message.reply(t(lang, 'commands.admin.ticket.setup.role.alreadySupportRole', { roleId }));
         if (current.length >= 10) return message.reply(t(lang, 'commands.admin.ticket.setup.role.maxSupportRoles'));
         settings.ticketSupportRoleIds = [...new Set([...current, roleId])];
         settings.ticketSupportRoleId = settings.ticketSupportRoleIds[0];
         await save(settings, guild.id);
         return message.reply(
-          t(lang, 'commands.admin.ticket.setup.role.added', { roleId, total: settings.ticketSupportRoleIds.length })
+          t(lang, 'commands.admin.ticket.setup.role.added', { roleId, total: settings.ticketSupportRoleIds.length }),
         );
       }
 
@@ -363,13 +420,14 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         const roleId = val.match(/^<@&(\d{17,19})>$/)?.[1] ?? (val.match(/^\d{17,19}$/)?.[0] || null);
         if (!roleId) return message.reply(t(lang, 'commands.admin.ticket.setup.role.invalidRoleId'));
         const current = getSupportRoleIds(settings);
-        if (!current.includes(roleId)) return message.reply(t(lang, 'commands.admin.ticket.setup.role.notSupportRole', { roleId }));
+        if (!current.includes(roleId))
+          return message.reply(t(lang, 'commands.admin.ticket.setup.role.notSupportRole', { roleId }));
         const updated = current.filter((id: string) => id !== roleId);
         settings.ticketSupportRoleIds = updated;
         settings.ticketSupportRoleId = updated[0] || null;
         await save(settings, guild.id);
         return message.reply(
-          t(lang, 'commands.admin.ticket.setup.role.removed', { roleId, remaining: updated.length })
+          t(lang, 'commands.admin.ticket.setup.role.removed', { roleId, remaining: updated.length }),
         );
       }
 
@@ -381,7 +439,7 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         settings.ticketSupportRoleId = settings.ticketSupportRoleIds[0];
         await save(settings, guild.id);
         return message.reply(
-          t(lang, 'commands.admin.ticket.setup.role.added', { roleId, total: settings.ticketSupportRoleIds.length })
+          t(lang, 'commands.admin.ticket.setup.role.added', { roleId, total: settings.ticketSupportRoleIds.length }),
         );
       }
 
@@ -405,7 +463,8 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
     if (sub === 'max') {
       const val = parseInt(args[1]);
-      if (isNaN(val) || val < 1 || val > 10) return message.reply(t(lang, 'commands.admin.ticket.setup.max.usage', { prefix }));
+      if (isNaN(val) || val < 1 || val > 10)
+        return message.reply(t(lang, 'commands.admin.ticket.setup.max.usage', { prefix }));
       settings.ticketMaxOpen = val;
       await save(settings, guild.id);
       return message.reply(t(lang, 'commands.admin.ticket.setup.max.setDone', { maxOpen: val }));
@@ -425,21 +484,34 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       return message.reply(t(lang, 'commands.admin.ticket.setup.message.setDone'));
     }
 
-    const cat = settings.ticketCategoryId ? `<#${settings.ticketCategoryId}>` : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
+    const cat = settings.ticketCategoryId
+      ? `<#${settings.ticketCategoryId}>`
+      : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
     const roleIds = getSupportRoleIds(settings);
-    const role = roleIds.length > 0 ? roleIds.map((id: string) => `<@&${id}>`).join(', ') : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
-    const log = settings.ticketLogChannelId ? `<#${settings.ticketLogChannelId}>` : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
-    const setupCh = settings.ticketSetupChannelId ? `<#${settings.ticketSetupChannelId}>` : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
+    const role =
+      roleIds.length > 0
+        ? roleIds.map((id: string) => `<@&${id}>`).join(', ')
+        : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
+    const log = settings.ticketLogChannelId
+      ? `<#${settings.ticketLogChannelId}>`
+      : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
+    const setupCh = settings.ticketSetupChannelId
+      ? `<#${settings.ticketSetupChannelId}>`
+      : t(lang, 'commands.admin.ticket.setupEmbed.notSet');
 
     const embed = new EmbedBuilder()
       .setTitle(t(lang, 'commands.admin.ticket.setupEmbed.title'))
-      .setColor(0x5865F2)
+      .setColor(0x5865f2)
       .addFields(
         { name: t(lang, 'commands.admin.ticket.setupEmbed.fields.category'), value: cat, inline: true },
         { name: t(lang, 'commands.admin.ticket.setupEmbed.fields.ticketChannel'), value: setupCh, inline: true },
         { name: t(lang, 'commands.admin.ticket.setupEmbed.fields.supportRole'), value: role, inline: true },
         { name: t(lang, 'commands.admin.ticket.setupEmbed.fields.logChannel'), value: log, inline: true },
-        { name: t(lang, 'commands.admin.ticket.setupEmbed.fields.maxOpen'), value: String(settings.ticketMaxOpen || 3), inline: true },
+        {
+          name: t(lang, 'commands.admin.ticket.setupEmbed.fields.maxOpen'),
+          value: String(settings.ticketMaxOpen || 3),
+          inline: true,
+        },
         {
           name: t(lang, 'commands.admin.ticket.setupEmbed.fields.customMessage'),
           value: settings.ticketOpenMessage
@@ -450,9 +522,9 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         {
           name: t(lang, 'commands.admin.ticket.setupEmbed.fields.setupCommands'),
           value: t(lang, 'commands.admin.ticket.setupEmbed.setupCommands', { prefix }),
-          inline: false
+          inline: false,
         },
-      )
+      );
 
     return message.reply({ embeds: [embed] });
   },
@@ -467,7 +539,9 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     if (!ticket) return message.reply(t(lang, 'commands.admin.ticket.claim.ticketNotOpen'));
 
     if ((ticket as any).claimedBy) {
-      return message.reply(t(lang, 'commands.admin.ticket.claim.alreadyClaimed', { claimedBy: (ticket as any).claimedBy }));
+      return message.reply(
+        t(lang, 'commands.admin.ticket.claim.alreadyClaimed', { claimedBy: (ticket as any).claimedBy }),
+      );
     }
 
     (ticket as any).claimedBy = message.author.id;
@@ -477,7 +551,7 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     const embed = new EmbedBuilder()
       .setTitle(t(lang, 'commands.admin.ticket.user.claimEmbed.title', { ticketNumber: (ticket as any).ticketNumber }))
       .setDescription(t(lang, 'commands.admin.ticket.user.claimEmbed.description', { userId: message.author.id }))
-      .setColor(0x2ecc71)
+      .setColor(0x2ecc71);
 
     return message.reply({ embeds: [embed] });
   },
@@ -499,7 +573,7 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     const embed = new EmbedBuilder()
       .setTitle(t(lang, 'commands.admin.ticket.user.closeEmbed.title', { ticketNumber: (ticket as any).ticketNumber }))
       .setDescription(t(lang, 'commands.admin.ticket.user.closeEmbed.description', { userId: message.author.id }))
-      .setColor(0xED4245)
+      .setColor(0xed4245)
       .addFields({ name: t(lang, 'commands.admin.ticket.user.closeEmbed.reasonField'), value: reason, inline: false });
 
     if ((ticket as any).claimedBy) {
@@ -510,8 +584,6 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       });
     }
 
-
-
     (ticket as any).status = 'closed';
     (ticket as any).closedBy = message.author.id;
     (ticket as any).closedAt = new Date();
@@ -519,24 +591,42 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
     try {
       await (message as any).channel.send({ embeds: [embed] });
-    } catch { }
+    } catch {}
 
     if (settings.ticketLogChannelId) {
       try {
         let logChannel = guild.channels?.get(settings.ticketLogChannelId);
-        if (!logChannel) try { logChannel = await client.channels.fetch(settings.ticketLogChannelId); } catch { }
+        if (!logChannel)
+          try {
+            logChannel = await client.channels.fetch(settings.ticketLogChannelId);
+          } catch {}
         if (logChannel) {
           const transcriptMessages = ((ticket as any).transcript || []) as Array<{
-            authorId: string; authorName: string; avatarURL?: string | null;
-            content: string; attachments?: Array<{ url: string; name: string }>;
+            authorId: string;
+            authorName: string;
+            avatarURL?: string | null;
+            content: string;
+            attachments?: Array<{ url: string; name: string }>;
             timestamp: Date | string;
           }>;
 
           const logEmbed = new EmbedBuilder()
-            .setTitle(t(lang, 'commands.admin.ticket.user.logEmbed.titleClosed', { ticketNumber: (ticket as any).ticketNumber }))
-            .setColor(0xED4245)
-            .addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.openedByField'), value: `<@${(ticket as any).openedBy}>`, inline: true })
-            .addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.closedByField'), value: `<@${message.author.id}>`, inline: true });
+            .setTitle(
+              t(lang, 'commands.admin.ticket.user.logEmbed.titleClosed', {
+                ticketNumber: (ticket as any).ticketNumber,
+              }),
+            )
+            .setColor(0xed4245)
+            .addFields({
+              name: t(lang, 'commands.admin.ticket.user.logEmbed.openedByField'),
+              value: `<@${(ticket as any).openedBy}>`,
+              inline: true,
+            })
+            .addFields({
+              name: t(lang, 'commands.admin.ticket.user.logEmbed.closedByField'),
+              value: `<@${message.author.id}>`,
+              inline: true,
+            });
 
           if ((ticket as any).claimedBy) {
             logEmbed.addFields({
@@ -546,13 +636,25 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
             });
           }
 
-          logEmbed.addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.reasonField'), value: reason, inline: false });
+          logEmbed.addFields({
+            name: t(lang, 'commands.admin.ticket.user.logEmbed.reasonField'),
+            value: reason,
+            inline: false,
+          });
 
           if ((ticket as any).subject) {
-            logEmbed.addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.subjectField'), value: (ticket as any).subject, inline: false });
+            logEmbed.addFields({
+              name: t(lang, 'commands.admin.ticket.user.logEmbed.subjectField'),
+              value: (ticket as any).subject,
+              inline: false,
+            });
           }
 
-          logEmbed.addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.messagesField'), value: String(transcriptMessages.length), inline: true })
+          logEmbed.addFields({
+            name: t(lang, 'commands.admin.ticket.user.logEmbed.messagesField'),
+            value: String(transcriptMessages.length),
+            inline: true,
+          });
 
           const sendOpts: any = { embeds: [logEmbed] };
 
@@ -568,7 +670,9 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
                   const name = (u as any).username || id;
                   nameCache.set(id, name);
                   return name;
-                } catch { return id; }
+                } catch {
+                  return id;
+                }
               };
 
               const openedByName = await resolveName((ticket as any).openedBy);
@@ -586,10 +690,12 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
                 closedAt: new Date(),
                 messages: transcriptMessages,
               });
-              sendOpts.files = [{
-                name: `transcript-${(ticket as any).ticketNumber}.html`,
-                data: Buffer.from(html, 'utf-8'),
-              }];
+              sendOpts.files = [
+                {
+                  name: `transcript-${(ticket as any).ticketNumber}.html`,
+                  data: Buffer.from(html, 'utf-8'),
+                },
+              ];
             } catch (err: any) {
               console.error(`[ticket] Failed to generate transcript: ${err.message}`);
             }
@@ -597,22 +703,32 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
           await logChannel.send(sendOpts);
         }
-      } catch { }
+      } catch {}
     }
 
     const openedByUserId = (ticket as any).openedBy;
     if (openedByUserId) {
       try {
         const transcriptMessages = ((ticket as any).transcript || []) as Array<{
-          authorId: string; authorName: string; avatarURL?: string | null;
-          content: string; attachments?: Array<{ url: string; name: string }>;
+          authorId: string;
+          authorName: string;
+          avatarURL?: string | null;
+          content: string;
+          attachments?: Array<{ url: string; name: string }>;
           timestamp: Date | string;
         }>;
         const userEmbed = new EmbedBuilder()
-          .setTitle(t(lang, 'commands.admin.ticket.user.dmEmbed.titleClosed', { ticketNumber: (ticket as any).ticketNumber }))
-          .setDescription(t(lang, 'commands.admin.ticket.user.dmEmbed.description', { guildName: guild.name, userId: message.author.id }))
-          .setColor(0xED4245)
-          .addFields({ name: t(lang, 'commands.admin.ticket.user.dmEmbed.reasonField'), value: reason, inline: false })
+          .setTitle(
+            t(lang, 'commands.admin.ticket.user.dmEmbed.titleClosed', { ticketNumber: (ticket as any).ticketNumber }),
+          )
+          .setDescription(
+            t(lang, 'commands.admin.ticket.user.dmEmbed.description', {
+              guildName: guild.name,
+              userId: message.author.id,
+            }),
+          )
+          .setColor(0xed4245)
+          .addFields({ name: t(lang, 'commands.admin.ticket.user.dmEmbed.reasonField'), value: reason, inline: false });
         const userSendOpts: any = { embeds: [userEmbed] };
         if (transcriptMessages.length > 0) {
           try {
@@ -625,7 +741,9 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
                 const name = (u as any).username || id;
                 nameCache.set(id, name);
                 return name;
-              } catch { return id; }
+              } catch {
+                return id;
+              }
             };
             const openedByName = await resolveName(openedByUserId);
             const closedByName = message.author.username || message.author.id;
@@ -641,21 +759,23 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
               closedAt: new Date(),
               messages: transcriptMessages,
             });
-            userSendOpts.files = [{ name: `transcript-${(ticket as any).ticketNumber}.html`, data: Buffer.from(html, 'utf-8') }];
+            userSendOpts.files = [
+              { name: `transcript-${(ticket as any).ticketNumber}.html`, data: Buffer.from(html, 'utf-8') },
+            ];
           } catch (err: any) {
             console.error(`[ticket] Failed to generate transcript for DM: ${err.message}`);
           }
         }
         const opener = await client.users.fetch(openedByUserId).catch(() => null);
         if (opener) await opener.send(userSendOpts);
-      } catch { }
+      } catch {}
     }
 
     setTimeout(async () => {
       try {
-        const ch = guild.channels?.get(channelId) || await client.channels.fetch(channelId).catch(() => null);
+        const ch = guild.channels?.get(channelId) || (await client.channels.fetch(channelId).catch(() => null));
         if (ch) await ch.delete();
-      } catch { }
+      } catch {}
     }, 5000);
   },
 
@@ -703,7 +823,8 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     const userId = args[0]?.match(/^<@!?(\d{17,19})>$/)?.[1] ?? (args[0]?.match(/^\d{17,19}$/)?.[0] || null);
     if (!userId) return message.reply(t(lang, 'commands.admin.ticket.remove.usage', { prefix }));
 
-    if (userId === (ticket as any).openedBy) return message.reply(t(lang, 'commands.admin.ticket.remove.openedByCannotRemove'));
+    if (userId === (ticket as any).openedBy)
+      return message.reply(t(lang, 'commands.admin.ticket.remove.openedByCannotRemove'));
 
     const channel = guild.channels?.get(channelId);
     if (!channel) return message.reply(t(lang, 'commands.admin.ticket.remove.channelNotFound'));
@@ -725,9 +846,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     }
 
     const channelMention = args[0];
-    const channelId = (channelMention?.match(/^<#(\d{17,19})>$/)?.[1]
-      ?? (channelMention?.match(/^\d{17,19}$/)?.[0] || null))
-      || (message as any).channelId || (message as any).channel?.id;
+    const channelId =
+      (channelMention?.match(/^<#(\d{17,19})>$/)?.[1] ?? (channelMention?.match(/^\d{17,19}$/)?.[0] || null)) ||
+      (message as any).channelId ||
+      (message as any).channel?.id;
 
     let targetChannel = guild.channels?.get(channelId);
     if (!targetChannel) {
@@ -750,7 +872,7 @@ function showHelp(message: any, prefix = '!', lang = 'en') {
   return message.reply(
     t(lang, 'commands.admin.ticket.help.body', {
       prefix,
-    })
+    }),
   );
 }
 
@@ -765,7 +887,7 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.ticket.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.ticket.serverOnly')));
 
     const sub = args[0]?.toLowerCase();
 
@@ -781,21 +903,24 @@ const command: Command = {
       } else {
         console.error(`[${guildName}] Error in !ticket: ${error.message || error}`);
       }
-      message.reply(t(lang, 'commands.admin.ticket.processingError')).catch(() => { });
+      message.reply(t(lang, 'commands.admin.ticket.processingError')).catch(() => {});
       return;
     }
 
-    if (sub === 'open') return void await message.reply(t(lang, 'commands.admin.ticket.openNotice', { prefix }));
+    if (sub === 'open') return void (await message.reply(t(lang, 'commands.admin.ticket.openNotice', { prefix })));
 
     if (!sub || !subcommands[sub]) return showHelp(message, prefix, lang);
 
     if (sub === 'setup' || sub === 'panel') {
       let member = guild.members?.get(message.author.id);
-      if (!member) try { member = await guild.fetchMember(message.author.id); } catch { }
+      if (!member)
+        try {
+          member = await guild.fetchMember(message.author.id);
+        } catch {}
       if (member) {
         const perms = member.permissions;
         if (!perms?.has(PermissionFlags.ManageGuild) && !perms?.has(PermissionFlags.Administrator)) {
-          return void await message.reply(t(lang, 'commands.admin.ticket.missingManageServerPermission'));
+          return void (await message.reply(t(lang, 'commands.admin.ticket.missingManageServerPermission')));
         }
       }
     }
@@ -808,10 +933,10 @@ const command: Command = {
         console.warn(`[${guildName}] Fluxer API unreachable during !ticket (ECONNRESET)`);
       } else {
         console.error(`[${guildName}] Error in !ticket: ${error.message || error}`);
-        message.reply(t(lang, 'commands.admin.ticket.processingError')).catch(() => { });
+        message.reply(t(lang, 'commands.admin.ticket.processingError')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

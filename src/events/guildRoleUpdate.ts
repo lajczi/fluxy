@@ -24,17 +24,17 @@ const event: BotEvent = {
         'Role Updated',
         0xf1c40f,
         [
-          { name: 'Role',  value: `<@&${role.id}>`, inline: true },
-          { name: 'Name',  value: role.name, inline: true },
+          { name: 'Role', value: `<@&${role.id}>`, inline: true },
+          { name: 'Name', value: role.name, inline: true },
           { name: 'Color', value: colorHex(role.color), inline: true },
         ],
         client,
-        { footer: `Role ID: ${role.id}`, eventType: 'role_update' }
+        { footer: `Role ID: ${role.id}`, eventType: 'role_update' },
       );
     } catch (error) {
       console.error('Error in guildRoleUpdate event:', error);
     }
-  }
+  },
 };
 
 export default event;

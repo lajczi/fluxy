@@ -31,6 +31,7 @@ The rest of this README is for self-hosters and contributors etc.
 - MongoDB
 
 ### Quick start
+
 ```bash
 # 1. Install
 npm install
@@ -51,35 +52,35 @@ The two env vars you actually need to set are `TOKEN` and `MONGO_URI`. Everythin
 
 Full list is in `.env.example`. The ones you'll actually touch:
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `TOKEN` | ✅ | - | Bot token |
-| `MONGO_URI` | ✅ | - | MongoDB connection string |
-| `PREFIX` | | `!` | Default command prefix |
-| `OWNER_ID` | | - | Your user ID for owner-only commands |
-| `API_ENABLED` | | `false` | Enable the API/dashboard backend |
-| `API_PORT` | | `4000` | Port for the API |
-| `API_ADMIN_TOKEN` | | - | Privileged API access token - make it strong |
-| `FLUXER_OAUTH_CLIENT_ID` | | - | OAuth client ID |
-| `FLUXER_OAUTH_CLIENT_SECRET` | | - | OAuth client secret |
-| `FLUXER_OAUTH_REDIRECT_URI` | | - | OAuth redirect URI |
-| `DASHBOARD_URL` | | - | Dashboard origin for CORS |
-| `GLITCHTIP_DSN` | | - | Optional error reporting |
+| Variable                     | Required | Default | Description                                  |
+| ---------------------------- | -------- | ------- | -------------------------------------------- |
+| `TOKEN`                      | ✅       | -       | Bot token                                    |
+| `MONGO_URI`                  | ✅       | -       | MongoDB connection string                    |
+| `PREFIX`                     |          | `!`     | Default command prefix                       |
+| `OWNER_ID`                   |          | -       | Your user ID for owner-only commands         |
+| `API_ENABLED`                |          | `false` | Enable the API/dashboard backend             |
+| `API_PORT`                   |          | `4000`  | Port for the API                             |
+| `API_ADMIN_TOKEN`            |          | -       | Privileged API access token - make it strong |
+| `FLUXER_OAUTH_CLIENT_ID`     |          | -       | OAuth client ID                              |
+| `FLUXER_OAUTH_CLIENT_SECRET` |          | -       | OAuth client secret                          |
+| `FLUXER_OAUTH_REDIRECT_URI`  |          | -       | OAuth redirect URI                           |
+| `DASHBOARD_URL`              |          | -       | Dashboard origin for CORS                    |
+| `GLITCHTIP_DSN`              |          | -       | Optional error reporting                     |
 
 ### Scripts
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Watch mode |
-| `npm run dev:sharded` | Sharded manager in watch mode |
-| `npm run build` | Compile TS → `build/` |
-| `npm start` | Run compiled bot |
-| `npm run start:sharded` | Run compiled shard manager |
-| `npm test` | Run tests |
-| `npm run test:watch` | Watch tests |
-| `npm run test:coverage` | Coverage report |
-| `npm run lint` | ESLint |
-| `npm run i18n:check` | Validate locale JSON files (keys + placeholders vs `en.json`) |
+| Command                 | What it does                                                  |
+| ----------------------- | ------------------------------------------------------------- |
+| `npm run dev`           | Watch mode                                                    |
+| `npm run dev:sharded`   | Sharded manager in watch mode                                 |
+| `npm run build`         | Compile TS → `build/`                                         |
+| `npm start`             | Run compiled bot                                              |
+| `npm run start:sharded` | Run compiled shard manager                                    |
+| `npm test`              | Run tests                                                     |
+| `npm run test:watch`    | Watch tests                                                   |
+| `npm run test:coverage` | Coverage report                                               |
+| `npm run lint`          | ESLint                                                        |
+| `npm run i18n:check`    | Validate locale JSON files (keys + placeholders vs `en.json`) |
 
 ### Localization
 

@@ -26,14 +26,21 @@ const command: Command = {
 
       const embed = new EmbedBuilder()
         .setTitle(t(lang, 'commands.ping.title'))
-        .setColor(0x5865F2)
+        .setColor(0x5865f2)
         .addFields(
-          { name: t(lang, 'commands.ping.restApi'), value: t(lang, 'auditCatalog.commands.general.ping.l31_addFields_value', { restLatency }), inline: true },
-          { name: t(lang, 'commands.ping.roundTrip'), value: t(lang, 'auditCatalog.commands.general.ping.l32_addFields_value', { msgLatency }), inline: true }
+          {
+            name: t(lang, 'commands.ping.restApi'),
+            value: t(lang, 'auditCatalog.commands.general.ping.l31_addFields_value', { restLatency }),
+            inline: true,
+          },
+          {
+            name: t(lang, 'commands.ping.roundTrip'),
+            value: t(lang, 'auditCatalog.commands.general.ping.l32_addFields_value', { msgLatency }),
+            inline: true,
+          },
         );
 
       await msg.edit({ content: '', embeds: [embed] });
-
     } catch (error: any) {
       if (isNetworkError(error)) {
         console.warn(`Fluxer API unreachable during !ping (ECONNRESET)`);
@@ -41,7 +48,7 @@ const command: Command = {
         console.error(`Error in !ping: ${error.message || error}`);
       }
     }
-  }
+  },
 };
 
 export default command;

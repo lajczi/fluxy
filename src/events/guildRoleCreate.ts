@@ -22,17 +22,17 @@ const event: BotEvent = {
         'Role Created',
         0x2ecc71,
         [
-          { name: 'Role',  value: `<@&${role.id}>`, inline: true },
-          { name: 'Name',  value: role.name, inline: true },
+          { name: 'Role', value: `<@&${role.id}>`, inline: true },
+          { name: 'Name', value: role.name, inline: true },
           { name: 'Color', value: colorHex(role.color), inline: true },
         ],
         client,
-        { footer: `Role ID: ${role.id}`, eventType: 'role_create' }
+        { footer: `Role ID: ${role.id}`, eventType: 'role_create' },
       );
     } catch (error) {
       console.error('Error in guildRoleCreate event:', error);
     }
-  }
+  },
 };
 
 export default event;

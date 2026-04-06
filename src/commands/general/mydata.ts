@@ -23,7 +23,7 @@ const command: Command = {
     const sub = args[0]?.toLowerCase();
 
     if (!sub || sub === 'info') {
-      return void await message.reply(t(lang, 'commands.mydata.info', { prefix }));
+      return void (await message.reply(t(lang, 'commands.mydata.info', { prefix })));
     }
 
     if (sub === 'export') {
@@ -61,7 +61,7 @@ const command: Command = {
         pendingDeletes.add(userId);
         setTimeout(() => pendingDeletes.delete(userId), 60 * 1000);
 
-        return void await message.reply(t(lang, 'commands.mydata.deleteConfirm', { prefix }));
+        return void (await message.reply(t(lang, 'commands.mydata.deleteConfirm', { prefix })));
       }
 
       pendingDeletes.delete(userId);
@@ -73,10 +73,12 @@ const command: Command = {
         const lines = [];
         if (result.userSettings) lines.push('- Personal settings deleted');
         if (result.warnings > 0) lines.push(`- ${result.warnings} warning record(s) deleted`);
-        if (result.moderationLogsAnonymized > 0) lines.push(`- ${result.moderationLogsAnonymized} moderation log(s) anonymized`);
+        if (result.moderationLogsAnonymized > 0)
+          lines.push(`- ${result.moderationLogsAnonymized} moderation log(s) anonymized`);
         if (result.ticketMessagesAnonymized > 0) lines.push('- Ticket transcript messages anonymized');
         if (result.commandUsage > 0) lines.push(`- ${result.commandUsage} command usage record(s) deleted`);
-        if (result.guildSettingsReferences > 0) lines.push(`- Removed from ${result.guildSettingsReferences} guild allowlist(s)`);
+        if (result.guildSettingsReferences > 0)
+          lines.push(`- Removed from ${result.guildSettingsReferences} guild allowlist(s)`);
 
         if (lines.length === 0) {
           lines.push(t(lang, 'commands.mydata.deleteNoData'));
@@ -91,8 +93,8 @@ const command: Command = {
       return;
     }
 
-    return void await message.reply(t(lang, 'commands.mydata.unknown', { prefix }));
-  }
+    return void (await message.reply(t(lang, 'commands.mydata.unknown', { prefix })));
+  },
 };
 
 export default command;

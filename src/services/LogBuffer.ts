@@ -26,7 +26,7 @@ class LogBuffer {
   }
 
   getSince(timestamp: number): LogEntry[] {
-    return this.buffer.filter(e => e.timestamp >= timestamp);
+    return this.buffer.filter((e) => e.timestamp >= timestamp);
   }
 
   clear(): void {

@@ -61,17 +61,38 @@ jest.mock('@erinjs/core', () => {
   class MockEmbedBuilder {
     public data: Record<string, unknown> = { fields: [] };
 
-    setTitle(value: string) { this.data.title = value; return this; }
-    setDescription(value: string) { this.data.description = value; return this; }
-    setColor(value: number) { this.data.color = value; return this; }
-    setFooter(value: unknown) { this.data.footer = value; return this; }
-    setTimestamp(value: unknown) { this.data.timestamp = value; return this; }
-    setAuthor(value: unknown) { this.data.author = value; return this; }
+    setTitle(value: string) {
+      this.data.title = value;
+      return this;
+    }
+    setDescription(value: string) {
+      this.data.description = value;
+      return this;
+    }
+    setColor(value: number) {
+      this.data.color = value;
+      return this;
+    }
+    setFooter(value: unknown) {
+      this.data.footer = value;
+      return this;
+    }
+    setTimestamp(value: unknown) {
+      this.data.timestamp = value;
+      return this;
+    }
+    setAuthor(value: unknown) {
+      this.data.author = value;
+      return this;
+    }
     addFields(value: unknown) {
       (this.data.fields as unknown[]).push(value);
       return this;
     }
-    setImage(value: string) { this.data.image = value; return this; }
+    setImage(value: string) {
+      this.data.image = value;
+      return this;
+    }
   }
 
   return { EmbedBuilder: MockEmbedBuilder };
@@ -497,9 +518,7 @@ describe('RssPollerService', () => {
     expect(embed.title).toBe('RT Hello World');
     expect(embed.description).toBe('this is the summary');
     expect(embed.fields).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: 'Link', value: 'https://example.com/2' }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ name: 'Link', value: 'https://example.com/2' })]),
     );
     expect(embed.author).toEqual(expect.objectContaining({ name: 'bone' }));
   });
@@ -604,7 +623,9 @@ describe('RssPollerService', () => {
       username: '@helldivers2',
       avatar_url: 'https://pbs.twimg.com/profile_images/hd2.jpg',
     });
-    expect(String(webhookPayloads[0].content)).toContain('https://fxtwitter.com/helldivers2/status/2040444809219916065');
+    expect(String(webhookPayloads[0].content)).toContain(
+      'https://fxtwitter.com/helldivers2/status/2040444809219916065',
+    );
     expect(mockGuildSettingsUpdateOne).toHaveBeenCalledWith(
       { guildId: 'g1', 'rss.feeds.id': 'feed-1' },
       expect.objectContaining({

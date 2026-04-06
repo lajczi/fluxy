@@ -12,7 +12,6 @@ export default class EventHandler {
     this.client = client;
   }
 
-
   async loadEvents(): Promise<void> {
     const eventsPath = path.join(__dirname, '..', 'events');
 
@@ -22,8 +21,9 @@ export default class EventHandler {
       return;
     }
 
-    const eventFiles = fs.readdirSync(eventsPath)
-      .filter(file => (file.endsWith('.ts') || file.endsWith('.js')) && !file.endsWith('.d.ts'));
+    const eventFiles = fs
+      .readdirSync(eventsPath)
+      .filter((file) => (file.endsWith('.ts') || file.endsWith('.js')) && !file.endsWith('.d.ts'));
 
     for (const file of eventFiles) {
       try {
@@ -69,13 +69,11 @@ export default class EventHandler {
         }
 
         this.events.set(event.name, event);
-
       } catch (error: any) {
         console.error(`Error loading event ${file}:`, error.message);
       }
     }
   }
-
 
   getEvent(name: string): BotEvent | undefined {
     return this.events.get(name);

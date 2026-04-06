@@ -9,11 +9,7 @@ import log from '../utils/consoleLogger';
 import settingsCache from '../utils/settingsCache';
 import { fetchFeed } from '../utils/rssFeed';
 import { t } from '../i18n';
-import {
-  RSS_MAX_SEEN_ITEM_IDS,
-  clampItemsPerPoll,
-  clampPollIntervalMinutes,
-} from '../utils/rssDefaults';
+import { RSS_MAX_SEEN_ITEM_IDS, clampItemsPerPoll, clampPollIntervalMinutes } from '../utils/rssDefaults';
 
 interface DueFeed {
   guildId: string;
@@ -73,10 +69,7 @@ function removeTitlePrefix(title: string, summary: string): string {
     return '';
   }
 
-  const titlePrefixPattern = new RegExp(
-    `^${escapeRegExp(normalizedTitle)}(?:\\s*[\\-:|\\u2013\\u2014]\\s*)?`,
-    'i',
-  );
+  const titlePrefixPattern = new RegExp(`^${escapeRegExp(normalizedTitle)}(?:\\s*[\\-:|\\u2013\\u2014]\\s*)?`, 'i');
   return normalizedSummary.replace(titlePrefixPattern, '').trim();
 }
 
@@ -89,7 +82,10 @@ function removeTrailingLink(summary: string, link: string): string {
   return normalizedSummary.replace(trailingLinkPattern, '').trim();
 }
 
-function buildEmbedSummary(item: { title: string; description: string | null; link: string }, includeSummary: boolean): string | null {
+function buildEmbedSummary(
+  item: { title: string; description: string | null; link: string },
+  includeSummary: boolean,
+): string | null {
   if (!includeSummary || !item.description) return null;
 
   let summary = normalizeSummaryText(item.description);
@@ -113,9 +109,8 @@ function normalizeRssSettings(settings: unknown): IRssSettings | null {
   if (!Array.isArray(rss.feeds)) return null;
   return {
     enabled: rss.enabled === true,
-    pollIntervalMinutes: typeof rss.pollIntervalMinutes === 'number'
-      ? rss.pollIntervalMinutes
-      : config.rss.defaultPollIntervalMinutes,
+    pollIntervalMinutes:
+      typeof rss.pollIntervalMinutes === 'number' ? rss.pollIntervalMinutes : config.rss.defaultPollIntervalMinutes,
     feeds: rss.feeds as IRssFeed[],
   };
 }
@@ -176,7 +171,12 @@ function toRichPreviewLink(value: string): string {
   return value;
 }
 
-function pickWebhookDisplayName(feed: IRssFeed, parsedTitle: string | null, itemAuthor: string | null, itemLink: string): string {
+function pickWebhookDisplayName(
+  feed: IRssFeed,
+  parsedTitle: string | null,
+  itemAuthor: string | null,
+  itemLink: string,
+): string {
   const configured = typeof feed.name === 'string' ? feed.name.trim() : '';
   if (configured) return truncate(configured, 80);
 
@@ -303,9 +303,7 @@ class RssPollerService {
       };
     }
 
-    const feeds = requestedFeedId
-      ? rss.feeds.filter((feed) => feed?.id === requestedFeedId)
-      : rss.feeds;
+    const feeds = requestedFeedId ? rss.feeds.filter((feed) => feed?.id === requestedFeedId) : rss.feeds;
 
     if (requestedFeedId && feeds.length === 0) {
       return {
@@ -485,15 +483,12 @@ class RssPollerService {
     if (!rest || typeof rest.post !== 'function') return null;
 
     try {
-      const created = await rest.post(
-        Routes.channelWebhooks(feed.channelId),
-        {
-          auth: true,
-          body: {
-            name: truncate(name || 'Fluxy RSS', 80),
-          },
+      const created = (await rest.post(Routes.channelWebhooks(feed.channelId), {
+        auth: true,
+        body: {
+          name: truncate(name || 'Fluxy RSS', 80),
         },
-      ) as { id?: string; token?: string | null };
+      })) as { id?: string; token?: string | null };
 
       if (typeof created?.id !== 'string' || !created.id) return null;
       if (typeof created?.token !== 'string' || !created.token) return null;
@@ -513,7 +508,12 @@ class RssPollerService {
     feed: IRssFeed,
     parsedTitle: string | null,
   ): Promise<WebhookTarget | null> {
-    if (typeof feed.webhookId === 'string' && feed.webhookId && typeof feed.webhookToken === 'string' && feed.webhookToken) {
+    if (
+      typeof feed.webhookId === 'string' &&
+      feed.webhookId &&
+      typeof feed.webhookToken === 'string' &&
+      feed.webhookToken
+    ) {
       return {
         id: feed.webhookId,
         token: feed.webhookToken,
@@ -525,7 +525,8 @@ class RssPollerService {
         ? feed.webhookName
         : typeof feed.name === 'string' && feed.name.trim().length > 0
           ? feed.name
-          : parsedTitle || 'Fluxy RSS').trim(),
+          : parsedTitle || 'Fluxy RSS'
+      ).trim(),
       80,
     );
 
@@ -695,9 +696,7 @@ class RssPollerService {
 
           const webhookBasePayload: Record<string, unknown> = {
             username: webhookName,
-            allowed_mentions: mention
-              ? { parse: [], roles: [feed.mentionRoleId as string] }
-              : { parse: [] },
+            allowed_mentions: mention ? { parse: [], roles: [feed.mentionRoleId as string] } : { parse: [] },
           };
 
           if (webhookAvatarUrl) {
@@ -722,9 +721,7 @@ class RssPollerService {
           } else {
             const title = truncate(item.title || sourceTitle, 256);
             const summary = buildEmbedSummary(item, feed.includeSummary);
-            const description = summary
-              ? summary
-              : item.link;
+            const description = summary ? summary : item.link;
 
             const embed = new EmbedBuilder()
               .setTitle(title)

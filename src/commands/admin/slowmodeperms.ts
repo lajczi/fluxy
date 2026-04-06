@@ -19,13 +19,13 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.admin.slowmodeperms.serverOnly'));
+      return void (await message.reply(t('en', 'commands.admin.slowmodeperms.serverOnly')));
     }
 
     const subcommand = args[0]?.toLowerCase();
 
     if (!subcommand || !['add', 'remove', 'list', 'clear'].includes(subcommand)) {
-      return void await message.reply(t('en', 'commands.admin.slowmodeperms.usage', { prefix }));
+      return void (await message.reply(t('en', 'commands.admin.slowmodeperms.usage', { prefix })));
     }
 
     try {
@@ -36,7 +36,7 @@ const command: Command = {
         case 'add': {
           const roleArg = args[1];
           if (!roleArg) {
-            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.roleRequiredUsageAdd', { prefix }));
+            return void (await message.reply(t(lang, 'commands.admin.slowmodeperms.roleRequiredUsageAdd', { prefix })));
           }
 
           const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
@@ -46,19 +46,23 @@ const command: Command = {
           } else if (/^\d{17,19}$/.test(roleArg)) {
             roleId = roleArg;
           } else {
-            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.invalidRole'));
+            return void (await message.reply(t(lang, 'commands.admin.slowmodeperms.invalidRole')));
           }
 
           let role = guild.roles?.get(roleId);
           if (!role) {
-            try { role = await guild.fetchRole(roleId); } catch {}
+            try {
+              role = await guild.fetchRole(roleId);
+            } catch {}
           }
           if (!role) {
-            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.roleDoesNotExist'));
+            return void (await message.reply(t(lang, 'commands.admin.slowmodeperms.roleDoesNotExist')));
           }
 
           if (settings.slowmodeAllowedRoles?.includes(roleId)) {
-            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.alreadyAllowed', { roleName: role.name }));
+            return void (await message.reply(
+              t(lang, 'commands.admin.slowmodeperms.alreadyAllowed', { roleName: role.name }),
+            ));
           }
 
           if (!settings.slowmodeAllowedRoles) {
@@ -68,13 +72,17 @@ const command: Command = {
           await settings.save();
           settingsCache.invalidate(guild.id);
 
-          return void await message.reply(t(lang, 'commands.admin.slowmodeperms.added', { roleName: role.name, prefix }));
+          return void (await message.reply(
+            t(lang, 'commands.admin.slowmodeperms.added', { roleName: role.name, prefix }),
+          ));
         }
 
         case 'remove': {
           const roleArg = args[1];
           if (!roleArg) {
-            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.roleRequiredUsageRemove', { prefix }));
+            return void (await message.reply(
+              t(lang, 'commands.admin.slowmodeperms.roleRequiredUsageRemove', { prefix }),
+            ));
           }
 
           const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
@@ -84,47 +92,47 @@ const command: Command = {
           } else if (/^\d{17,19}$/.test(roleArg)) {
             roleId = roleArg;
           } else {
-            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.invalidRole'));
+            return void (await message.reply(t(lang, 'commands.admin.slowmodeperms.invalidRole')));
           }
 
           if (!settings.slowmodeAllowedRoles?.includes(roleId)) {
-            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.notInAllowlist'));
+            return void (await message.reply(t(lang, 'commands.admin.slowmodeperms.notInAllowlist')));
           }
 
           settings.slowmodeAllowedRoles = settings.slowmodeAllowedRoles.filter((id: string) => id !== roleId);
           await settings.save();
           settingsCache.invalidate(guild.id);
 
-          const note = settings.slowmodeAllowedRoles.length === 0
-            ? t(lang, 'commands.admin.slowmodeperms.noteAllowlistEmpty')
-            : '';
-          return void await message.reply(t(lang, 'commands.admin.slowmodeperms.removed', { roleId }) + note);
+          const note =
+            settings.slowmodeAllowedRoles.length === 0
+              ? t(lang, 'commands.admin.slowmodeperms.noteAllowlistEmpty')
+              : '';
+          return void (await message.reply(t(lang, 'commands.admin.slowmodeperms.removed', { roleId }) + note));
         }
 
         case 'list': {
           const roles: string[] = settings.slowmodeAllowedRoles || [];
 
           if (roles.length === 0) {
-            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.noAllowOverrides', { prefix }));
+            return void (await message.reply(t(lang, 'commands.admin.slowmodeperms.noAllowOverrides', { prefix })));
           }
 
           const roleList = roles.map((id: string) => `<@&${id}>`).join('\n');
-          return void await message.reply(t(lang, 'commands.admin.slowmodeperms.list', { roleList, prefix }));
+          return void (await message.reply(t(lang, 'commands.admin.slowmodeperms.list', { roleList, prefix })));
         }
 
         case 'clear': {
           if (!settings.slowmodeAllowedRoles || settings.slowmodeAllowedRoles.length === 0) {
-            return void await message.reply(t(lang, 'commands.admin.slowmodeperms.noOverridesToClear'));
+            return void (await message.reply(t(lang, 'commands.admin.slowmodeperms.noOverridesToClear')));
           }
 
           settings.slowmodeAllowedRoles = [];
           await settings.save();
           settingsCache.invalidate(guild.id);
 
-          return void await message.reply(t(lang, 'commands.admin.slowmodeperms.clearedAll', { prefix }));
+          return void (await message.reply(t(lang, 'commands.admin.slowmodeperms.clearedAll', { prefix })));
         }
       }
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -136,7 +144,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.admin.slowmodeperms.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

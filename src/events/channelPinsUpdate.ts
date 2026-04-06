@@ -21,15 +21,19 @@ const event: BotEvent = {
         0x3498db,
         [
           { name: 'Channel', value: `<#${channelId}>`, inline: true },
-          { name: 'Pinned At', value: lastPin ? `<t:${Math.floor(new Date(lastPin).getTime() / 1000)}:R>` : 'Unknown', inline: true },
+          {
+            name: 'Pinned At',
+            value: lastPin ? `<t:${Math.floor(new Date(lastPin).getTime() / 1000)}:R>` : 'Unknown',
+            inline: true,
+          },
         ],
         client,
-        { footer: `Channel ID: ${channelId}`, eventType: 'channel_pins_update' }
+        { footer: `Channel ID: ${channelId}`, eventType: 'channel_pins_update' },
       );
     } catch (error) {
       console.error('Error in channelPinsUpdate event:', error);
     }
-  }
+  },
 };
 
 export default event;

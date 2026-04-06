@@ -10,7 +10,8 @@ import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'kick',
-  description: 'Remove a member from the server \u2014 they can rejoin with an invite. Reason is logged to the mod log channel',
+  description:
+    'Remove a member from the server \u2014 they can rejoin with an invite. Reason is logged to the mod log channel',
   usage: '<@user or user ID> [reason]',
   category: 'moderation',
   permissions: ['KickMembers'],
@@ -23,19 +24,19 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.moderation.kick.serverOnly'));
+      return void (await message.reply(t('en', 'commands.moderation.kick.serverOnly')));
     }
 
     const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
     const lang = normalizeLocale(guildSettings?.language);
 
     if (!args[0]) {
-      return void await message.reply(t(lang, 'commands.moderation.kick.usage', { prefix }));
+      return void (await message.reply(t(lang, 'commands.moderation.kick.usage', { prefix })));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply(t(lang, 'commands.moderation.kick.invalidUser'));
+      return void (await message.reply(t(lang, 'commands.moderation.kick.invalidUser')));
     }
 
     const reason = args.slice(1).join(' ').trim() || t(lang, 'commands.moderation.kick.noReasonProvided');
@@ -50,17 +51,17 @@ const command: Command = {
       try {
         targetMember = await guild.fetchMember(userId);
       } catch {
-        return void await message.reply(t(lang, 'commands.moderation.kick.userNotInServer'));
+        return void (await message.reply(t(lang, 'commands.moderation.kick.userNotInServer')));
       }
     }
 
     if (!targetMember) {
-      return void await message.reply(t(lang, 'commands.moderation.kick.userNotInServer'));
+      return void (await message.reply(t(lang, 'commands.moderation.kick.userNotInServer')));
     }
 
     const modCheck = canModerate(moderator, targetMember);
     if (!modCheck.canModerate) {
-      return void await message.reply(`${modCheck.reason}`);
+      return void (await message.reply(`${modCheck.reason}`));
     }
 
     const botUserId = client.user?.id;
@@ -75,7 +76,7 @@ const command: Command = {
     if (botMember) {
       const botCheck = canModerate(botMember as any, targetMember);
       if (!botCheck.canModerate) {
-        return void await message.reply(t(lang, 'commands.moderation.kick.cannotKickRoleHierarchy'));
+        return void (await message.reply(t(lang, 'commands.moderation.kick.cannotKickRoleHierarchy')));
       }
     }
 
@@ -87,8 +88,8 @@ const command: Command = {
         t(lang, 'commands.moderation.kick.success', {
           username: displayName,
           userId: targetMember.id,
-          reason
-        })
+          reason,
+        }),
       );
 
       await logModAction(guild, (message as any).author, targetMember.user || targetMember, 'kick', reason, { client });
@@ -98,9 +99,8 @@ const command: Command = {
         targetId: targetMember.id,
         userId: (message as any).author.id,
         action: 'kick',
-        reason
+        reason,
       });
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -112,7 +112,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.moderation.kick.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

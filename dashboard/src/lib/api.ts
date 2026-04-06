@@ -45,7 +45,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText })) as { error?: string; [key: string]: unknown };
+    const body = (await res.json().catch(() => ({ error: res.statusText }))) as {
+      error?: string;
+      [key: string]: unknown;
+    };
     const error = new Error(body.error || `HTTP ${res.status}`);
 
     if (res.status !== 401 && res.status !== 403) {
@@ -67,7 +70,7 @@ export const api = {
       const cached = getCached<T>(path);
       if (cached !== undefined) return Promise.resolve(cached);
     }
-    return request<T>(path).then(data => {
+    return request<T>(path).then((data) => {
       setCache(path, data);
       return data;
     });
@@ -75,13 +78,13 @@ export const api = {
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }).then(data => {
+    request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }).then((data) => {
       const base = path.replace(/\/[^/]+$/, '');
       invalidateCache(base);
       return data;
     }),
   delete: <T>(path: string) =>
-    request<T>(path, { method: 'DELETE' }).then(data => {
+    request<T>(path, { method: 'DELETE' }).then((data) => {
       const base = path.replace(/\/[^/]+$/, '');
       invalidateCache(base);
       return data;
@@ -436,12 +439,8 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
   const rawCustomCommands = Array.isArray(s.customCommands) ? s.customCommands : [];
 
   const normalizedRssFeeds: RssFeed[] = rssFeeds.slice(0, 5).map((feed: any, idx: number) => ({
-    id: typeof feed?.id === 'string' && feed.id.trim().length > 0
-      ? feed.id
-      : `feed-${idx + 1}`,
-    name: typeof feed?.name === 'string' && feed.name.trim().length > 0
-      ? feed.name.trim()
-      : null,
+    id: typeof feed?.id === 'string' && feed.id.trim().length > 0 ? feed.id : `feed-${idx + 1}`,
+    name: typeof feed?.name === 'string' && feed.name.trim().length > 0 ? feed.name.trim() : null,
     sourceType: feed?.sourceType === 'rsshub' ? 'rsshub' : 'rss',
     url: typeof feed?.url === 'string' ? feed.url : null,
     route: typeof feed?.route === 'string' ? feed.route : null,
@@ -451,9 +450,8 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
     webhookToken: typeof feed?.webhookToken === 'string' ? feed.webhookToken : null,
     webhookName: typeof feed?.webhookName === 'string' ? feed.webhookName : null,
     enabled: feed?.enabled !== false,
-    maxItemsPerPoll: typeof feed?.maxItemsPerPoll === 'number'
-      ? Math.max(1, Math.min(10, Math.floor(feed.maxItemsPerPoll)))
-      : 3,
+    maxItemsPerPoll:
+      typeof feed?.maxItemsPerPoll === 'number' ? Math.max(1, Math.min(10, Math.floor(feed.maxItemsPerPoll))) : 3,
     includeSummary: feed?.includeSummary !== false,
     includeImage: feed?.includeImage !== false,
     format: feed?.format === 'text' ? 'text' : 'embed',
@@ -468,12 +466,15 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
     enabled: cmd?.enabled !== false,
     actionType: cmd?.actionType === 'toggleRole' ? 'toggleRole' : 'reply',
     targetRoleId: typeof cmd?.targetRoleId === 'string' ? cmd.targetRoleId : null,
-    requiredRoleIds: Array.isArray(cmd?.requiredRoleIds) ? cmd.requiredRoleIds.filter((id: unknown) => typeof id === 'string') : [],
+    requiredRoleIds: Array.isArray(cmd?.requiredRoleIds)
+      ? cmd.requiredRoleIds.filter((id: unknown) => typeof id === 'string')
+      : [],
     requiredPermission: typeof cmd?.requiredPermission === 'string' ? cmd.requiredPermission : null,
-    allowedChannelIds: Array.isArray(cmd?.allowedChannelIds) ? cmd.allowedChannelIds.filter((id: unknown) => typeof id === 'string') : [],
-    cooldownSeconds: typeof cmd?.cooldownSeconds === 'number'
-      ? Math.max(0, Math.min(3600, Math.floor(cmd.cooldownSeconds)))
-      : 0,
+    allowedChannelIds: Array.isArray(cmd?.allowedChannelIds)
+      ? cmd.allowedChannelIds.filter((id: unknown) => typeof id === 'string')
+      : [],
+    cooldownSeconds:
+      typeof cmd?.cooldownSeconds === 'number' ? Math.max(0, Math.min(3600, Math.floor(cmd.cooldownSeconds))) : 0,
     deleteTrigger: !!cmd?.deleteTrigger,
   }));
 
@@ -622,9 +623,10 @@ export function normalizeSettings(s: Partial<GuildSettings> & { guildId: string 
 
     rss: {
       enabled: rss.enabled ?? false,
-      pollIntervalMinutes: typeof rss.pollIntervalMinutes === 'number'
-        ? Math.max(10, Math.min(1440, Math.floor(rss.pollIntervalMinutes)))
-        : 15,
+      pollIntervalMinutes:
+        typeof rss.pollIntervalMinutes === 'number'
+          ? Math.max(10, Math.min(1440, Math.floor(rss.pollIntervalMinutes)))
+          : 15,
       feeds: normalizedRssFeeds,
     },
 

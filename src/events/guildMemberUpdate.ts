@@ -6,10 +6,7 @@ import { generateWelcomeCard } from '../utils/welcomeCard';
 import { EmbedBuilder } from '@erinjs/core';
 
 function resolveWelcomeTriggerRoleId(settings: any, welcomeMessage: any): string | null {
-  return welcomeMessage?.triggerRoleId
-    ?? settings?.verification?.verifiedRoleId
-    ?? settings?.autoroleId
-    ?? null;
+  return welcomeMessage?.triggerRoleId ?? settings?.verification?.verifiedRoleId ?? settings?.autoroleId ?? null;
 }
 
 const event: BotEvent = {
@@ -45,7 +42,7 @@ const event: BotEvent = {
         fields.push({
           name: 'Roles Added',
           value: added.map((id: string) => `<@&${id}>`).join(', '),
-          inline: false
+          inline: false,
         });
       }
 
@@ -53,28 +50,22 @@ const event: BotEvent = {
         fields.push({
           name: 'Roles Removed',
           value: removed.map((id: string) => `<@&${id}>`).join(', '),
-          inline: false
+          inline: false,
         });
       }
 
-      const color = added.length > 0 && removed.length === 0
-        ? 0x2ecc71
-        : removed.length > 0 && added.length === 0
-          ? 0xe74c3c
-          : 0xf1c40f;
+      const color =
+        added.length > 0 && removed.length === 0
+          ? 0x2ecc71
+          : removed.length > 0 && added.length === 0
+            ? 0xe74c3c
+            : 0xf1c40f;
 
-      await logServerEvent(
-        guild,
-        'Member Roles Updated',
-        color,
-        fields,
-        client,
-        {
-          description: `<@${newMember.id}>'s roles were updated`,
-          footer: `User ID: ${newMember.id}`,
-          eventType: 'member_role_update',
-        }
-      );
+      await logServerEvent(guild, 'Member Roles Updated', color, fields, client, {
+        description: `<@${newMember.id}>'s roles were updated`,
+        footer: `User ID: ${newMember.id}`,
+        eventType: 'member_role_update',
+      });
 
       if (added.length > 0) {
         try {
@@ -90,8 +81,8 @@ const event: BotEvent = {
           let welcomeChannel: any;
           try {
             const channelsMap = guild.channels?.cache || guild.channels;
-            welcomeChannel = channelsMap?.get(wm.channelId)
-              ?? await client.channels.fetch(wm.channelId).catch(() => null);
+            welcomeChannel =
+              channelsMap?.get(wm.channelId) ?? (await client.channels.fetch(wm.channelId).catch(() => null));
           } catch {
             welcomeChannel = null;
           }
@@ -112,9 +103,8 @@ const event: BotEvent = {
             }
           }
 
-          const avatarURL = user?.displayAvatarURL?.({ size: 256, format: 'png' })
-            ?? user?.avatarURL
-            ?? '/assets/default-avatar.png';
+          const avatarURL =
+            user?.displayAvatarURL?.({ size: 256, format: 'png' }) ?? user?.avatarURL ?? '/assets/default-avatar.png';
 
           const sendOpts: any = {};
           let cardBuffer: Buffer | null = null;
@@ -122,11 +112,11 @@ const event: BotEvent = {
           if (wm.imageEnabled !== false) {
             try {
               cardBuffer = await generateWelcomeCard({
-                username:    newMember.displayName || user?.username || 'New Member',
+                username: newMember.displayName || user?.username || 'New Member',
                 avatarURL,
-                serverName:  guild.name,
+                serverName: guild.name,
                 memberCount: memberCount || 0,
-                card:        wm.card || {},
+                card: wm.card || {},
                 roleName,
               });
               sendOpts.files = [{ name: 'welcome.png', data: cardBuffer }];
@@ -135,12 +125,13 @@ const event: BotEvent = {
             }
           }
 
-          const replaceVars = (text: string) => text
-            .replace(/\\n/g, '\n')
-            .replace(/\{user\}/gi,   `<@${newMember.id}>`)
-            .replace(/\{server\}/gi, guild.name)
-            .replace(/\{count\}/gi,  String(memberCount || 0))
-            .replace(/\{role\}/gi,   roleName || 'None');
+          const replaceVars = (text: string) =>
+            text
+              .replace(/\\n/g, '\n')
+              .replace(/\{user\}/gi, `<@${newMember.id}>`)
+              .replace(/\{server\}/gi, guild.name)
+              .replace(/\{count\}/gi, String(memberCount || 0))
+              .replace(/\{role\}/gi, roleName || 'None');
 
           if (wm.message) {
             sendOpts.content = replaceVars(wm.message);
@@ -175,7 +166,7 @@ const event: BotEvent = {
     } catch (error) {
       console.error('Error in guildMemberUpdate event:', error);
     }
-  }
+  },
 };
 
 export default event;

@@ -11,12 +11,15 @@ function authRouteT(key: string): string {
   return t('en', `auditCatalog.api.routes.auth.${key}`);
 }
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, val] of pendingStates) {
-    if (now - val.createdAt > STATE_TTL) pendingStates.delete(key);
-  }
-}, 2 * 60 * 1000).unref();
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, val] of pendingStates) {
+      if (now - val.createdAt > STATE_TTL) pendingStates.delete(key);
+    }
+  },
+  2 * 60 * 1000,
+).unref();
 
 export function createAuthRouter(): Router {
   const router = Router();
@@ -82,7 +85,7 @@ export function createAuthRouter(): Router {
         return;
       }
 
-      const tokenData = await tokenRes.json() as {
+      const tokenData = (await tokenRes.json()) as {
         access_token?: string;
         refresh_token?: string;
         expires_in?: number;
@@ -135,7 +138,7 @@ export function createAuthRouter(): Router {
 
       if (!tokenRes.ok) return null;
 
-      const data = await tokenRes.json() as {
+      const data = (await tokenRes.json()) as {
         access_token?: string;
         refresh_token?: string;
       };
@@ -187,7 +190,7 @@ export function createAuthRouter(): Router {
 
       const user = await userRes.json();
       const responseData: Record<string, unknown> = {
-        ...user as object,
+        ...(user as object),
         isOwner: config.ownerId ? (user as any).id === config.ownerId : false,
       };
       res.json(responseData);

@@ -3,11 +3,7 @@ import { canManageRole } from '../../utils/permissions';
 import isNetworkError from '../../utils/isNetworkError';
 import settingsCache from '../../utils/settingsCache';
 import { t, normalizeLocale } from '../../i18n';
-import {
-  beginBulkRoleUpdateSuppression,
-  endBulkRoleUpdateSuppression,
-  logServerEvent,
-} from '../../utils/logger';
+import { beginBulkRoleUpdateSuppression, endBulkRoleUpdateSuppression, logServerEvent } from '../../utils/logger';
 
 const command: Command = {
   name: 'roleall',
@@ -20,33 +16,38 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.roleall.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.roleall.serverOnly')));
 
     const cached: any = await settingsCache.get(guild.id).catch(() => null);
     const lang = normalizeLocale(cached?.language);
 
     const roleArg = args[0];
-    if (!roleArg) return void await message.reply(t(lang, 'commands.admin.roleall.usage', { prefix }));
+    if (!roleArg) return void (await message.reply(t(lang, 'commands.admin.roleall.usage', { prefix })));
 
     const roleMention = roleArg.match(/^<@&(\d{17,19})>$/);
     let roleId: string;
     if (roleMention) roleId = roleMention[1];
     else if (/^\d{17,19}$/.test(roleArg)) roleId = roleArg;
-    else return void await message.reply(t(lang, 'commands.admin.roleall.invalidRole'));
+    else return void (await message.reply(t(lang, 'commands.admin.roleall.invalidRole')));
 
     let role = guild.roles?.get(roleId);
     if (!role) {
-      try { role = await guild.fetchRole(roleId); } catch {}
+      try {
+        role = await guild.fetchRole(roleId);
+      } catch {}
     }
-    if (!role) return void await message.reply(t(lang, 'commands.admin.roleall.roleDoesNotExist'));
+    if (!role) return void (await message.reply(t(lang, 'commands.admin.roleall.roleDoesNotExist')));
 
     let moderator = guild.members?.get(message.author.id);
     if (!moderator) {
-      try { moderator = await guild.fetchMember(message.author.id); } catch {}
+      try {
+        moderator = await guild.fetchMember(message.author.id);
+      } catch {}
     }
     if (moderator) {
       const check = canManageRole(moderator, role, guild);
-      if (!check.allowed) return void await message.reply(check.reason || t(lang, 'commands.admin.roleall.cannotManageRoleFallback'));
+      if (!check.allowed)
+        return void (await message.reply(check.reason || t(lang, 'commands.admin.roleall.cannotManageRoleFallback')));
     }
 
     await message.reply(t(lang, 'commands.admin.roleall.assigning', { roleName: role.name }));
@@ -69,11 +70,11 @@ const command: Command = {
       } else {
         console.error(`[${guildName}] Error in !roleall: ${err.message || err}`);
       }
-      return void await message.reply(t(lang, 'commands.admin.roleall.failedFetchMembers'));
+      return void (await message.reply(t(lang, 'commands.admin.roleall.failedFetchMembers')));
     }
 
     if (members.length === 0) {
-      return void await message.reply(t(lang, 'commands.admin.roleall.noMembersFound'));
+      return void (await message.reply(t(lang, 'commands.admin.roleall.noMembersFound')));
     }
 
     const needsRole = members.filter((m: any) => {
@@ -84,7 +85,8 @@ const command: Command = {
     });
 
     const skipped = members.filter((m: any) => !m.user?.bot).length - needsRole.length;
-    let assigned = 0, failed = 0;
+    let assigned = 0,
+      failed = 0;
 
     const BATCH_SIZE = 5;
     const BATCH_DELAY_MS = 1000;
@@ -93,16 +95,18 @@ const command: Command = {
     try {
       for (let i = 0; i < needsRole.length; i += BATCH_SIZE) {
         const batch = needsRole.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(async (m: any) => {
-          try {
-            await m.addRole(roleId);
-            assigned++;
-          } catch {
-            failed++;
-          }
-        }));
+        await Promise.all(
+          batch.map(async (m: any) => {
+            try {
+              await m.addRole(roleId);
+              assigned++;
+            } catch {
+              failed++;
+            }
+          }),
+        );
         if (i + BATCH_SIZE < needsRole.length) {
-          await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+          await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
         }
       }
     } finally {
@@ -129,11 +133,11 @@ const command: Command = {
         description: `Bulk role assignment completed for **${role.name}**.`,
         footer: `Role ID: ${roleId}`,
         eventType: 'member_role_update',
-      }
+      },
     ).catch(() => {});
 
-    return void await message.reply(result);
-  }
+    return void (await message.reply(result));
+  },
 };
 
 export default command;

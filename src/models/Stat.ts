@@ -11,23 +11,26 @@ export interface StatDocument extends IStat, Document {}
 
 export type StatModel = Model<StatDocument>;
 
-const statSchema = new Schema<StatDocument, StatModel>({
-  type: {
-    type: String,
-    required: true,
-    index: true,
+const statSchema = new Schema<StatDocument, StatModel>(
+  {
+    type: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    value: {
+      type: String,
+      required: true,
+    },
+    additionalData: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
   },
-  value: {
-    type: String,
-    required: true,
+  {
+    timestamps: { createdAt: true, updatedAt: false },
   },
-  additionalData: {
-    type: Schema.Types.Mixed,
-    default: null,
-  },
-}, {
-  timestamps: { createdAt: true, updatedAt: false },
-});
+);
 
 statSchema.index({ type: 1, createdAt: -1 });
 

@@ -3,17 +3,7 @@ import { api, type DailyStat, type TopCommand, type TopGuild, type StatsTotals }
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { BarChart3, TrendingUp, Server, Terminal } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 export function Stats() {
   const [totals, setTotals] = useState<StatsTotals | null>(null);
@@ -40,7 +30,7 @@ export function Stats() {
         setTopCommands(tc);
         setTopGuilds(tg);
       })
-      .catch(err => setError(err.message))
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [days]);
 
@@ -57,8 +47,18 @@ export function Stats() {
   }
 
   const summaryCards = [
-    { label: 'Total Commands', value: totals?.totalCommands?.toLocaleString() ?? '0', icon: Terminal, color: 'text-blue-400' },
-    { label: 'Mod Actions', value: totals?.totalModActions?.toLocaleString() ?? '0', icon: BarChart3, color: 'text-purple-400' },
+    {
+      label: 'Total Commands',
+      value: totals?.totalCommands?.toLocaleString() ?? '0',
+      icon: Terminal,
+      color: 'text-blue-400',
+    },
+    {
+      label: 'Mod Actions',
+      value: totals?.totalModActions?.toLocaleString() ?? '0',
+      icon: BarChart3,
+      color: 'text-purple-400',
+    },
     { label: 'Top Command', value: topCommands[0]?.command ?? 'N/A', icon: TrendingUp, color: 'text-green-400' },
     { label: 'Top Server', value: topGuilds[0]?.name ?? 'N/A', icon: Server, color: 'text-orange-400' },
   ];
@@ -86,7 +86,7 @@ export function Stats() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {summaryCards.map(card => (
+        {summaryCards.map((card) => (
           <Card key={card.label}>
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
@@ -117,15 +117,30 @@ export function Stats() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(217.2, 32.6%, 17.5%)" />
-                <XAxis dataKey="date" stroke="#6b7280" fontSize={12}
-                  tickFormatter={v => new Date(v).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} />
+                <XAxis
+                  dataKey="date"
+                  stroke="#6b7280"
+                  fontSize={12}
+                  tickFormatter={(v) => new Date(v).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                />
                 <YAxis stroke="#6b7280" fontSize={12} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: 'hsl(222.2, 84%, 6%)', border: '1px solid hsl(217.2, 32.6%, 17.5%)', borderRadius: '8px', color: '#fff' }}
-                  labelFormatter={v => new Date(v).toLocaleDateString()}
+                  contentStyle={{
+                    backgroundColor: 'hsl(222.2, 84%, 6%)',
+                    border: '1px solid hsl(217.2, 32.6%, 17.5%)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                  }}
+                  labelFormatter={(v) => new Date(v).toLocaleDateString()}
                 />
-                <Area type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2}
-                  fillOpacity={1} fill="url(#colorCount)" />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorCount)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -148,7 +163,12 @@ export function Stats() {
                   <XAxis type="number" stroke="#6b7280" fontSize={12} />
                   <YAxis type="category" dataKey="command" stroke="#6b7280" fontSize={12} width={80} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: 'hsl(222.2, 84%, 6%)', border: '1px solid hsl(217.2, 32.6%, 17.5%)', borderRadius: '8px', color: '#fff' }}
+                    contentStyle={{
+                      backgroundColor: 'hsl(222.2, 84%, 6%)',
+                      border: '1px solid hsl(217.2, 32.6%, 17.5%)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                    }}
                   />
                   <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                 </BarChart>

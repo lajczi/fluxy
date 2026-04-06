@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { api, type GuildSummary } from '../lib/api';
 import { Server, Settings, Search, Plus } from 'lucide-react';
 
-const BOT_INVITE_URL = 'https://web.fluxer.app/oauth2/authorize?client_id=1474069931333816428&scope=bot&permissions=4504699474930806';
+const BOT_INVITE_URL =
+  'https://web.fluxer.app/oauth2/authorize?client_id=1474069931333816428&scope=bot&permissions=4504699474930806';
 
 export function GuildSelector() {
   const [guilds, setGuilds] = useState<GuildSummary[]>([]);
@@ -12,18 +13,17 @@ export function GuildSelector() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    api.get<GuildSummary[]>('/guilds')
+    api
+      .get<GuildSummary[]>('/guilds')
       .then(setGuilds)
-      .catch(err => setError(err.message))
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = guilds.filter(g =>
-    g.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = guilds.filter((g) => g.name.toLowerCase().includes(search.toLowerCase()));
 
-  const botGuilds = filtered.filter(g => g.botPresent !== false);
-  const nonBotGuilds = filtered.filter(g => g.botPresent === false);
+  const botGuilds = filtered.filter((g) => g.botPresent !== false);
+  const nonBotGuilds = filtered.filter((g) => g.botPresent === false);
 
   if (loading) {
     return (
@@ -50,7 +50,7 @@ export function GuildSelector() {
             type="text"
             placeholder="Search servers..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-9 pr-4 py-2 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full sm:w-64"
           />
         </div>
@@ -59,16 +59,14 @@ export function GuildSelector() {
       {filtered.length === 0 ? (
         <div className="text-center py-12">
           <Server className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">
-            {search ? 'No servers match your search.' : 'No servers found.'}
-          </p>
+          <p className="text-gray-400">{search ? 'No servers match your search.' : 'No servers found.'}</p>
         </div>
       ) : (
         <>
           {/* Bot-present guilds */}
           {botGuilds.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {botGuilds.map(guild => (
+              {botGuilds.map((guild) => (
                 <Link
                   key={guild.id}
                   to={`/guilds/${guild.id}`}
@@ -109,7 +107,7 @@ export function GuildSelector() {
                 </div>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {nonBotGuilds.map(guild => (
+                {nonBotGuilds.map((guild) => (
                   <a
                     key={guild.id}
                     href={`${BOT_INVITE_URL}&guild_id=${guild.id}`}

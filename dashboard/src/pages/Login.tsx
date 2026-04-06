@@ -30,14 +30,18 @@ export function Login() {
             <input
               type="checkbox"
               checked={accepted}
-              onChange={e => setAccepted(e.target.checked)}
+              onChange={(e) => setAccepted(e.target.checked)}
               className="mt-1 h-4 w-4 rounded border-gray-600 bg-transparent text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
             />
             <span className="text-sm text-gray-400">
               I agree to the{' '}
-              <Link to="/terms" className="text-blue-400 hover:underline">Terms of Service</Link>
-              {' '}and{' '}
-              <Link to="/privacy" className="text-blue-400 hover:underline">Privacy Policy</Link>
+              <Link to="/terms" className="text-blue-400 hover:underline">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link to="/privacy" className="text-blue-400 hover:underline">
+                Privacy Policy
+              </Link>
             </span>
           </label>
 
@@ -51,9 +55,13 @@ export function Login() {
         </div>
 
         <div className="text-center text-xs text-gray-500">
-          <Link to="/privacy" className="hover:text-gray-300">Privacy Policy</Link>
+          <Link to="/privacy" className="hover:text-gray-300">
+            Privacy Policy
+          </Link>
           <span className="mx-2">-</span>
-          <Link to="/terms" className="hover:text-gray-300">Terms of Service</Link>
+          <Link to="/terms" className="hover:text-gray-300">
+            Terms of Service
+          </Link>
         </div>
       </div>
     </div>

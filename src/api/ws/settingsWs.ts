@@ -41,8 +41,8 @@ async function verifyGuildAccess(token: string, guildId: string): Promise<boolea
     });
     if (!res.ok) return false;
 
-    const guilds = await res.json() as Array<{ id: string; owner_id?: string; permissions?: string | null }>;
-    const guild = guilds.find(g => g.id === guildId);
+    const guilds = (await res.json()) as Array<{ id: string; owner_id?: string; permissions?: string | null }>;
+    const guild = guilds.find((g) => g.id === guildId);
     if (!guild) return false;
 
     const perms = guild.permissions ? BigInt(guild.permissions) : 0n;
@@ -97,7 +97,9 @@ export function setupSettingsWebSocket(httpServer: HttpServer): void {
           const subs = clientSubscriptions.get(ws);
           subs?.delete(msg.unsubscribe);
         }
-      } catch { /* ignore malformed messages */ }
+      } catch {
+        /* ignore malformed messages */
+      }
     });
 
     ws.on('close', () => {

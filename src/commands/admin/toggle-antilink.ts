@@ -15,7 +15,7 @@ const command: Command = {
   async execute(message, _args, client) {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.toggleAntilink.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.toggleAntilink.serverOnly')));
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
@@ -39,7 +39,9 @@ const command: Command = {
       await message.reply(reply);
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn(`[${guild?.name || 'Unknown Server'}] Fluxer API unreachable during !toggle-antilink (ECONNRESET)`);
+        console.warn(
+          `[${guild?.name || 'Unknown Server'}] Fluxer API unreachable during !toggle-antilink (ECONNRESET)`,
+        );
       } else {
         console.error(`[${guild?.name || 'Unknown Server'}] Error in !toggle-antilink: ${error.message || error}`);
         const cached: any = await settingsCache.get(guild.id).catch(() => null);
@@ -47,7 +49,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.admin.toggleAntilink.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

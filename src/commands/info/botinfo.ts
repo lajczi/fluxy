@@ -29,7 +29,7 @@ async function fetchAccurateGuildCount(client: any): Promise<number> {
     let after: string | undefined;
     while (true) {
       const route = `${Routes.currentUserGuilds()}?limit=200${after ? `&after=${after}` : ''}`;
-      const response = await client.rest.get(route) as any;
+      const response = (await client.rest.get(route)) as any;
       const page = Array.isArray(response) ? response : (response?.guilds ?? []);
       total += page.length;
       if (page.length < 200) break;
@@ -74,17 +74,28 @@ const command: Command = {
         .setColor(0x3498db)
         .setThumbnail(botUser?.avatarURL?.() || null)
         .addFields(
-          { name: t(lang, 'commands.botinfo.labelId'), value: botUser?.id || t(lang, 'commands.botinfo.unknown'), inline: true },
+          {
+            name: t(lang, 'commands.botinfo.labelId'),
+            value: botUser?.id || t(lang, 'commands.botinfo.unknown'),
+            inline: true,
+          },
           { name: t(lang, 'commands.botinfo.labelVersion'), value: packageJson.version || '1.0.0', inline: true },
           { name: t(lang, 'commands.botinfo.labelUptime'), value: uptimeString, inline: true },
-          { name: t(lang, 'commands.botinfo.labelMemory'), value: t(lang, 'commands.botinfo.memoryFormat', { usedMemory, totalMemory }), inline: true },
+          {
+            name: t(lang, 'commands.botinfo.labelMemory'),
+            value: t(lang, 'commands.botinfo.memoryFormat', { usedMemory, totalMemory }),
+            inline: true,
+          },
           { name: t(lang, 'commands.botinfo.labelServers'), value: String(guildCount), inline: true },
           { name: t(lang, 'commands.botinfo.labelNode'), value: process.version, inline: true },
-          { name: t(lang, 'commands.botinfo.labelLibrary'), value: t(lang, 'commands.botinfo.libraryName'), inline: true },
+          {
+            name: t(lang, 'commands.botinfo.labelLibrary'),
+            value: t(lang, 'commands.botinfo.libraryName'),
+            inline: true,
+          },
         );
 
       await message.reply({ embeds: [embed] });
-
     } catch (error: any) {
       const guildName = (message as any).guild?.name || 'Unknown';
       if (isNetworkError(error)) {
@@ -94,7 +105,7 @@ const command: Command = {
         message.reply(t('en', 'commands.botinfo.errorFetchFailed')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

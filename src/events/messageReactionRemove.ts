@@ -28,9 +28,7 @@ const event: BotEvent = {
 
       const targetMessageIsBotAuthored = await isReactionOnBotMessage(client, reaction);
       if (!targetMessageIsBotAuthored) {
-        const emojiDisplay = reaction.emoji.id
-          ? `<:${reaction.emoji.name}:${reaction.emoji.id}>`
-          : reaction.emoji.name;
+        const emojiDisplay = reaction.emoji.id ? `<:${reaction.emoji.name}:${reaction.emoji.id}>` : reaction.emoji.name;
 
         await logServerEvent(
           guild,
@@ -46,8 +44,8 @@ const event: BotEvent = {
             description: `[Jump to message](https://fluxer.app/channels/${reaction.guildId}/${reaction.channelId}/${reaction.messageId})`,
             footer: `Message ID: ${reaction.messageId}`,
             eventType: 'reaction_remove',
-          }
-        ).catch(() => { });
+          },
+        ).catch(() => {});
       }
 
       const starboards = getActiveStarboards(settings);
@@ -60,8 +58,10 @@ const event: BotEvent = {
         for (const board of starboards) {
           const configEmoji = board.emoji ?? '⭐';
           const emojiMatches = reaction.emoji.id
-            ? (starEmojiRaw === configEmoji || `<:${starEmojiRaw}>` === configEmoji || `<a:${starEmojiRaw}>` === configEmoji)
-            : (stripVS(starEmojiRaw) === stripVS(configEmoji));
+            ? starEmojiRaw === configEmoji ||
+              `<:${starEmojiRaw}>` === configEmoji ||
+              `<a:${starEmojiRaw}>` === configEmoji
+            : stripVS(starEmojiRaw) === stripVS(configEmoji);
 
           if (!emojiMatches) continue;
 
@@ -89,11 +89,14 @@ const event: BotEvent = {
                 }
               } else if (entry.starboardMessageId && board.channelId) {
                 try {
-                  const origMsg = await client.rest.get(Routes.channelMessage(reaction.channelId, reaction.messageId)) as any;
+                  const origMsg = (await client.rest.get(
+                    Routes.channelMessage(reaction.channelId, reaction.messageId),
+                  )) as any;
                   if (origMsg) {
-                    const content = origMsg.content?.length > 1024
-                      ? origMsg.content.substring(0, 1021) + '...'
-                      : (origMsg.content || '');
+                    const content =
+                      origMsg.content?.length > 1024
+                        ? origMsg.content.substring(0, 1021) + '...'
+                        : origMsg.content || '';
 
                     const starEmoji = getStarEmoji(entry.starCount);
                     const starColor = getStarColor(entry.starCount);
@@ -118,11 +121,19 @@ const event: BotEvent = {
                           channelId: reaction.channelId,
                           messageId: reaction.messageId,
                         }),
-                        inline: true
+                        inline: true,
                       },
-                      { name: t('en', 'commands.report.fieldChannel'), value: `<#${reaction.channelId}>`, inline: true },
+                      {
+                        name: t('en', 'commands.report.fieldChannel'),
+                        value: `<#${reaction.channelId}>`,
+                        inline: true,
+                      },
                     );
-                    starEmbed.setFooter({ text: t('en', 'auditCatalog.events.messageReactionRemove.l116_setFooter', { 'reaction.messageId': reaction.messageId }) });
+                    starEmbed.setFooter({
+                      text: t('en', 'auditCatalog.events.messageReactionRemove.l116_setFooter', {
+                        'reaction.messageId': reaction.messageId,
+                      }),
+                    });
 
                     if (origMsg.attachments?.length > 0) {
                       const img = origMsg.attachments.find((a: any) => a.content_type?.startsWith('image/'));
@@ -149,17 +160,13 @@ const event: BotEvent = {
       if (!reactionRoles || reactionRoles.length === 0) return;
 
       const reactionConfig = reactionRoles.find(
-        (rr: any) => rr.messageId === reaction.messageId && rr.channelId === reaction.channelId
+        (rr: any) => rr.messageId === reaction.messageId && rr.channelId === reaction.channelId,
       );
       if (!reactionConfig) return;
 
-      const emojiIdentifier = reaction.emoji.id
-        ? `${reaction.emoji.name}:${reaction.emoji.id}`
-        : reaction.emoji.name;
+      const emojiIdentifier = reaction.emoji.id ? `${reaction.emoji.name}:${reaction.emoji.id}` : reaction.emoji.name;
 
-      const roleMapping = reactionConfig.roles.find(
-        (r: any) => r.emoji === emojiIdentifier
-      );
+      const roleMapping = reactionConfig.roles.find((r: any) => r.emoji === emojiIdentifier);
       if (!roleMapping) return;
 
       let member = guild.members?.get(user.id);
@@ -218,13 +225,12 @@ const event: BotEvent = {
           const restoredName = restoredRole?.name || roleMapping.removeRoleId;
           dmMsg = `Your role has been switched back from **${roleName}** to **${restoredName}** in **${guild.name}**.`;
         }
-        user.send(dmMsg).catch(() => { });
+        user.send(dmMsg).catch(() => {});
       }
-
     } catch (error) {
       console.error('Error in messageReactionRemove event:', error);
     }
-  }
+  },
 };
 
 export default event;

@@ -2,11 +2,7 @@ import { t } from '../i18n';
 
 export function isPermDenied(error: any): boolean {
   if (!error) return false;
-  return (
-    error?.code === 50013 ||
-    error?.statusCode === 403 ||
-    /permissions?/i.test(error?.message || '')
-  );
+  return error?.code === 50013 || error?.statusCode === 403 || /permissions?/i.test(error?.message || '');
 }
 
 const PERM_MESSAGE_KEYS = {

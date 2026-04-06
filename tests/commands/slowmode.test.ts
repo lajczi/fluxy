@@ -5,11 +5,11 @@ jest.mock('@erinjs/core', () => ({
     Administrator: 0x8n,
     ManageGuild: 0x20n,
     ManageChannels: 0x10n,
-  }
+  },
 }));
 
 jest.mock('../../src/utils/settingsCache', () => ({
-  get: jest.fn()
+  get: jest.fn(),
 }));
 
 import settingsCache from '../../src/utils/settingsCache';
@@ -98,7 +98,7 @@ describe('slowmode command permission checks', () => {
     const msg = makeMessage(member, guild);
 
     settingsCacheMock.get.mockResolvedValue({
-      slowmodeAllowedRoles: ['mod-role-id']
+      slowmodeAllowedRoles: ['mod-role-id'],
     });
 
     await slowmode.execute(msg, [], null);
@@ -112,14 +112,12 @@ describe('slowmode command permission checks', () => {
     const msg = makeMessage(member, guild);
 
     settingsCacheMock.get.mockResolvedValue({
-      slowmodeAllowedRoles: ['mod-role-id']
+      slowmodeAllowedRoles: ['mod-role-id'],
     });
 
     await slowmode.execute(msg, [], null);
 
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('Manage Channels')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('Manage Channels'));
   });
 
   test('user without perms and empty allowlist is denied', async () => {
@@ -128,14 +126,12 @@ describe('slowmode command permission checks', () => {
     const msg = makeMessage(member, guild);
 
     settingsCacheMock.get.mockResolvedValue({
-      slowmodeAllowedRoles: []
+      slowmodeAllowedRoles: [],
     });
 
     await slowmode.execute(msg, [], null);
 
-    expect(msg.reply).toHaveBeenCalledWith(
-      expect.stringContaining('Manage Channels')
-    );
+    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('Manage Channels'));
   });
 });
 

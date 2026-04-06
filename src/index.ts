@@ -12,12 +12,12 @@ import log from './utils/consoleLogger';
 import GuildSettings from './models/GuildSettings';
 import { getWorkerStats } from './utils/workerStats';
 
-
 const origHandleHello = (WebSocketShard.prototype as any).handleHello;
 (WebSocketShard.prototype as any).handleHello = function (this: any, data: any) {
   const origSend = this.send.bind(this);
   this.send = (payload: any) => {
-    if (payload?.op === 2 && payload.d) { // GatewayOpcodes.Identify
+    if (payload?.op === 2 && payload.d) {
+      // GatewayOpcodes.Identify
       payload.d.shard = [this.options.shardId, this.options.numShards];
     }
     origSend(payload);
@@ -37,7 +37,9 @@ WebSocketShard.prototype.connect = function (this: any) {
   let burstActive = true;
   const BURST_HB_EVERY = 100;
   const BURST_DURATION = 30_000;
-  setTimeout(() => { burstActive = false; }, BURST_DURATION);
+  setTimeout(() => {
+    burstActive = false;
+  }, BURST_DURATION);
 
   const onBurstMessage = () => {
     if (!burstActive) return;
@@ -45,7 +47,9 @@ WebSocketShard.prototype.connect = function (this: any) {
     if (burstEventCount % BURST_HB_EVERY === 0) {
       const seq = this.seq;
       if (seq !== null && ws.readyState === 1) {
-        try { ws.send(JSON.stringify({ op: 1, d: seq })); } catch { }
+        try {
+          ws.send(JSON.stringify({ op: 1, d: seq }));
+        } catch {}
       }
     }
   };
@@ -57,12 +61,8 @@ WebSocketShard.prototype.connect = function (this: any) {
   }
 };
 
-const assignedShardIds = process.env.SHARD_IDS
-  ? process.env.SHARD_IDS.split(',').map(Number)
-  : undefined;
-const assignedTotalShards = process.env.TOTAL_SHARDS
-  ? parseInt(process.env.TOTAL_SHARDS, 10)
-  : undefined;
+const assignedShardIds = process.env.SHARD_IDS ? process.env.SHARD_IDS.split(',').map(Number) : undefined;
+const assignedTotalShards = process.env.TOTAL_SHARDS ? parseInt(process.env.TOTAL_SHARDS, 10) : undefined;
 const isManagedWorker = assignedShardIds !== undefined && assignedTotalShards !== undefined;
 
 if (isManagedWorker) {
@@ -89,9 +89,7 @@ function ownsGuild(guildId: string): boolean {
   }
 }
 
-const GUILD_ID_IN_ROOT = new Set([
-  'GUILD_CREATE', 'GUILD_UPDATE', 'GUILD_DELETE',
-]);
+const GUILD_ID_IN_ROOT = new Set(['GUILD_CREATE', 'GUILD_UPDATE', 'GUILD_DELETE']);
 
 function extractGuildId(d: any, t: string | undefined): string | undefined {
   if (d?.guild_id) return String(d.guild_id);
@@ -147,11 +145,11 @@ if (config.glitchtip.dsn) {
   const originalConsoleError = console.error;
   console.error = (...args: any[]) => {
     originalConsoleError.apply(console, args);
-    const err = args.find(a => a instanceof Error);
+    const err = args.find((a) => a instanceof Error);
     if (err) {
       GlitchTip.captureException(err);
     } else {
-      const message = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+      const message = args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
       GlitchTip.captureMessage(message, 'error');
     }
   };
@@ -183,7 +181,6 @@ const eventHandler = new EventHandler(client);
  * if an error is a transient network/WebSocket error, bot will be okie
  */
 function isTransientError(error: any): boolean {
-
   if (isNetworkError(error)) return true;
 
   const errorMessage = error?.message?.toLowerCase() || '';
@@ -240,7 +237,7 @@ async function attemptMongoReconnect(): Promise<void> {
   while (!isShuttingDown) {
     const delay = delays[Math.min(attempt, delays.length - 1)];
     log.warn('MongoDB', `Reconnecting in ${delay / 1000}s (attempt ${attempt + 1})...`);
-    await new Promise(r => setTimeout(r, delay));
+    await new Promise((r) => setTimeout(r, delay));
 
     if (isShuttingDown) break;
     if (mongoose.connection.readyState === 1) {
@@ -283,7 +280,7 @@ async function connectDatabase(): Promise<void> {
         log.fatal('MongoDB', 'Connection failed after all retries. Exiting.');
         process.exit(1);
       }
-      await new Promise(r => setTimeout(r, 3000 * attempt));
+      await new Promise((r) => setTimeout(r, 3000 * attempt));
     }
   }
 }
@@ -294,9 +291,7 @@ async function connectDatabase(): Promise<void> {
 async function init(): Promise<void> {
   const initStart = Date.now();
 
-  log.banner([
-    `${log.c.bold}${log.c.bCyan}Fluxy${log.c.reset}  ${log.c.gray}v2.0.0${log.c.reset}`,
-  ]);
+  log.banner([`${log.c.bold}${log.c.bCyan}Fluxy${log.c.reset}  ${log.c.gray}v2.0.0${log.c.reset}`]);
 
   log.divider('Startup');
 
@@ -326,20 +321,20 @@ async function init(): Promise<void> {
         let page: any[];
         do {
           const url = '/users/@me/guilds' + (after ? `?after=${after}&limit=200` : '?limit=200');
-          const res = await client.rest.get(url) as any;
+          const res = (await client.rest.get(url)) as any;
           page = Array.isArray(res) ? res : (res?.guilds ?? []);
           total += page.length;
           if (page.length === 200) after = page[page.length - 1].id;
         } while (page.length === 200);
         guildCount = total;
-      } catch { }
+      } catch {}
       if (guildCount === null) {
         guildCount = await GuildSettings.countDocuments();
         log.warn('Presence', 'Using DB count (API unavailable)');
       }
       BOT_PRESENCE.custom_status.text = `Watching ${guildCount} servers`;
       log.step(`Presence set: Watching ${guildCount} servers`, null);
-    } catch { }
+    } catch {}
 
     const loginStart = Date.now();
     await client.login(config.token);
@@ -358,7 +353,6 @@ async function init(): Promise<void> {
     console.log('');
     log.ok('Startup', `Init complete in ${Date.now() - initStart}ms`);
     console.log('');
-
   } catch (error: any) {
     log.fatal('Startup', `Initialization error: ${error.message || error}`);
     process.exit(1);
@@ -384,13 +378,19 @@ client.on(Events.Error, (error: any) => {
 
     if (!outageStartedAt) outageStartedAt = now;
 
-    if (wsErrorTimestamps.length >= WS_WATCHDOG_THRESHOLD && (now - outageStartedAt) > MAX_OUTAGE_DURATION) {
-      log.fatal('Watchdog', `${WS_WATCHDOG_THRESHOLD}+ errors over ${Math.round((now - outageStartedAt) / 60000)}min sustained outage. Restarting for PM2.`);
+    if (wsErrorTimestamps.length >= WS_WATCHDOG_THRESHOLD && now - outageStartedAt > MAX_OUTAGE_DURATION) {
+      log.fatal(
+        'Watchdog',
+        `${WS_WATCHDOG_THRESHOLD}+ errors over ${Math.round((now - outageStartedAt) / 60000)}min sustained outage. Restarting for PM2.`,
+      );
       process.exit(1);
     }
 
     if (wsErrorTimestamps.length % 5 === 1 || wsErrorTimestamps.length <= 3) {
-      log.warn('Network', `Hiccup ${wsErrorTimestamps.length}/${WS_WATCHDOG_THRESHOLD} - ${error.message || error} - SDK retrying`);
+      log.warn(
+        'Network',
+        `Hiccup ${wsErrorTimestamps.length}/${WS_WATCHDOG_THRESHOLD} - ${error.message || error} - SDK retrying`,
+      );
     }
 
     const glitchtipThresholds = [10, 20, 35, WS_WATCHDOG_THRESHOLD];
@@ -402,7 +402,11 @@ client.on(Events.Error, (error: any) => {
         GlitchTip.captureMessage(`Gateway connectivity degraded: ${count} WebSocket errors in ${outageDuration}s`, {
           level: 'warning',
           tags: { source: 'ws_watchdog', threshold: String(threshold) },
-          extra: { errorCount: count, outageDurationSeconds: outageDuration, lastError: error.message || String(error) },
+          extra: {
+            errorCount: count,
+            outageDurationSeconds: outageDuration,
+            lastError: error.message || String(error),
+          },
         });
         break;
       }
@@ -440,10 +444,16 @@ client.on(Events.Debug, (message: string) => {
       invalidSessionTimestamps.shift();
     }
 
-    log.warn('Recovery', `Invalid session (${consecutiveInvalidSessions}/${MAX_CONSECUTIVE_INVALID_SESSIONS}) - patched SDK will close WS and reconnect`);
+    log.warn(
+      'Recovery',
+      `Invalid session (${consecutiveInvalidSessions}/${MAX_CONSECUTIVE_INVALID_SESSIONS}) - patched SDK will close WS and reconnect`,
+    );
 
     if (consecutiveInvalidSessions >= MAX_CONSECUTIVE_INVALID_SESSIONS) {
-      log.fatal('Recovery', `${consecutiveInvalidSessions} consecutive invalid sessions - token may be invalid. Exiting for PM2.`);
+      log.fatal(
+        'Recovery',
+        `${consecutiveInvalidSessions} consecutive invalid sessions - token may be invalid. Exiting for PM2.`,
+      );
       GlitchTip.captureMessage(`Invalid session circuit breaker: ${consecutiveInvalidSessions} consecutive`, 'fatal');
       GlitchTip.flush(2000).then(() => process.exit(1));
     }
@@ -452,7 +462,10 @@ client.on(Events.Debug, (message: string) => {
 
   if (message.includes('Closed: 4013')) {
     consecutiveClosed4013++;
-    log.warn('Recovery', `Gateway 4013 (${consecutiveClosed4013}/${MAX_CONSECUTIVE_CLOSED_4013}) - shard will auto-reconnect`);
+    log.warn(
+      'Recovery',
+      `Gateway 4013 (${consecutiveClosed4013}/${MAX_CONSECUTIVE_CLOSED_4013}) - shard will auto-reconnect`,
+    );
 
     if (consecutiveClosed4013 > MAX_CONSECUTIVE_CLOSED_4013) {
       log.fatal('Recovery', `${consecutiveClosed4013} consecutive 4013 closes. Exiting for PM2.`);
@@ -460,7 +473,6 @@ client.on(Events.Debug, (message: string) => {
       GlitchTip.flush(2000).then(() => process.exit(1));
     }
   }
-
 });
 
 client.on(Events.Ready, () => {
@@ -479,35 +491,49 @@ client.on(Events.Ready, () => {
   }
 
   if (isManagedWorker && process.send) {
-    for (const sid of (assignedShardIds ?? [])) {
+    for (const sid of assignedShardIds ?? []) {
       process.send({ type: 'shardReady', shardId: sid });
     }
   }
 
   setTimeout(async () => {
-    const count = isManagedWorker ? await fetchTotalGuildCount() : (client.guilds?.size || 0);
+    const count = isManagedWorker ? await fetchTotalGuildCount() : client.guilds?.size || 0;
     if (count > 0) {
       BOT_PRESENCE.custom_status.text = `Watching ${count} servers`;
       log.info('Presence', `Guild count: ${count} servers`);
     }
 
     if (!(client as any)._presenceInterval) {
-      (client as any)._presenceInterval = setInterval(async () => {
-        const c = isManagedWorker ? await fetchTotalGuildCount() : (client.guilds?.size || 0);
-        if (c > 0) BOT_PRESENCE.custom_status.text = `Watching ${c} servers`;
-      }, 10 * 60 * 1000);
+      (client as any)._presenceInterval = setInterval(
+        async () => {
+          const c = isManagedWorker ? await fetchTotalGuildCount() : client.guilds?.size || 0;
+          if (c > 0) BOT_PRESENCE.custom_status.text = `Watching ${c} servers`;
+        },
+        10 * 60 * 1000,
+      );
     }
   }, 15000);
 
   setTimeout(() => {
-    client.rest.get('/gateway/bot').then((gw: any) => {
-      const limit = gw?.session_start_limit;
-      if (limit !== null && limit !== undefined) {
-        const { remaining, total, reset_after, max_concurrency } = limit;
-        const resetSec = typeof reset_after === 'number' ? Math.round(reset_after / 1000) : '?';
-        log.info('Gateway', `Session limit: ${remaining}/${total} remaining, resets in ${resetSec}s` + (max_concurrency !== null && max_concurrency !== undefined ? `, max_concurrency: ${max_concurrency}` : ''));
-      }
-    }).catch(() => { /* ignore */ });
+    client.rest
+      .get('/gateway/bot')
+      .then((gw: any) => {
+        const limit = gw?.session_start_limit;
+        if (limit !== null && limit !== undefined) {
+          const { remaining, total, reset_after, max_concurrency } = limit;
+          const resetSec = typeof reset_after === 'number' ? Math.round(reset_after / 1000) : '?';
+          log.info(
+            'Gateway',
+            `Session limit: ${remaining}/${total} remaining, resets in ${resetSec}s` +
+              (max_concurrency !== null && max_concurrency !== undefined
+                ? `, max_concurrency: ${max_concurrency}`
+                : ''),
+          );
+        }
+      })
+      .catch(() => {
+        /* ignore */
+      });
   }, 30000);
 });
 
@@ -529,45 +555,59 @@ client.on(Events.Resumed, () => {
         op: GatewayOpcodes.PresenceUpdate,
         d: client.options.presence,
       });
-    } catch { }
+    } catch {}
   }
 });
 
-setInterval(() => {
-  if (isShuttingDown) return;
-  const now = Date.now();
-  const sinceLastSuccess = now - lastSuccessfulConnection;
+setInterval(
+  () => {
+    if (isShuttingDown) return;
+    const now = Date.now();
+    const sinceLastSuccess = now - lastSuccessfulConnection;
 
-  if (sinceLastSuccess > 15 * 60 * 1000 && wsErrorTimestamps.length > 10) {
-    log.warn('Health', `No connection in ${Math.round(sinceLastSuccess / 60000)}min - ${wsErrorTimestamps.length} errors - SDK retrying`);
-    GlitchTip.captureMessage(`Sustained gateway outage: no connection in ${Math.round(sinceLastSuccess / 60000)}min`, {
-      level: 'error',
-      tags: { source: 'health_monitor' },
-      extra: { minutesSinceLastSuccess: Math.round(sinceLastSuccess / 60000), errorCount: wsErrorTimestamps.length },
-    });
-  }
-}, 5 * 60 * 1000);
+    if (sinceLastSuccess > 15 * 60 * 1000 && wsErrorTimestamps.length > 10) {
+      log.warn(
+        'Health',
+        `No connection in ${Math.round(sinceLastSuccess / 60000)}min - ${wsErrorTimestamps.length} errors - SDK retrying`,
+      );
+      GlitchTip.captureMessage(
+        `Sustained gateway outage: no connection in ${Math.round(sinceLastSuccess / 60000)}min`,
+        {
+          level: 'error',
+          tags: { source: 'health_monitor' },
+          extra: {
+            minutesSinceLastSuccess: Math.round(sinceLastSuccess / 60000),
+            errorCount: wsErrorTimestamps.length,
+          },
+        },
+      );
+    }
+  },
+  5 * 60 * 1000,
+);
 
-setInterval(() => {
-  if (isShuttingDown) return;
-  const botId = client.user?.id;
-  let swept = 0;
-  for (const guild of client.guilds.values()) {
-    const size = (guild as any).members.size;
-    if (size <= 1) continue; // only bot's own member or empty
-    for (const [id] of (guild as any).members) {
-      if (id !== botId) {
-        (guild as any).members.delete(id);
-        swept++;
+setInterval(
+  () => {
+    if (isShuttingDown) return;
+    const botId = client.user?.id;
+    let swept = 0;
+    for (const guild of client.guilds.values()) {
+      const size = (guild as any).members.size;
+      if (size <= 1) continue; // only bot's own member or empty
+      for (const [id] of (guild as any).members) {
+        if (id !== botId) {
+          (guild as any).members.delete(id);
+          swept++;
+        }
       }
     }
-  }
-  if (swept > 0) {
-    const memMB = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1);
-    log.info('Sweep', `Cleared ${swept.toLocaleString()} cached members - heap: ${memMB} MB`);
-  }
-}, 10 * 60 * 1000); // every 10 min
-
+    if (swept > 0) {
+      const memMB = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1);
+      log.info('Sweep', `Cleared ${swept.toLocaleString()} cached members - heap: ${memMB} MB`);
+    }
+  },
+  10 * 60 * 1000,
+); // every 10 min
 
 process.on('unhandledRejection', (reason: any) => {
   if (reason instanceof Error && isTransientError(reason)) {
@@ -587,7 +627,6 @@ process.on('uncaughtException', (error) => {
   log.fatal('Exception', error.message || error);
   process.exit(1);
 });
-
 
 async function gracefulShutdown(signal: string): Promise<void> {
   if (isShuttingDown) return;
@@ -617,7 +656,6 @@ async function gracefulShutdown(signal: string): Promise<void> {
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
-
 const ipcPendingRequests = new Map<string, { resolve: (v: any) => void; timer: ReturnType<typeof setTimeout> }>();
 
 async function fetchTotalGuildCount(): Promise<number> {
@@ -636,15 +674,17 @@ async function fetchTotalGuildCount(): Promise<number> {
 
 async function fetchAllShardInfo(): Promise<any[]> {
   if (!isManagedWorker || !process.send) {
-    return [{
-      workerId: 0,
-      shardIds: [0],
-      status: 'online',
-      guilds: client.guilds?.size || 0,
-      memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024 * 10) / 10,
-      uptime: Math.floor(process.uptime()),
-      ping: null,
-    }];
+    return [
+      {
+        workerId: 0,
+        shardIds: [0],
+        status: 'online',
+        guilds: client.guilds?.size || 0,
+        memory: Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 10) / 10,
+        uptime: Math.floor(process.uptime()),
+        ping: null,
+      },
+    ];
   }
 
   const requestId = `si-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -727,7 +767,7 @@ if (isManagedWorker) {
             shardIds: assignedShardIds,
             status: 'online',
             guilds: client.guilds?.size || 0,
-            memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024 * 10) / 10,
+            memory: Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 10) / 10,
             uptime: Math.floor(process.uptime()),
             ping: (client as any)._ws?.shards?.values()?.next()?.value?.heartbeatAt
               ? Date.now() - (client as any)._ws.shards.values().next().value.heartbeatAt

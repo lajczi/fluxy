@@ -15,33 +15,45 @@ function yn(bool: any, lang: string): string {
   return bool ? t(lang, 'commands.admin.automod.yes') : t(lang, 'commands.admin.automod.no');
 }
 
-
 function parseRoleId(arg?: string): string | null {
   const m = arg?.match(/^<@&(\d{17,19})>$/);
-  return m ? m[1] : (/^\d{17,19}$/.test(arg || '') ? arg! : null);
+  return m ? m[1] : /^\d{17,19}$/.test(arg || '') ? arg! : null;
 }
 
 function parseChannelId(arg?: string): string | null {
   const m = arg?.match(/^<#(\d{17,19})>$/);
-  return m ? m[1] : (/^\d{17,19}$/.test(arg || '') ? arg! : null);
+  return m ? m[1] : /^\d{17,19}$/.test(arg || '') ? arg! : null;
 }
 
 async function showStatus(message: any, guild: any, settings: any, lang: string) {
   const am = settings.automod || {};
   const spam = am.spam || {};
-  const exemptRoles    = (am.exemptRoles    || []).map((id: string) => `<@&${id}>`).join(', ') || t(lang, 'commands.admin.automod.status.none');
-  const exemptChannels = (am.exemptChannels || []).map((id: string) => `<#${id}>`).join(', ')   || t(lang, 'commands.admin.automod.status.none');
-  const customDomains  = (am.allowedDomains || []).join(', ') || t(lang, 'commands.admin.automod.status.none');
+  const exemptRoles =
+    (am.exemptRoles || []).map((id: string) => `<@&${id}>`).join(', ') || t(lang, 'commands.admin.automod.status.none');
+  const exemptChannels =
+    (am.exemptChannels || []).map((id: string) => `<#${id}>`).join(', ') ||
+    t(lang, 'commands.admin.automod.status.none');
+  const customDomains = (am.allowedDomains || []).join(', ') || t(lang, 'commands.admin.automod.status.none');
   const level = am.level || 'off';
 
   const embed = new EmbedBuilder()
     .setTitle(t(lang, 'commands.admin.automod.status.title', { guildName: guild.name }))
-    .setColor(0x5865F2)
+    .setColor(0x5865f2)
     .addFields(
-      { name: t(lang, 'commands.admin.automod.status.fieldLevel'), value: t(lang, 'commands.admin.automod.status.levelValue', { level, description: levelDescription(lang, level) }) },
-      { name: t(lang, 'commands.admin.automod.status.fieldAntiSpam'), value: yn(am.antiSpam, lang),  inline: true },
-      { name: t(lang, 'commands.admin.automod.status.fieldAntiLink'), value: yn(am.antiLink, lang),  inline: true },
-      { name: t(lang, 'commands.admin.automod.status.fieldAntiReactionSpam'), value: yn(am.antiReactionSpam, lang), inline: true },
+      {
+        name: t(lang, 'commands.admin.automod.status.fieldLevel'),
+        value: t(lang, 'commands.admin.automod.status.levelValue', {
+          level,
+          description: levelDescription(lang, level),
+        }),
+      },
+      { name: t(lang, 'commands.admin.automod.status.fieldAntiSpam'), value: yn(am.antiSpam, lang), inline: true },
+      { name: t(lang, 'commands.admin.automod.status.fieldAntiLink'), value: yn(am.antiLink, lang), inline: true },
+      {
+        name: t(lang, 'commands.admin.automod.status.fieldAntiReactionSpam'),
+        value: yn(am.antiReactionSpam, lang),
+        inline: true,
+      },
       { name: t(lang, 'commands.admin.automod.status.fieldGhostPing'), value: yn(am.ghostPing, lang), inline: true },
       {
         name: t(lang, 'commands.admin.automod.status.fieldSpamThresholds'),
@@ -50,19 +62,18 @@ async function showStatus(message: any, guild: any, settings: any, lang: string)
           timeWindow: spam.timeWindow ?? 5,
           violationThreshold: spam.violationThreshold ?? 3,
           timeoutDuration: spam.timeoutDuration ?? 10,
-        })
+        }),
       },
       { name: t(lang, 'commands.admin.automod.status.fieldAllowedDomains'), value: customDomains },
       { name: t(lang, 'commands.admin.automod.status.fieldExemptRoles'), value: exemptRoles },
-      { name: t(lang, 'commands.admin.automod.status.fieldExemptChannels'), value: exemptChannels }
+      { name: t(lang, 'commands.admin.automod.status.fieldExemptChannels'), value: exemptChannels },
     )
-    .setFooter({ text: t(lang, 'commands.admin.automod.status.footer') })
+    .setFooter({ text: t(lang, 'commands.admin.automod.status.footer') });
 
   return message.reply({ embeds: [embed] });
 }
 
 const subcommands: Record<string, (message: any, args: string[], guild: any, settings: any) => Promise<any>> = {
-
   async status(message, args, guild, settings) {
     const lang = normalizeLocale(settings?.language);
     return showStatus(message, guild, settings, lang);
@@ -78,10 +89,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     settings.automod.level = lvl;
 
     const presets: Record<string, { antiSpam: boolean; antiLink: boolean; antiReactionSpam: boolean }> = {
-      off:     { antiSpam: false, antiLink: false, antiReactionSpam: false },
-      minimal: { antiSpam: true,  antiLink: false, antiReactionSpam: false },
-      medium:  { antiSpam: true,  antiLink: true,  antiReactionSpam: true  },
-      high:    { antiSpam: true,  antiLink: true,  antiReactionSpam: true  }
+      off: { antiSpam: false, antiLink: false, antiReactionSpam: false },
+      minimal: { antiSpam: true, antiLink: false, antiReactionSpam: false },
+      medium: { antiSpam: true, antiLink: true, antiReactionSpam: true },
+      high: { antiSpam: true, antiLink: true, antiReactionSpam: true },
     };
     Object.assign(settings.automod, presets[lvl]);
 
@@ -89,7 +100,9 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     await settings.save();
     settingsCache.invalidate(guild.id);
 
-    return message.reply(t(lang, 'commands.admin.automod.level.setDone', { level: lvl, description: levelDescription(lang, lvl) }));
+    return message.reply(
+      t(lang, 'commands.admin.automod.level.setDone', { level: lvl, description: levelDescription(lang, lvl) }),
+    );
   },
 
   async spam(message, args, guild, settings) {
@@ -101,7 +114,8 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
     switch (sub) {
       case 'messages': {
-        if (isNaN(val) || val < 2 || val > 20) return message.reply(t(lang, 'commands.admin.automod.spam.messagesRange'));
+        if (isNaN(val) || val < 2 || val > 20)
+          return message.reply(t(lang, 'commands.admin.automod.spam.messagesRange'));
         settings.automod.spam.maxMessages = val;
         break;
       }
@@ -111,12 +125,14 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         break;
       }
       case 'timeout': {
-        if (isNaN(val) || val < 1 || val > 60) return message.reply(t(lang, 'commands.admin.automod.spam.timeoutRange'));
+        if (isNaN(val) || val < 1 || val > 60)
+          return message.reply(t(lang, 'commands.admin.automod.spam.timeoutRange'));
         settings.automod.spam.timeoutDuration = val;
         break;
       }
       case 'violations': {
-        if (isNaN(val) || val < 1 || val > 10) return message.reply(t(lang, 'commands.admin.automod.spam.violationsRange'));
+        if (isNaN(val) || val < 1 || val > 10)
+          return message.reply(t(lang, 'commands.admin.automod.spam.violationsRange'));
         settings.automod.spam.violationThreshold = val;
         break;
       }
@@ -129,12 +145,14 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     settingsCache.invalidate(guild.id);
 
     const spam = settings.automod.spam;
-    return message.reply(t(lang, 'commands.admin.automod.spam.updated', {
-      maxMessages: spam.maxMessages ?? 5,
-      timeWindow: spam.timeWindow ?? 5,
-      violationThreshold: spam.violationThreshold ?? 3,
-      timeoutDuration: spam.timeoutDuration ?? 10,
-    }));
+    return message.reply(
+      t(lang, 'commands.admin.automod.spam.updated', {
+        maxMessages: spam.maxMessages ?? 5,
+        timeWindow: spam.timeWindow ?? 5,
+        violationThreshold: spam.violationThreshold ?? 3,
+        timeoutDuration: spam.timeoutDuration ?? 10,
+      }),
+    );
   },
 
   async link(message, args, guild, settings) {
@@ -145,7 +163,10 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
       return message.reply(t(lang, 'commands.admin.automod.link.usage'));
     }
 
-    const clean = domain.replace(/^https?:\/\//i, '').replace(/\/$/, '').toLowerCase();
+    const clean = domain
+      .replace(/^https?:\/\//i, '')
+      .replace(/\/$/, '')
+      .toLowerCase();
 
     if (!settings.automod.allowedDomains) settings.automod.allowedDomains = [];
 
@@ -274,46 +295,46 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         return message.reply(t(lang, 'commands.admin.automod.exempt.channelReEnabled', { channelId }));
       }
     }
-  }
+  },
 };
 
 function showHelp(message: any, lang: string) {
   const embed = new EmbedBuilder()
     .setTitle(t(lang, 'commands.admin.automod.help.title'))
-    .setColor(0x5865F2)
+    .setColor(0x5865f2)
     .addFields(
       {
         name: t(lang, 'commands.admin.automod.help.fieldStatusName'),
-        value: t(lang, 'commands.admin.automod.help.fieldStatusValue')
+        value: t(lang, 'commands.admin.automod.help.fieldStatusValue'),
       },
       {
         name: t(lang, 'commands.admin.automod.help.fieldLevelName'),
-        value: t(lang, 'commands.admin.automod.help.fieldLevelValue')
+        value: t(lang, 'commands.admin.automod.help.fieldLevelValue'),
       },
       {
         name: t(lang, 'commands.admin.automod.help.fieldSpamName'),
-        value: t(lang, 'commands.admin.automod.help.fieldSpamValue')
+        value: t(lang, 'commands.admin.automod.help.fieldSpamValue'),
       },
       {
         name: t(lang, 'commands.admin.automod.help.fieldLinkName'),
-        value: t(lang, 'commands.admin.automod.help.fieldLinkValue')
+        value: t(lang, 'commands.admin.automod.help.fieldLinkValue'),
       },
       {
         name: t(lang, 'commands.admin.automod.help.fieldReactionSpamName'),
-        value: t(lang, 'commands.admin.automod.help.fieldReactionSpamValue')
+        value: t(lang, 'commands.admin.automod.help.fieldReactionSpamValue'),
       },
       {
         name: t(lang, 'commands.admin.automod.help.fieldGhostPingName'),
-        value: t(lang, 'commands.admin.automod.help.fieldGhostPingValue')
+        value: t(lang, 'commands.admin.automod.help.fieldGhostPingValue'),
       },
       {
         name: t(lang, 'commands.admin.automod.help.fieldExemptRoleName'),
-        value: t(lang, 'commands.admin.automod.help.fieldExemptRoleValue')
+        value: t(lang, 'commands.admin.automod.help.fieldExemptRoleValue'),
       },
       {
         name: t(lang, 'commands.admin.automod.help.fieldExemptChannelName'),
-        value: t(lang, 'commands.admin.automod.help.fieldExemptChannelValue')
-      }
+        value: t(lang, 'commands.admin.automod.help.fieldExemptChannelValue'),
+      },
     )
     .setFooter({ text: t(lang, 'commands.admin.automod.help.footer') });
 
@@ -342,7 +363,7 @@ const command: Command = {
   async execute(message, args, client) {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.automod.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.automod.serverOnly')));
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
@@ -356,7 +377,6 @@ const command: Command = {
       if (!settings.automod) settings.automod = {};
 
       await subcommands[sub](message, args.slice(1), guild, settings);
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -368,7 +388,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.admin.automod.errorGeneric')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

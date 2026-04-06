@@ -2,8 +2,16 @@ import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import {
-  LayoutDashboard, Server, BarChart3, Heart, LogOut,
-  Menu, X, ChevronRight, Shield, Database,
+  LayoutDashboard,
+  Server,
+  BarChart3,
+  Heart,
+  LogOut,
+  Menu,
+  X,
+  ChevronRight,
+  Shield,
+  Database,
 } from 'lucide-react';
 import { TelemetryNotice } from '../TelemetryNotice';
 
@@ -29,11 +37,13 @@ export function Layout() {
   return (
     <div className="flex h-screen overflow-hidden bg-[hsl(var(--background))]">
       {/* Sidebar */}
-      <aside className={`
+      <aside
+        className={`
         fixed inset-y-0 left-0 z-50 w-64 transform bg-[hsl(var(--card))] border-r border-[hsl(var(--border))]
         transition-transform duration-200 ease-in-out lg:relative lg:translate-x-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+      `}
+      >
         {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-[hsl(var(--border))]">
           <img src="/bot-icon.png" alt="Fluxy" className="h-8 w-8 rounded-lg" />
@@ -45,9 +55,9 @@ export function Layout() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {allItems.map(item => {
-            const active = location.pathname === item.path ||
-              (item.path !== '/' && location.pathname.startsWith(item.path));
+          {allItems.map((item) => {
+            const active =
+              location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
               <Link
                 key={item.path}
@@ -55,9 +65,10 @@ export function Layout() {
                 onClick={() => setSidebarOpen(false)}
                 className={`
                   flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
-                  ${active
-                    ? 'bg-blue-500/10 text-blue-400 shadow-sm shadow-blue-500/10'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5 active:bg-white/10 active:scale-[0.98]'
+                  ${
+                    active
+                      ? 'bg-blue-500/10 text-blue-400 shadow-sm shadow-blue-500/10'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5 active:bg-white/10 active:scale-[0.98]'
                   }
                 `}
               >
@@ -97,7 +108,11 @@ export function Layout() {
                 <Shield className="h-4 w-4" />
               </button>
             )}
-            <button onClick={logout} className="text-gray-400 hover:text-red-400 active:scale-90 transition-all duration-150" title="Logout">
+            <button
+              onClick={logout}
+              className="text-gray-400 hover:text-red-400 active:scale-90 transition-all duration-150"
+              title="Logout"
+            >
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -125,7 +140,10 @@ export function Layout() {
           <TelemetryNotice
             renderTrigger={(openDialog) => {
               // Sync sidebar button open state with TelemetryNotice-controlled dialog
-              if (privacyOpen) { openDialog(); setPrivacyOpen(false); }
+              if (privacyOpen) {
+                openDialog();
+                setPrivacyOpen(false);
+              }
               return null;
             }}
           />
@@ -135,4 +153,3 @@ export function Layout() {
     </div>
   );
 }
-

@@ -6,15 +6,49 @@ import isNetworkError from '../../utils/isNetworkError';
 import { t, normalizeLocale } from '../../i18n';
 
 const RESERVED_NAMES = [
-  'help', 'ticket', 'automod', 'ban', 'kick', 'warn', 'mute', 'unmute',
-  'clear', 'timeout', 'lockdown', 'setlog', 'setserverlog', 'setstaff',
-  'setprefix', 'clearprefix', 'blacklist', 'welcome', 'autorole',
-  'reactionrole', 'rr', 'roleall', 'roleclear', 'status', 'report',
-  'honeypot', 'hp', 'keywords', 'customcommand', 'cc',
-  'toggle-automod', 'toggle-antispam', 'toggle-antilink',
-  'toggle-antireactionspam', 'toggle-ghostping',
-  'serverinfo', 'userinfo', 'avatar', 'ping', 'uptime',
-  'warnings', 'slowmode', 'nick'
+  'help',
+  'ticket',
+  'automod',
+  'ban',
+  'kick',
+  'warn',
+  'mute',
+  'unmute',
+  'clear',
+  'timeout',
+  'lockdown',
+  'setlog',
+  'setserverlog',
+  'setstaff',
+  'setprefix',
+  'clearprefix',
+  'blacklist',
+  'welcome',
+  'autorole',
+  'reactionrole',
+  'rr',
+  'roleall',
+  'roleclear',
+  'status',
+  'report',
+  'honeypot',
+  'hp',
+  'keywords',
+  'customcommand',
+  'cc',
+  'toggle-automod',
+  'toggle-antispam',
+  'toggle-antilink',
+  'toggle-antireactionspam',
+  'toggle-ghostping',
+  'serverinfo',
+  'userinfo',
+  'avatar',
+  'ping',
+  'uptime',
+  'warnings',
+  'slowmode',
+  'nick',
 ];
 
 const MAX_COMMANDS = 5;
@@ -28,14 +62,11 @@ function parseColor(str?: string): string | null {
 }
 
 const subcommands: Record<string, (message: any, args: string[], guild: any, settings: any) => Promise<any>> = {
-
   async add(message, args, guild, settings) {
     const lang = normalizeLocale(settings?.language);
     const name = args[0]?.toLowerCase();
     if (!name) {
-      return message.reply(
-        t(lang, 'auditCatalog.commands.admin.customcommand.l35_reply')
-      );
+      return message.reply(t(lang, 'auditCatalog.commands.admin.customcommand.l35_reply'));
     }
 
     if (!/^[a-z0-9_-]{1,32}$/.test(name)) {
@@ -56,7 +87,7 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         t(lang, 'auditCatalog.commands.admin.customcommand.l54_reply', {
           'response.length': response.length,
           MAX_RESPONSE_LENGTH,
-        })
+        }),
       );
     }
 
@@ -122,7 +153,7 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         t(lang, 'auditCatalog.commands.admin.customcommand.l54_reply', {
           'response.length': response.length,
           MAX_RESPONSE_LENGTH,
-        })
+        }),
       );
     }
 
@@ -145,9 +176,7 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     const toggle = args[1]?.toLowerCase();
 
     if (!name || !['on', 'off'].includes(toggle)) {
-      return message.reply(
-        t(lang, 'auditCatalog.commands.admin.customcommand.l135_reply')
-      );
+      return message.reply(t(lang, 'auditCatalog.commands.admin.customcommand.l135_reply'));
     }
 
     const cmd = settings.customCommands?.find((c: any) => c.name === name);
@@ -202,7 +231,7 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
     const embed = new EmbedBuilder()
       .setTitle(t(lang, 'auditCatalog.commands.admin.customcommand.l185_setTitle', { 'guild.name': guild.name }))
       .setDescription(lines.join('\n'))
-      .setColor(0x5865F2)
+      .setColor(0x5865f2)
       .setFooter({
         text: t(lang, 'auditCatalog.commands.admin.customcommand.l188_setFooter', {
           'commands.length': commands.length,
@@ -225,7 +254,7 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
 
     const embed = new EmbedBuilder()
       .setTitle(t(lang, 'auditCatalog.commands.admin.customcommand.l203_setTitle', { 'cmd.name': cmd.name }))
-      .setColor(0x5865F2)
+      .setColor(0x5865f2)
       .addFields(
         {
           name: t(lang, 'auditCatalog.commands.admin.customcommand.l206_addFields_name'),
@@ -233,54 +262,56 @@ const subcommands: Record<string, (message: any, args: string[], guild: any, set
         },
         {
           name: t(lang, 'auditCatalog.commands.admin.customcommand.l207_addFields_name'),
-          value: cmd.embed
-            ? t(lang, 'verification.status.enabledYes')
-            : t(lang, 'verification.status.enabledNo'),
-          inline: true
-        }
+          value: cmd.embed ? t(lang, 'verification.status.enabledYes') : t(lang, 'verification.status.enabledNo'),
+          inline: true,
+        },
       );
 
     if (cmd.embed && cmd.color) {
       embed.addFields({ name: t(lang, 'commands.roleinfo.fieldColor'), value: cmd.color, inline: true });
     }
     if (cmd.embed && cmd.title) {
-      embed.addFields({ name: t(lang, 'auditCatalog.commands.admin.customcommand.l211_addFields_name'), value: cmd.title, inline: true });
+      embed.addFields({
+        name: t(lang, 'auditCatalog.commands.admin.customcommand.l211_addFields_name'),
+        value: cmd.title,
+        inline: true,
+      });
     }
 
     return message.reply({ embeds: [embed] });
-  }
+  },
 };
 
 function showHelp(message: any, lang: string) {
   const embed = new EmbedBuilder()
     .setTitle(t(lang, 'auditCatalog.commands.admin.customcommand.l219_setTitle'))
-    .setColor(0x5865F2)
+    .setColor(0x5865f2)
     .setDescription(t(lang, 'auditCatalog.commands.admin.customcommand.l221_setDescription'))
     .addFields(
       {
         name: t(lang, 'auditCatalog.commands.admin.customcommand.l223_addFields_name'),
-        value: t(lang, 'auditCatalog.commands.admin.customcommand.l223_addFields_value')
+        value: t(lang, 'auditCatalog.commands.admin.customcommand.l223_addFields_value'),
       },
       {
         name: t(lang, 'auditCatalog.commands.admin.customcommand.l224_addFields_name'),
-        value: t(lang, 'auditCatalog.commands.admin.customcommand.l224_addFields_value')
+        value: t(lang, 'auditCatalog.commands.admin.customcommand.l224_addFields_value'),
       },
       {
         name: t(lang, 'auditCatalog.commands.admin.customcommand.l225_addFields_name'),
-        value: t(lang, 'auditCatalog.commands.admin.customcommand.l225_addFields_value')
+        value: t(lang, 'auditCatalog.commands.admin.customcommand.l225_addFields_value'),
       },
       {
         name: t(lang, 'auditCatalog.commands.admin.customcommand.l226_addFields_name'),
-        value: t(lang, 'auditCatalog.commands.admin.customcommand.l226_addFields_value')
+        value: t(lang, 'auditCatalog.commands.admin.customcommand.l226_addFields_value'),
       },
       {
         name: t(lang, 'auditCatalog.commands.admin.customcommand.l227_addFields_name'),
-        value: t(lang, 'auditCatalog.commands.admin.customcommand.l227_addFields_value')
+        value: t(lang, 'auditCatalog.commands.admin.customcommand.l227_addFields_value'),
       },
       {
         name: t(lang, 'auditCatalog.commands.admin.customcommand.l228_addFields_name'),
-        value: t(lang, 'auditCatalog.commands.admin.customcommand.l228_addFields_value')
-      }
+        value: t(lang, 'auditCatalog.commands.admin.customcommand.l228_addFields_value'),
+      },
     )
     .setFooter({ text: t(lang, 'auditCatalog.commands.admin.customcommand.l230_setFooter') });
 
@@ -299,7 +330,7 @@ const command: Command = {
   async execute(message, args, client) {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.keywords.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.keywords.serverOnly')));
 
     const settings: any = await GuildSettings.getOrCreate(guild.id);
     const lang = normalizeLocale(settings?.language);
@@ -322,7 +353,7 @@ const command: Command = {
         message.reply(t(lang, 'auditCatalog.commands.admin.customcommand.l265_reply')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

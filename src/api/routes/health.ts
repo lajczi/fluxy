@@ -103,7 +103,7 @@ export function createHealthRouter(client: Client): Router {
     let entries = since > 0 ? logBuffer.getSince(since) : logBuffer.getRecent(limit);
 
     if (level) {
-      entries = entries.filter(e => e.level === level);
+      entries = entries.filter((e) => e.level === level);
     }
 
     if (!since) {

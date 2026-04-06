@@ -14,13 +14,12 @@ const defaultConfig = {
   timeWindow: 5000,
   timeoutDuration: 600000,
   violationThreshold: 3,
-  violationWindow: 1800000
+  violationWindow: 1800000,
 };
 
 function antiReactionSpamT(locale: unknown, key: string, vars?: Record<string, string | number>): string {
   return t(normalizeLocale(locale), `auditCatalog.automod.modules.antiReactionSpam.${key}`, vars);
 }
-
 
 function checkReactionSpam(guildId: string, userId: string, maxReactions: number, windowMs: number) {
   const key = `${guildId}-${userId}`;
@@ -32,7 +31,7 @@ function checkReactionSpam(guildId: string, userId: string, maxReactions: number
     reactionTracker.set(key, data);
   }
 
-  data.timestamps = data.timestamps.filter(t => now - t < windowMs);
+  data.timestamps = data.timestamps.filter((t) => now - t < windowMs);
   data.timestamps.push(now);
 
   const isSpam = data.timestamps.length >= maxReactions;
@@ -57,12 +56,12 @@ function trackViolation(guildId: string, userId: string, config: any) {
     violationTracker.set(key, data);
   }
 
-  data.violations = data.violations.filter(v => now - v < window);
+  data.violations = data.violations.filter((v) => now - v < window);
   data.violations.push(now);
 
   return {
     count: data.violations.length,
-    shouldTimeout: data.violations.length >= config.violationThreshold
+    shouldTimeout: data.violations.length >= config.violationThreshold,
   };
 }
 
@@ -77,11 +76,11 @@ function resetTracker(guildId: string, userId: string): void {
 function cleanupTrackers(windowMs: number): void {
   const now = Date.now();
   for (const [key, data] of reactionTracker) {
-    data.timestamps = data.timestamps.filter(t => now - t < windowMs);
+    data.timestamps = data.timestamps.filter((t) => now - t < windowMs);
     if (data.timestamps.length === 0) reactionTracker.delete(key);
   }
   for (const [key, data] of violationTracker) {
-    data.violations = data.violations.filter(v => now - v < defaultConfig.violationWindow);
+    data.violations = data.violations.filter((v) => now - v < defaultConfig.violationWindow);
     if (data.violations.length === 0) violationTracker.delete(key);
   }
 }
@@ -92,7 +91,6 @@ function formatDuration(ms: number): string {
   const hrs = Math.round(mins / 60);
   return `${hrs} hour${hrs !== 1 ? 's' : ''}`;
 }
-
 
 async function applyTimeout(guild: any, userId: string, duration: number, locale: unknown): Promise<boolean> {
   try {
@@ -105,12 +103,15 @@ async function applyTimeout(guild: any, userId: string, duration: number, locale
     const reason = antiReactionSpamT(locale, 'timeoutReason');
     await member.edit({
       communication_disabled_until: until,
-      timeout_reason: reason
+      timeout_reason: reason,
     });
     return true;
   } catch (error: any) {
     if (isNetworkError(error)) {
-      moderationQueue.enqueue(guild.id, userId, 'timeout', { durationMs: duration, reason: antiReactionSpamT(locale, 'timeoutReason') });
+      moderationQueue.enqueue(guild.id, userId, 'timeout', {
+        durationMs: duration,
+        reason: antiReactionSpamT(locale, 'timeoutReason'),
+      });
       return true;
     }
     if (error.statusCode === 404 || error.code === 'MEMBER_NOT_FOUND') return false;
@@ -119,7 +120,6 @@ async function applyTimeout(guild: any, userId: string, duration: number, locale
   }
 }
 
-
 const antiReactionSpam = {
   name: 'antiReactionSpam',
   description: 'Detects and prevents reaction spam by tracking reaction frequency',
@@ -127,11 +127,11 @@ const antiReactionSpam = {
   async check(guild: any, userId: string, reaction: any, client: any, settings: any): Promise<boolean> {
     const guildId = guild.id;
     const config = {
-      maxReactions:       defaultConfig.maxReactions,
-      timeWindow:         defaultConfig.timeWindow,
-      timeoutDuration:    defaultConfig.timeoutDuration,
+      maxReactions: defaultConfig.maxReactions,
+      timeWindow: defaultConfig.timeWindow,
+      timeoutDuration: defaultConfig.timeoutDuration,
       violationThreshold: defaultConfig.violationThreshold,
-      violationWindow:    defaultConfig.violationWindow
+      violationWindow: defaultConfig.violationWindow,
     };
 
     const result = checkReactionSpam(guildId, userId, config.maxReactions, config.timeWindow);
@@ -143,11 +143,9 @@ const antiReactionSpam = {
 
     try {
       try {
-        const emojiParam = reaction.emoji.id
-          ? `${reaction.emoji.name}:${reaction.emoji.id}`
-          : reaction.emoji.name;
+        const emojiParam = reaction.emoji.id ? `${reaction.emoji.name}:${reaction.emoji.id}` : reaction.emoji.name;
         await client.rest.delete(
-          `${Routes.channelMessageReaction(reaction.channelId, reaction.messageId, emojiParam)}/${userId}`
+          `${Routes.channelMessageReaction(reaction.channelId, reaction.messageId, emojiParam)}/${userId}`,
         );
       } catch {}
 
@@ -201,7 +199,6 @@ const antiReactionSpam = {
           language: settings?.language,
         }).catch(() => {});
       }
-
     } finally {
       processingLocks.delete(lockKey);
     }
@@ -209,36 +206,55 @@ const antiReactionSpam = {
     return true;
   },
 
-  async logAction(guild: any, userId: string, reaction: any, client: any, logChannelId: string, info: any): Promise<void> {
+  async logAction(
+    guild: any,
+    userId: string,
+    reaction: any,
+    client: any,
+    logChannelId: string,
+    info: any,
+  ): Promise<void> {
     try {
       let logChannel = guild.channels?.get(logChannelId);
       if (!logChannel) {
-        try { logChannel = await client.channels.fetch(logChannelId); } catch { return; }
+        try {
+          logChannel = await client.channels.fetch(logChannelId);
+        } catch {
+          return;
+        }
       }
       if (!logChannel) return;
 
       const fields: any[] = [
         { name: antiReactionSpamT(info.language, 'fieldUser'), value: `<@${userId}> (${userId})`, inline: true },
         { name: antiReactionSpamT(info.language, 'fieldChannel'), value: `<#${reaction.channelId}>`, inline: true },
-        { name: antiReactionSpamT(info.language, 'fieldViolations'), value: `${info.violation.count}/${info.config.violationThreshold}`, inline: true }
+        {
+          name: antiReactionSpamT(info.language, 'fieldViolations'),
+          value: `${info.violation.count}/${info.config.violationThreshold}`,
+          inline: true,
+        },
       ];
 
       if (info.timedOut) {
         fields.push({
           name: antiReactionSpamT(info.language, 'fieldAction'),
-          value: antiReactionSpamT(info.language, 'actionTimedOutFor', { duration: formatDuration(info.config.timeoutDuration) }),
-          inline: true
+          value: antiReactionSpamT(info.language, 'actionTimedOutFor', {
+            duration: formatDuration(info.config.timeoutDuration),
+          }),
+          inline: true,
         });
       }
 
       const embed = {
-        title: info.timedOut ? antiReactionSpamT(info.language, 'logTitleTimedOut') : antiReactionSpamT(info.language, 'logTitleDetected'),
+        title: info.timedOut
+          ? antiReactionSpamT(info.language, 'logTitleTimedOut')
+          : antiReactionSpamT(info.language, 'logTitleDetected'),
         description: info.timedOut
           ? antiReactionSpamT(info.language, 'logDescriptionTimedOut')
           : antiReactionSpamT(info.language, 'logDescriptionDetected'),
         fields,
         color: info.timedOut ? 0xf1c40f : 0xe74c3c,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       try {
@@ -257,7 +273,7 @@ const antiReactionSpam = {
   resetTracker,
   trackViolation,
   clearViolations,
-  defaultConfig
+  defaultConfig,
 };
 
 export default antiReactionSpam;

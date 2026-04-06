@@ -1,7 +1,9 @@
 ## Summary
+
 What does this PR change, in one short paragraph?
 
 ## Type
+
 - [ ] Bug fix
 - [ ] New feature / behavior change
 - [ ] Refactor (no user-visible change intended)
@@ -10,12 +12,15 @@ What does this PR change, in one short paragraph?
 - [ ] Tests only
 
 ## Scope
+
 **Primary area:** (e.g. `src/commands/…`, `src/automod/…`, `dashboard/`, `src/api/…`)
 
 ## Related issues
+
 Closes #<!-- issue number -->
 
 ## Testing
+
 Describe what you ran:
 
 - [ ] `npm run lint`
@@ -24,13 +29,16 @@ Describe what you ran:
 - [ ] Manually exercised: …
 
 ## User-visible changes
+
 - [ ] No user-visible change
 - [ ] **Yes** — brief note for changelog / release (what users or admins will notice):
 
 ## Screenshots / recordings
+
 <!-- Required for dashboard UI changes; delete section if N/A -->
 
 ## Checklist
+
 - [ ] I agree my contributions are licensed under the project license ([LICENSE](LICENSE)).
 - [ ] I did not commit secrets (`.env`, tokens, keys. FOR THE LOVE OF GOD DO NO FUCKING DO THIS).
 - [ ] For behavior changes: I considered edge cases (permissions, DMs, missing guild data) where applicable.

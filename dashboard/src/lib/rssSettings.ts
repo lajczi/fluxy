@@ -48,17 +48,17 @@ function normalizeFeed(feed: RssFeedPayload): RssFeedPayload {
     route: route || null,
     channelId: (feed.channelId || '').trim(),
     mentionRoleId: feed.mentionRoleId || null,
-    webhookId: typeof feed.webhookId === 'string' ? (feed.webhookId.trim() || null) : null,
-    webhookToken: typeof feed.webhookToken === 'string' ? (feed.webhookToken.trim() || null) : null,
-    webhookName: typeof feed.webhookName === 'string' ? (feed.webhookName.trim() || null) : null,
+    webhookId: typeof feed.webhookId === 'string' ? feed.webhookId.trim() || null : null,
+    webhookToken: typeof feed.webhookToken === 'string' ? feed.webhookToken.trim() || null : null,
+    webhookName: typeof feed.webhookName === 'string' ? feed.webhookName.trim() || null : null,
     maxItemsPerPoll: clampNumber(feed.maxItemsPerPoll, RSS_MIN_ITEMS_PER_POLL, RSS_MAX_ITEMS_PER_POLL),
     format,
   };
 }
 
-export function buildRssSavePayload(input: RssSettingsPayload):
-  | { ok: true; payload: RssSettingsPayload }
-  | { ok: false; error: string } {
+export function buildRssSavePayload(
+  input: RssSettingsPayload,
+): { ok: true; payload: RssSettingsPayload } | { ok: false; error: string } {
   const feeds = input.feeds.slice(0, RSS_MAX_FEEDS).map(normalizeFeed);
 
   const hasInvalid = feeds.some((feed) => {
@@ -75,11 +75,7 @@ export function buildRssSavePayload(input: RssSettingsPayload):
     ok: true,
     payload: {
       enabled: input.enabled,
-      pollIntervalMinutes: clampNumber(
-        input.pollIntervalMinutes,
-        RSS_MIN_INTERVAL_MINUTES,
-        RSS_MAX_INTERVAL_MINUTES,
-      ),
+      pollIntervalMinutes: clampNumber(input.pollIntervalMinutes, RSS_MIN_INTERVAL_MINUTES, RSS_MAX_INTERVAL_MINUTES),
       feeds,
     },
   };

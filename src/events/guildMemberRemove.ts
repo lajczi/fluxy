@@ -22,18 +22,11 @@ const event: BotEvent = {
         leaveFields.push({ name: 'Members', value: memberCount.toLocaleString(), inline: true });
       }
 
-      await logServerEvent(
-        guild,
-        'Member Left',
-        0xe67e22,
-        leaveFields,
-        client,
-        {
-          description: `<@${userId}> left the server`,
-          footer: `User ID: ${userId}`,
-          eventType: 'member_leave',
-        }
-      );
+      await logServerEvent(guild, 'Member Left', 0xe67e22, leaveFields, client, {
+        description: `<@${userId}> left the server`,
+        footer: `User ID: ${userId}`,
+        eventType: 'member_leave',
+      });
 
       try {
         const settings = await settingsCache.get(guild.id);
@@ -46,7 +39,7 @@ const event: BotEvent = {
     } catch (error) {
       console.error('Error in guildMemberRemove event:', error);
     }
-  }
+  },
 };
 
 export default event;

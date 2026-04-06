@@ -21,11 +21,7 @@ function shouldEmitLog(guildId: string, code: string): boolean {
 
 export type InviteLogMeta = { synthetic?: boolean };
 
-export async function logInviteCreateFromInvite(
-  invite: any,
-  client: any,
-  meta?: InviteLogMeta
-): Promise<void> {
+export async function logInviteCreateFromInvite(invite: any, client: any, meta?: InviteLogMeta): Promise<void> {
   const guildId = invite.guild?.id ?? invite.guildId;
   if (!guildId) return;
 
@@ -66,14 +62,10 @@ export async function logInviteCreateFromInvite(
     });
   }
 
-  await logServerEvent(
-    guild,
-    'Invite Created',
-    0x2ecc71,
-    fields,
-    client,
-    { footer: `Invite Code: ${code}`, eventType: 'invite_create' }
-  );
+  await logServerEvent(guild, 'Invite Created', 0x2ecc71, fields, client, {
+    footer: `Invite Code: ${code}`,
+    eventType: 'invite_create',
+  });
 }
 
 const event: BotEvent = {

@@ -15,7 +15,7 @@ const command: Command = {
   async execute(message, args, client) {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.setprefix.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.setprefix.serverOnly')));
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
@@ -24,16 +24,21 @@ const command: Command = {
       if (!args[0]) {
         const currentPrefixes = settings.prefixes || [];
         if (currentPrefixes.length === 0) {
-          return void await message.reply(t(lang, 'commands.admin.setprefix.noCustomPrefix'));
+          return void (await message.reply(t(lang, 'commands.admin.setprefix.noCustomPrefix')));
         }
         const prefixList = currentPrefixes.map((p: string) => `\`${p}\``).join(', ');
-        return void await message.reply(t(lang, 'commands.admin.setprefix.currentPrefixes', { prefixes: prefixList }));
+        return void (await message.reply(
+          t(lang, 'commands.admin.setprefix.currentPrefixes', { prefixes: prefixList }),
+        ));
       }
 
       const newPrefix = args[0];
-      if (!newPrefix || newPrefix.trim() === '') return void await message.reply(t(lang, 'commands.admin.setprefix.prefixEmpty'));
-      if (newPrefix.includes(' ')) return void await message.reply(t(lang, 'commands.admin.setprefix.prefixNoSpaces'));
-      if (newPrefix.length > 10) return void await message.reply(t(lang, 'commands.admin.setprefix.prefixTooLong', { max: 10 }));
+      if (!newPrefix || newPrefix.trim() === '')
+        return void (await message.reply(t(lang, 'commands.admin.setprefix.prefixEmpty')));
+      if (newPrefix.includes(' '))
+        return void (await message.reply(t(lang, 'commands.admin.setprefix.prefixNoSpaces')));
+      if (newPrefix.length > 10)
+        return void (await message.reply(t(lang, 'commands.admin.setprefix.prefixTooLong', { max: 10 })));
 
       await GuildSettings.updateSetting(guild.id, 'prefixes', [newPrefix]);
       settingsCache.invalidate(guild.id);
@@ -49,7 +54,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.admin.setprefix.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

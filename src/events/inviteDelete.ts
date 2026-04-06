@@ -21,12 +21,12 @@ const event: BotEvent = {
           { name: 'Channel', value: data.channel_id ? `<#${data.channel_id}>` : 'Unknown', inline: true },
         ],
         client,
-        { footer: `Invite Code: ${data.code ?? 'unknown'}`, eventType: 'invite_delete' }
+        { footer: `Invite Code: ${data.code ?? 'unknown'}`, eventType: 'invite_delete' },
       );
     } catch (error) {
       console.error('Error in inviteDelete event:', error);
     }
-  }
+  },
 };
 
 export default event;

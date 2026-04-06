@@ -9,7 +9,8 @@ import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'unban',
-  description: 'Remove a ban from a previously banned user. Requires their user ID (right-click their name > Copy ID) also in logs',
+  description:
+    'Remove a ban from a previously banned user. Requires their user ID (right-click their name > Copy ID) also in logs',
   usage: '<user ID> [reason]',
   category: 'moderation',
   permissions: ['BanMembers'],
@@ -22,19 +23,19 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.moderation.unban.serverOnly'));
+      return void (await message.reply(t('en', 'commands.moderation.unban.serverOnly')));
     }
 
     const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
     const lang = normalizeLocale(guildSettings?.language);
 
     if (!args[0]) {
-      return void await message.reply(t(lang, 'commands.moderation.unban.usage', { prefix }));
+      return void (await message.reply(t(lang, 'commands.moderation.unban.usage', { prefix })));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply(t(lang, 'commands.moderation.unban.invalidUser'));
+      return void (await message.reply(t(lang, 'commands.moderation.unban.invalidUser')));
     }
 
     const reason = args.slice(1).join(' ').trim() || t(lang, 'commands.moderation.unban.noReasonProvided');
@@ -51,7 +52,7 @@ const command: Command = {
 
       const displayName = targetUser.username || targetUser.id;
       await message.reply(
-        t(lang, 'commands.moderation.unban.success', { username: displayName, userId: targetUser.id, reason })
+        t(lang, 'commands.moderation.unban.success', { username: displayName, userId: targetUser.id, reason }),
       );
 
       await logModAction(guild, (message as any).author, targetUser, 'unban', reason, { client });
@@ -61,9 +62,8 @@ const command: Command = {
         targetId: userId,
         userId: (message as any).author.id,
         action: 'unban',
-        reason
+        reason,
       });
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -77,7 +77,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.moderation.unban.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

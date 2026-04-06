@@ -25,7 +25,9 @@ function parseChannelId(arg: string): string | null {
 async function verifyChannel(channelId: string, guild: any, client: any): Promise<any> {
   let channel = guild.channels?.get(channelId);
   if (!channel) {
-    try { channel = await client.channels.fetch(channelId); } catch {}
+    try {
+      channel = await client.channels.fetch(channelId);
+    } catch {}
   }
   return channel || null;
 }
@@ -56,7 +58,7 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.admin.setserverlog.serverOnly'));
+      return void (await message.reply(t('en', 'commands.admin.setserverlog.serverOnly')));
     }
 
     try {
@@ -67,7 +69,9 @@ const command: Command = {
       if (!args[0] || args[0].toLowerCase() === 'status') {
         const defaultCh = settings.serverLogChannelId;
         const lines: string[] = [];
-        lines.push(`**${t(lang, 'commands.admin.setserverlog.defaultLabel')}:** ${defaultCh ? `<#${defaultCh}>` : t(lang, 'commands.admin.setserverlog.notSet')}`);
+        lines.push(
+          `**${t(lang, 'commands.admin.setserverlog.defaultLabel')}:** ${defaultCh ? `<#${defaultCh}>` : t(lang, 'commands.admin.setserverlog.notSet')}`,
+        );
 
         let hasOverrides = false;
         for (const cat of LOG_CATEGORIES) {
@@ -78,23 +82,21 @@ const command: Command = {
         }
 
         if (!hasOverrides && !defaultCh) {
-          return void await message.reply(
-            t(lang, 'commands.admin.setserverlog.noServerLogChannelSet', { prefix })
-          );
+          return void (await message.reply(t(lang, 'commands.admin.setserverlog.noServerLogChannelSet', { prefix })));
         }
 
         if (!hasOverrides) {
           lines.push(t(lang, 'commands.admin.setserverlog.allEventsDefault', { prefix }));
         }
 
-        return void await message.reply(lines.join('\n'));
+        return void (await message.reply(lines.join('\n')));
       }
 
       if (args[0].toLowerCase() === 'clear') {
         settings.serverLogChannelId = null;
         await settings.save();
         settingsCache.invalidate(guild.id);
-        return void await message.reply(t(lang, 'commands.admin.setserverlog.cleared'));
+        return void (await message.reply(t(lang, 'commands.admin.setserverlog.cleared')));
       }
 
       const maybeCategory = args[0].toLowerCase();
@@ -106,10 +108,10 @@ const command: Command = {
           const current = overrides[category];
           const defaultChannelLabel = t(lang, 'commands.admin.setserverlog.defaultChannel');
           const categoryLabel = CATEGORY_LABELS[category] || category;
-          return void await message.reply(
+          return void (await message.reply(
             `**${categoryLabel}** logs → ${current ? `<#${current}>` : defaultChannelLabel}\n` +
-            t(lang, 'commands.admin.setserverlog.logsUsageHint', { prefix, category })
-          );
+              t(lang, 'commands.admin.setserverlog.logsUsageHint', { prefix, category }),
+          ));
         }
 
         if (action === 'clear') {
@@ -119,16 +121,16 @@ const command: Command = {
           await settings.save();
           settingsCache.invalidate(guild.id);
           const categoryLabel = CATEGORY_LABELS[category] || category;
-          return void await message.reply(
-            t(lang, 'commands.admin.setserverlog.logsWillGoToDefaultChannel', { categoryLabel })
-          );
+          return void (await message.reply(
+            t(lang, 'commands.admin.setserverlog.logsWillGoToDefaultChannel', { categoryLabel }),
+          ));
         }
 
         const channelId = parseChannelId(args[1]);
-        if (!channelId) return void await message.reply(t(lang, 'commands.admin.setserverlog.invalidChannel'));
+        if (!channelId) return void (await message.reply(t(lang, 'commands.admin.setserverlog.invalidChannel')));
 
         const channel = await verifyChannel(channelId, guild, client);
-        if (!channel) return void await message.reply(t(lang, 'commands.admin.setserverlog.channelDoesNotExist'));
+        if (!channel) return void (await message.reply(t(lang, 'commands.admin.setserverlog.channelDoesNotExist')));
 
         if (!settings.logChannelOverrides) settings.logChannelOverrides = {};
         settings.logChannelOverrides[category] = channelId;
@@ -137,30 +139,29 @@ const command: Command = {
         settingsCache.invalidate(guild.id);
 
         const categoryLabel = CATEGORY_LABELS[category] || category;
-        return void await message.reply(
-          t(lang, 'commands.admin.setserverlog.logsWillGoToChannel', { categoryLabel, channelId })
-        );
+        return void (await message.reply(
+          t(lang, 'commands.admin.setserverlog.logsWillGoToChannel', { categoryLabel, channelId }),
+        ));
       }
 
       const channelId = parseChannelId(args[0]);
       if (!channelId) {
-        return void await message.reply(
+        return void (await message.reply(
           t(lang, 'commands.admin.setserverlog.invalidArgument', {
             prefix,
-            categories: LOG_CATEGORIES.join(', ')
-          })
-        );
+            categories: LOG_CATEGORIES.join(', '),
+          }),
+        ));
       }
 
       const channel = await verifyChannel(channelId, guild, client);
-      if (!channel) return void await message.reply(t(lang, 'commands.admin.setserverlog.channelDoesNotExist'));
+      if (!channel) return void (await message.reply(t(lang, 'commands.admin.setserverlog.channelDoesNotExist')));
 
       settings.serverLogChannelId = channelId;
       await settings.save();
       settingsCache.invalidate(guild.id);
 
       await message.reply(t(lang, 'commands.admin.setserverlog.setDone', { channelId }));
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -172,7 +173,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.admin.setserverlog.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

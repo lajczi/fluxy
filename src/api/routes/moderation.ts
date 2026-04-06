@@ -16,8 +16,7 @@ export function createModerationRouter(requireGuildAccess: RequestHandler): Rout
       const guildId = req.params.guildId as string;
       const { limit, skip, action, userId, targetId } = req.query;
 
-      const safeStr = (v: unknown): string | undefined =>
-        typeof v === 'string' ? v : undefined;
+      const safeStr = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
 
       const logs = await ModerationLog.getGuildLogs(guildId, {
         limit: Math.min(parseInt(limit as string) || 50, 100),
@@ -82,7 +81,11 @@ export function createModerationRouter(requireGuildAccess: RequestHandler): Rout
   router.get('/:guildId/user/:userId/history', requireGuildAccess, async (req: AuthRequest, res) => {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-      const history = await ModerationLog.getUserHistory(req.params.guildId as string, req.params.userId as string, limit);
+      const history = await ModerationLog.getUserHistory(
+        req.params.guildId as string,
+        req.params.userId as string,
+        limit,
+      );
       res.json(history);
     } catch {
       res.status(500).json({ error: moderationT('internalServerError') });

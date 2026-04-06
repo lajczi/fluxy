@@ -57,14 +57,16 @@ export default class CommandHandler {
       return;
     }
 
-    const categories = fs.readdirSync(commandsPath, { withFileTypes: true })
-      .filter(dirent => dirent.isDirectory())
-      .map(dirent => dirent.name);
+    const categories = fs
+      .readdirSync(commandsPath, { withFileTypes: true })
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => dirent.name);
 
     for (const category of categories) {
       const categoryPath = path.join(commandsPath, category);
-      const commandFiles = fs.readdirSync(categoryPath)
-        .filter(file => (file.endsWith('.ts') || file.endsWith('.js')) && !file.endsWith('.d.ts'));
+      const commandFiles = fs
+        .readdirSync(categoryPath)
+        .filter((file) => (file.endsWith('.ts') || file.endsWith('.js')) && !file.endsWith('.d.ts'));
 
       for (const file of commandFiles) {
         try {
@@ -91,14 +93,12 @@ export default class CommandHandler {
               });
             }
           }
-
         } catch (error: any) {
           console.error(`Error loading command ${file}:`, error.message);
         }
       }
     }
   }
-
 
   async handleMessage(message: Message): Promise<void> {
     if ((message as any).author?.bot || !message.content) return;
@@ -154,7 +154,7 @@ export default class CommandHandler {
           const customCommands = Array.isArray(settings?.customCommands)
             ? settings.customCommands.slice(0, MAX_CUSTOM_COMMANDS_PER_GUILD)
             : [];
-          const customCmd = customCommands.find(c => c.name === commandName);
+          const customCmd = customCommands.find((c) => c.name === commandName);
 
           if (customCmd && customCmd.enabled !== false) {
             const disabled = (settings as any)?.disabledCommands ?? [];
@@ -169,8 +169,9 @@ export default class CommandHandler {
               const memberRoleIds = (member as any)?.roles?.roleIds ?? [];
 
               const isStaff = settings.staffRoleId && memberRoleIds.includes(settings.staffRoleId);
-              const isAdmin = (member as any)?.permissions?.has((PermissionFlags as any).Administrator) ||
-                              (member as any)?.permissions?.has((PermissionFlags as any).ManageGuild);
+              const isAdmin =
+                (member as any)?.permissions?.has((PermissionFlags as any).Administrator) ||
+                (member as any)?.permissions?.has((PermissionFlags as any).ManageGuild);
 
               if (!isStaff && !isAdmin) {
                 return;
@@ -184,7 +185,8 @@ export default class CommandHandler {
             }
 
             const needsRoleGate = Array.isArray(customCmd.requiredRoleIds) && customCmd.requiredRoleIds.length > 0;
-            const needsPermissionGate = typeof customCmd.requiredPermission === 'string' && customCmd.requiredPermission.length > 0;
+            const needsPermissionGate =
+              typeof customCmd.requiredPermission === 'string' && customCmd.requiredPermission.length > 0;
 
             if (needsRoleGate || needsPermissionGate) {
               const member = await this.getMember(message);
@@ -193,7 +195,7 @@ export default class CommandHandler {
               const memberRoleIds = (member as any)?.roles?.roleIds ?? [];
 
               if (needsRoleGate) {
-                const hasRole = customCmd.requiredRoleIds.some(roleId => memberRoleIds.includes(roleId));
+                const hasRole = customCmd.requiredRoleIds.some((roleId) => memberRoleIds.includes(roleId));
                 if (!hasRole) {
                   return;
                 }
@@ -212,9 +214,10 @@ export default class CommandHandler {
               }
             }
 
-            const cooldownSeconds = typeof customCmd.cooldownSeconds === 'number'
-              ? Math.max(0, Math.min(3600, Math.floor(customCmd.cooldownSeconds)))
-              : 0;
+            const cooldownSeconds =
+              typeof customCmd.cooldownSeconds === 'number'
+                ? Math.max(0, Math.min(3600, Math.floor(customCmd.cooldownSeconds)))
+                : 0;
 
             if (cooldownSeconds > 0 && (message as any).author?.id) {
               const customCooldown = this.checkCustomCommandCooldown(
@@ -225,12 +228,14 @@ export default class CommandHandler {
               );
 
               if (!customCooldown.ready) {
-                await message.reply(
-                  t(lang, 'auditCatalog.handlers.CommandHandler.l220_reply', {
-                    'customCooldown.remaining': customCooldown.remaining,
-                    'customCmd.name': customCmd.name
-                  }),
-                ).catch(() => {});
+                await message
+                  .reply(
+                    t(lang, 'auditCatalog.handlers.CommandHandler.l220_reply', {
+                      'customCooldown.remaining': customCooldown.remaining,
+                      'customCmd.name': customCmd.name,
+                    }),
+                  )
+                  .catch(() => {});
                 return;
               }
             }
@@ -252,17 +257,23 @@ export default class CommandHandler {
                 return;
               }
 
-              const targetRoleId = typeof customCmd.targetRoleId === 'string' && customCmd.targetRoleId.length > 0
-                ? customCmd.targetRoleId
-                : null;
+              const targetRoleId =
+                typeof customCmd.targetRoleId === 'string' && customCmd.targetRoleId.length > 0
+                  ? customCmd.targetRoleId
+                  : null;
 
               if (!targetRoleId) {
-                await message.reply(t(lang, 'auditCatalog.handlers.CommandHandler.l248_reply', { 'customCmd.name': customCmd.name })).catch(() => {});
+                await message
+                  .reply(
+                    t(lang, 'auditCatalog.handlers.CommandHandler.l248_reply', { 'customCmd.name': customCmd.name }),
+                  )
+                  .catch(() => {});
                 return;
               }
 
               const invokingMember = await this.getMember(message);
-              const memberHasManageRoles = (invokingMember as any)?.permissions?.has((PermissionFlags as any).ManageRoles) ||
+              const memberHasManageRoles =
+                (invokingMember as any)?.permissions?.has((PermissionFlags as any).ManageRoles) ||
                 (invokingMember as any)?.permissions?.has((PermissionFlags as any).Administrator);
 
               if (!memberHasManageRoles) {
@@ -272,7 +283,14 @@ export default class CommandHandler {
 
               const targetUserId = parseUserId(args[0]);
               if (!targetUserId) {
-                await message.reply(t(lang, 'auditCatalog.handlers.CommandHandler.l263_reply', { usedPrefix, 'customCmd.name': customCmd.name })).catch(() => {});
+                await message
+                  .reply(
+                    t(lang, 'auditCatalog.handlers.CommandHandler.l263_reply', {
+                      usedPrefix,
+                      'customCmd.name': customCmd.name,
+                    }),
+                  )
+                  .catch(() => {});
                 return;
               }
 
@@ -292,7 +310,11 @@ export default class CommandHandler {
               }
 
               if (!targetRole) {
-                await message.reply(t(lang, 'auditCatalog.handlers.CommandHandler.l283_reply', { 'customCmd.name': customCmd.name })).catch(() => {});
+                await message
+                  .reply(
+                    t(lang, 'auditCatalog.handlers.CommandHandler.l283_reply', { 'customCmd.name': customCmd.name }),
+                  )
+                  .catch(() => {});
                 return;
               }
 
@@ -302,7 +324,8 @@ export default class CommandHandler {
                 botMember = await guild.fetchMember(botUserId).catch(() => null);
               }
 
-              const botHasManageRoles = (botMember as any)?.permissions?.has((PermissionFlags as any).ManageRoles) ||
+              const botHasManageRoles =
+                (botMember as any)?.permissions?.has((PermissionFlags as any).ManageRoles) ||
                 (botMember as any)?.permissions?.has((PermissionFlags as any).Administrator);
 
               if (!botHasManageRoles) {
@@ -330,11 +353,12 @@ export default class CommandHandler {
               roleMention = `<@&${targetRoleId}>`;
             }
 
-            const responseTemplate = typeof customCmd.response === 'string' && customCmd.response.trim().length > 0
-              ? customCmd.response
-              : actionType === 'toggleRole'
-                ? '{target}: role {role} was {action}.'
-                : '{user}';
+            const responseTemplate =
+              typeof customCmd.response === 'string' && customCmd.response.trim().length > 0
+                ? customCmd.response
+                : actionType === 'toggleRole'
+                  ? '{target}: role {role} was {action}.'
+                  : '{user}';
 
             const response = responseTemplate
               .replace(/\{user\}/gi, authorMention)
@@ -345,13 +369,12 @@ export default class CommandHandler {
               .replace(/\{action\}/gi, actionWord);
 
             if (customCmd.embed) {
-              const parsedColor = typeof customCmd.color === 'string'
-                ? parseInt(customCmd.color.replace('#', ''), 16)
-                : NaN;
+              const parsedColor =
+                typeof customCmd.color === 'string' ? parseInt(customCmd.color.replace('#', ''), 16) : NaN;
 
               const embed = new EmbedBuilder()
                 .setDescription(response)
-                .setColor(Number.isFinite(parsedColor) ? parsedColor : 0x5865F2);
+                .setColor(Number.isFinite(parsedColor) ? parsedColor : 0x5865f2);
 
               if (customCmd.title) embed.setTitle(customCmd.title);
               await message.reply({ embeds: [embed] }).catch(() => {});
@@ -359,7 +382,9 @@ export default class CommandHandler {
               await message.reply(response).catch(() => {});
             }
 
-            statsService.recordCommand(`custom:${customCmd.name}`, guildId ?? undefined, (message as any).author?.id).catch(() => {});
+            statsService
+              .recordCommand(`custom:${customCmd.name}`, guildId ?? undefined, (message as any).author?.id)
+              .catch(() => {});
 
             if (customCmd.deleteTrigger && typeof (message as any).delete === 'function') {
               await (message as any).delete().catch(() => {});
@@ -381,8 +406,9 @@ export default class CommandHandler {
         const memberRoleIds = (member as any)?.roles?.roleIds ?? [];
 
         const isStaff = settings.staffRoleId && memberRoleIds.includes(settings.staffRoleId);
-        const isAdmin = (member as any)?.permissions?.has((PermissionFlags as any).Administrator) ||
-                        (member as any)?.permissions?.has((PermissionFlags as any).ManageGuild);
+        const isAdmin =
+          (member as any)?.permissions?.has((PermissionFlags as any).Administrator) ||
+          (member as any)?.permissions?.has((PermissionFlags as any).ManageGuild);
 
         if (!isStaff && !isAdmin) {
           return;
@@ -416,16 +442,18 @@ export default class CommandHandler {
         return;
       }
 
-      const hasPermission = command.permissions.some(perm => {
+      const hasPermission = command.permissions.some((perm) => {
         return (member as any).permissions?.has((PermissionFlags as unknown as Record<string, bigint>)[perm]);
       });
 
       if (!hasPermission) {
-        await message.reply(
-          t(locale, 'auditCatalog.handlers.CommandHandler.l412_reply', {
-            "command.permissions.join(', ')": command.permissions.join(', ')
-          })
-        ).catch(() => {});
+        await message
+          .reply(
+            t(locale, 'auditCatalog.handlers.CommandHandler.l412_reply', {
+              "command.permissions.join(', ')": command.permissions.join(', '),
+            }),
+          )
+          .catch(() => {});
         return;
       }
     }
@@ -439,7 +467,13 @@ export default class CommandHandler {
 
     const cooldownInfo = this.checkCooldown((message as any).author.id, commandName);
     if (!cooldownInfo.ready) {
-      await message.reply(t(locale, 'auditCatalog.handlers.CommandHandler.l426_reply', { 'cooldownInfo.remaining': cooldownInfo.remaining })).catch(() => {});
+      await message
+        .reply(
+          t(locale, 'auditCatalog.handlers.CommandHandler.l426_reply', {
+            'cooldownInfo.remaining': cooldownInfo.remaining,
+          }),
+        )
+        .catch(() => {});
       return;
     }
 
@@ -447,14 +481,17 @@ export default class CommandHandler {
       await command.execute(message, args, this.client, usedPrefix);
       statsService.recordCommand(command.name, guildId ?? undefined, (message as any).author?.id).catch(() => {});
     } catch (error: any) {
-      const guildName = (message as any).guild?.name || ((message as any).guildId ? `Guild ${(message as any).guildId}` : 'DM');
+      const guildName =
+        (message as any).guild?.name || ((message as any).guildId ? `Guild ${(message as any).guildId}` : 'DM');
 
       if (isNetworkError(error)) {
         console.warn(`[${guildName}] Fluxer API unreachable during !${commandName} (ECONNRESET)`);
-        await message.reply(
-          'The Fluxer API is having connectivity issues, which is affecting bot functionality.\n' +
-          'Check the status page to see if there are any ongoing incidents: <https://status.starlightnet.work>',
-        ).catch(() => {});
+        await message
+          .reply(
+            'The Fluxer API is having connectivity issues, which is affecting bot functionality.\n' +
+              'Check the status page to see if there are any ongoing incidents: <https://status.starlightnet.work>',
+          )
+          .catch(() => {});
       } else if (
         error?.message?.toLowerCase().includes('nsfw') ||
         error?.message?.toLowerCase().includes('age restricted')
@@ -484,11 +521,13 @@ export default class CommandHandler {
           try {
             const owner = await this.client.users.fetch(config.ownerId).catch(() => null);
             if (owner) {
-              await (owner as any).send(
-                `**Command error** in **${guildName}**\n` +
-                `Command: \`!${commandName}\`\n` +
-                `Error: \`${error.message || error}\``,
-              ).catch(() => {});
+              await (owner as any)
+                .send(
+                  `**Command error** in **${guildName}**\n` +
+                    `Command: \`!${commandName}\`\n` +
+                    `Error: \`${error.message || error}\``,
+                )
+                .catch(() => {});
             }
           } catch {}
         }
@@ -577,11 +616,9 @@ export default class CommandHandler {
     return { ready: true, remaining: 0 };
   }
 
-
   getCommand(name: string): Command | undefined {
     return this.commands.get(name);
   }
-
 
   getCommandsByCategory(): Record<string, Command[]> {
     const categories: Record<string, Command[]> = {};

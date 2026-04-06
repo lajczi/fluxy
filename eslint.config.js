@@ -40,7 +40,7 @@ module.exports = [
       'no-console': 'off',
       'prefer-const': 'warn',
       'no-var': 'error',
-      'eqeqeq': ['warn', 'always'],
+      eqeqeq: ['warn', 'always'],
       'no-empty': ['warn', { allowEmptyCatch: true }],
     },
   },

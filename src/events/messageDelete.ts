@@ -11,7 +11,6 @@ const event: BotEvent = {
   name: 'messageDelete',
 
   async execute(message: any, client: any) {
-
     const guildId = message.channel?.guildId;
     if (!guildId) return;
 
@@ -25,7 +24,9 @@ const event: BotEvent = {
     const cachedContent = message.id ? messageCache.get(message.id) : null;
     const rawContent = cachedContent || message.content;
     const content = rawContent
-      ? (rawContent.length > 1024 ? rawContent.substring(0, 1021) + '...' : rawContent)
+      ? rawContent.length > 1024
+        ? rawContent.substring(0, 1021) + '...'
+        : rawContent
       : '*(content not cached)*';
 
     if (message.id) messageCache.remove(message.id);
@@ -42,7 +43,9 @@ const event: BotEvent = {
       0x99aab5,
       fields,
       client,
-      message.id ? { footer: `Message ID: ${message.id}`, eventType: 'message_delete' } : { eventType: 'message_delete' }
+      message.id
+        ? { footer: `Message ID: ${message.id}`, eventType: 'message_delete' }
+        : { eventType: 'message_delete' },
     );
 
     // ─── Starboard cleanup ───
@@ -54,7 +57,7 @@ const event: BotEvent = {
           const originals = await StarboardMessage.find({ guildId, messageId: message.id });
           if (originals.length > 0) {
             for (const entry of originals) {
-              const channelId = entry.starboardChannelId || boards.find(b => b.channelId)?.channelId;
+              const channelId = entry.starboardChannelId || boards.find((b) => b.channelId)?.channelId;
               if (entry.starboardMessageId && channelId) {
                 try {
                   await client.rest.delete(Routes.channelMessage(channelId, entry.starboardMessageId));
@@ -74,7 +77,7 @@ const event: BotEvent = {
         console.error(`[starboard] Error in message delete cleanup: ${sbErr.message}`);
       }
     }
-  }
+  },
 };
 
 export default event;

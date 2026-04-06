@@ -15,18 +15,21 @@ export interface IStarboardMessage {
 
 export interface StarboardMessageDocument extends IStarboardMessage, Document {}
 
-const starboardMessageSchema = new Schema<StarboardMessageDocument>({
-  guildId: { type: String, required: true, index: true },
-  channelId: { type: String, required: true },
-  starboardChannelId: { type: String, default: null },
-  messageId: { type: String, required: true },
-  authorId: { type: String, required: true },
-  starboardMessageId: { type: String, default: null },
-  starCount: { type: Number, default: 0, min: 0 },
-  reactors: { type: [String], default: [] },
-}, {
-  timestamps: true,
-});
+const starboardMessageSchema = new Schema<StarboardMessageDocument>(
+  {
+    guildId: { type: String, required: true, index: true },
+    channelId: { type: String, required: true },
+    starboardChannelId: { type: String, default: null },
+    messageId: { type: String, required: true },
+    authorId: { type: String, required: true },
+    starboardMessageId: { type: String, default: null },
+    starCount: { type: Number, default: 0, min: 0 },
+    reactors: { type: [String], default: [] },
+  },
+  {
+    timestamps: true,
+  },
+);
 
 starboardMessageSchema.index({ guildId: 1, messageId: 1, starboardChannelId: 1 }, { unique: true });
 starboardMessageSchema.index({ guildId: 1, starCount: -1 });

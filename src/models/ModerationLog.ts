@@ -5,13 +5,16 @@ export interface ModerationLogDocument extends IModerationLog, Document {}
 
 export interface ModerationLogModel extends Model<ModerationLogDocument> {
   logAction(data: Partial<IModerationLog>): Promise<ModerationLogDocument>;
-  getGuildLogs(guildId: string, options?: {
-    limit?: number;
-    skip?: number;
-    action?: ModerationAction;
-    userId?: string;
-    targetId?: string;
-  }): Promise<IModerationLog[]>;
+  getGuildLogs(
+    guildId: string,
+    options?: {
+      limit?: number;
+      skip?: number;
+      action?: ModerationAction;
+      userId?: string;
+      targetId?: string;
+    },
+  ): Promise<IModerationLog[]>;
   getUserHistory(guildId: string, targetId: string, limit?: number): Promise<IModerationLog[]>;
   getWarningCount(guildId: string, targetId: string): Promise<number>;
   getGuildStats(guildId: string, days?: number): Promise<{ total: number; byAction: Record<string, number> }>;
@@ -42,10 +45,25 @@ const moderationLogSchema = new Schema<ModerationLogDocument, ModerationLogModel
     type: String,
     required: true,
     enum: [
-      'ban', 'unban', 'kick', 'mute', 'unmute',
-      'warn', 'unwarn', 'clearwarn', 'slowmode', 'unlock',
-      'purge', 'softban', 'tempban', 'tempmute', 'timeout',
-      'nickname', 'role_add', 'role_remove', 'other',
+      'ban',
+      'unban',
+      'kick',
+      'mute',
+      'unmute',
+      'warn',
+      'unwarn',
+      'clearwarn',
+      'slowmode',
+      'unlock',
+      'purge',
+      'softban',
+      'tempban',
+      'tempmute',
+      'timeout',
+      'nickname',
+      'role_add',
+      'role_remove',
+      'other',
     ],
   },
 
@@ -62,16 +80,16 @@ const moderationLogSchema = new Schema<ModerationLogDocument, ModerationLogModel
   },
 
   metadata: {
-    roleId:          { type: String },
-    roleName:        { type: String },
-    messageCount:    { type: Number },
-    channelId:       { type: String },
-    channelName:     { type: String },
+    roleId: { type: String },
+    roleName: { type: String },
+    messageCount: { type: Number },
+    channelId: { type: String },
+    channelName: { type: String },
     slowmodeSeconds: { type: Number },
-    oldNickname:     { type: String },
-    newNickname:     { type: String },
-    warningId:       { type: String },
-    caseNumber:      { type: Number },
+    oldNickname: { type: String },
+    newNickname: { type: String },
+    warningId: { type: String },
+    caseNumber: { type: Number },
   },
 
   timestamp: {
@@ -118,18 +136,11 @@ moderationLogSchema.statics.getGuildLogs = async function (
   if (userId) query.userId = userId;
   if (targetId) query.targetId = targetId;
 
-  return this.find(query)
-    .sort({ timestamp: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean();
+  return this.find(query).sort({ timestamp: -1 }).skip(skip).limit(limit).lean();
 };
 
 moderationLogSchema.statics.getUserHistory = async function (guildId: string, targetId: string, limit = 20) {
-  return this.find({ guildId, targetId })
-    .sort({ timestamp: -1 })
-    .limit(limit)
-    .lean();
+  return this.find({ guildId, targetId }).sort({ timestamp: -1 }).limit(limit).lean();
 };
 
 moderationLogSchema.statics.getWarningCount = async function (guildId: string, targetId: string) {

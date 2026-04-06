@@ -22,10 +22,7 @@ function safeCompare(a: string, b: string): boolean {
   }
 }
 
-export async function verifyWsToken(
-  req: IncomingMessage,
-  requireOwner = false,
-): Promise<string | null> {
+export async function verifyWsToken(req: IncomingMessage, requireOwner = false): Promise<string | null> {
   const cookies = parseCookies(req.headers.cookie);
   const token = cookies['fluxy_token'] || null;
 

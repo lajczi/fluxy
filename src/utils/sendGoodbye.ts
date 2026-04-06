@@ -9,8 +9,7 @@ export default async function sendGoodbye(member: any, guild: any, settings: any
   let goodbyeChannel: any;
   try {
     const channelsMap = guild.channels?.cache || guild.channels;
-    goodbyeChannel = channelsMap?.get(gm.channelId)
-      ?? await guild.channels.fetch(gm.channelId).catch(() => null);
+    goodbyeChannel = channelsMap?.get(gm.channelId) ?? (await guild.channels.fetch(gm.channelId).catch(() => null));
   } catch {
     goodbyeChannel = null;
   }
@@ -19,12 +18,13 @@ export default async function sendGoodbye(member: any, guild: any, settings: any
   const user = member.user;
   const memberCount = memberCounter.get(guild.id) ?? 0;
 
-  const replaceVars = (text: string) => text
-    .replace(/\\n/g, '\n')
-    .replace(/\{user\}/gi, `<@${member.id}>`)
-    .replace(/\{username\}/gi, user?.username || 'Unknown')
-    .replace(/\{server\}/gi, guild.name)
-    .replace(/\{count\}/gi, String(memberCount || 0));
+  const replaceVars = (text: string) =>
+    text
+      .replace(/\\n/g, '\n')
+      .replace(/\{user\}/gi, `<@${member.id}>`)
+      .replace(/\{username\}/gi, user?.username || 'Unknown')
+      .replace(/\{server\}/gi, guild.name)
+      .replace(/\{count\}/gi, String(memberCount || 0));
 
   const sendOpts: any = {};
 

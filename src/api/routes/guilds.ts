@@ -89,10 +89,12 @@ function getGuildChannelCacheFallback(client: Client, guild: any, guildId: strin
   const cachedGuildChannels = Array.from(guild?.channels?.values?.() || []);
   if (cachedGuildChannels.length > 0) return cachedGuildChannels;
 
-  const cachedClientChannels = Array.from(((client as any).channels?.values?.() || []) as Iterable<any>).filter((channel: any) => {
-    const channelGuildId = channel?.guildId ?? channel?.guild_id ?? channel?.guild?.id ?? null;
-    return channelGuildId === guildId;
-  });
+  const cachedClientChannels = Array.from(((client as any).channels?.values?.() || []) as Iterable<any>).filter(
+    (channel: any) => {
+      const channelGuildId = channel?.guildId ?? channel?.guild_id ?? channel?.guild?.id ?? null;
+      return channelGuildId === guildId;
+    },
+  );
 
   if (cachedClientChannels.length > 0 && typeof guild?.channels?.set === 'function') {
     for (const channel of cachedClientChannels) {
@@ -127,7 +129,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
         return;
       }
 
-      const userGuilds = await userGuildsRes.json() as Array<{
+      const userGuilds = (await userGuildsRes.json()) as Array<{
         id: string;
         name: string;
         icon?: string | null;
@@ -136,18 +138,16 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       }>;
 
       const userId = req.userId;
-      const manageable = userGuilds.filter(ug => {
+      const manageable = userGuilds.filter((ug) => {
         if (ug.owner_id === userId) return true;
         const perms = ug.permissions ? BigInt(ug.permissions) : 0n;
         return (perms & 0x8n) === 0x8n || (perms & 0x20n) === 0x20n;
       });
 
       const fetchAllGuildIds = (client as any).fetchAllGuildIds;
-      const allBotGuildIds: Set<string> = fetchAllGuildIds
-        ? await fetchAllGuildIds()
-        : new Set(client.guilds.keys());
+      const allBotGuildIds: Set<string> = fetchAllGuildIds ? await fetchAllGuildIds() : new Set(client.guilds.keys());
 
-      const result = manageable.map(ug => {
+      const result = manageable.map((ug) => {
         const botGuild = client.guilds.get(ug.id);
         if (botGuild) {
           return {
@@ -201,7 +201,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
     } else {
       let fetched = false;
       try {
-        const guildData = await client.rest.get(Routes.guild(guildId)) as any;
+        const guildData = (await client.rest.get(Routes.guild(guildId))) as any;
         if (guildData?.id) {
           guildName = guildData.name;
           guildIcon = guildData.icon || null;
@@ -209,7 +209,10 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
           fetched = true;
         }
       } catch (err: any) {
-        log.warn('API', `GET /guilds/${guildId} failed: ${err?.statusCode ?? err?.code ?? err?.message} - trying bot guild list fallback`);
+        log.warn(
+          'API',
+          `GET /guilds/${guildId} failed: ${err?.statusCode ?? err?.code ?? err?.message} - trying bot guild list fallback`,
+        );
       }
 
       if (!fetched) {
@@ -247,9 +250,9 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
 
     const cachedChannels = channels;
     try {
-      const fetched = asArray(await client.rest.get(Routes.guildChannels(guildId)) as any);
+      const fetched = asArray((await client.rest.get(Routes.guildChannels(guildId))) as any);
       if (fetched.length > 0) channels = fetched;
-    } catch { }
+    } catch {}
     const hasMissingNames = channels.length > 0 && channels.some((ch: any) => !ch?.name);
     if (channels.length === 0 || hasMissingNames) {
       channels = cachedChannels;
@@ -257,17 +260,17 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
 
     const cachedRoles = roles;
     try {
-      const fetched = asArray(await client.rest.get(Routes.guildRoles(guildId)) as any);
+      const fetched = asArray((await client.rest.get(Routes.guildRoles(guildId))) as any);
       if (fetched.length > 0) roles = fetched;
-    } catch { }
+    } catch {}
     if (roles.length === 0) {
       roles = cachedRoles;
     }
     if (emojis.length === 0) {
       try {
-        const fetched = asArray(await client.rest.get(`/guilds/${guildId}/emojis`) as any);
+        const fetched = asArray((await client.rest.get(`/guilds/${guildId}/emojis`)) as any);
         if (fetched.length > 0) emojis = fetched;
-      } catch { }
+      } catch {}
     }
 
     res.json({
@@ -339,7 +342,9 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
     } catch (err: any) {
       const fields = Object.keys(sanitized);
       if (err.name === 'ValidationError') {
-        res.status(400).json({ error: guildsT('validationErrorUpdating', { fields: fields.join(', ') }), details: err.message });
+        res
+          .status(400)
+          .json({ error: guildsT('validationErrorUpdating', { fields: fields.join(', ') }), details: err.message });
         return;
       }
       log.error('API', `Failed to update settings for ${guildId}: ${err.message}`);
@@ -351,27 +356,43 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
     const guildId = req.params.id as string;
 
     try {
-      const settings: any = await GuildSettings.findOne({ guildId }) || await (GuildSettings as any).getOrCreate(guildId);
+      const settings: any =
+        (await GuildSettings.findOne({ guildId })) || (await (GuildSettings as any).getOrCreate(guildId));
       const { channelId: existingChannelId } = req.body || {};
 
       const botId = client.user?.id;
       const everyoneRoleId = guildId;
       const overwrites: any[] = [
-        { id: everyoneRoleId, type: 0, allow: String(PermissionFlags.ViewChannel | PermissionFlags.AddReactions | PermissionFlags.ReadMessageHistory), deny: String(PermissionFlags.SendMessages) },
+        {
+          id: everyoneRoleId,
+          type: 0,
+          allow: String(
+            PermissionFlags.ViewChannel | PermissionFlags.AddReactions | PermissionFlags.ReadMessageHistory,
+          ),
+          deny: String(PermissionFlags.SendMessages),
+        },
       ];
       if (botId) {
         overwrites.push({
           id: botId,
           type: 1,
-          allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ManageMessages | PermissionFlags.ManageChannels | PermissionFlags.AddReactions | PermissionFlags.ReadMessageHistory | PermissionFlags.EmbedLinks),
+          allow: String(
+            PermissionFlags.ViewChannel |
+              PermissionFlags.SendMessages |
+              PermissionFlags.ManageMessages |
+              PermissionFlags.ManageChannels |
+              PermissionFlags.AddReactions |
+              PermissionFlags.ReadMessageHistory |
+              PermissionFlags.EmbedLinks,
+          ),
           deny: '0',
         });
       }
 
       if (!settings.ticketCategoryId) {
-        const categoryRes = await client.rest.post(Routes.guildChannels(guildId), {
+        const categoryRes = (await client.rest.post(Routes.guildChannels(guildId), {
           body: { type: 4, name: 'Tickets' },
-        }) as any;
+        })) as any;
         const categoryId = categoryRes?.id;
         if (!categoryId) {
           res.status(500).json({ error: guildsT('createTicketCategoryFailed') });
@@ -396,7 +417,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
           return;
         }
       } else {
-        const channelRes = await client.rest.post(Routes.guildChannels(guildId), {
+        const channelRes = (await client.rest.post(Routes.guildChannels(guildId), {
           body: {
             type: 0,
             name: 'make-a-ticket',
@@ -404,7 +425,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
             topic: guildsT('ticketSetupTopic'),
             permission_overwrites: overwrites,
           },
-        }) as any;
+        })) as any;
         targetChannelId = channelRes?.id;
         targetChannelName = channelRes?.name ?? 'make-a-ticket';
         if (!targetChannelId) {
@@ -418,12 +439,12 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       const embed = new EmbedBuilder()
         .setTitle(t(lang, 'commands.admin.ticket.user.panelEmbed.title'))
         .setDescription(t(lang, 'auditCatalog.api.routes.guilds.ticketSetupPanelDescription', { emoji }))
-        .setColor(0x5865F2)
+        .setColor(0x5865f2)
         .setFooter({ text: t(lang, 'commands.admin.ticket.user.panelEmbed.footer') });
 
-      const msgRes = await client.rest.post(Routes.channelMessages(targetChannelId), {
+      const msgRes = (await client.rest.post(Routes.channelMessages(targetChannelId), {
         body: { embeds: [embed.toJSON()] },
-      }) as any;
+      })) as any;
       const panelMsgId = msgRes?.id;
       if (!panelMsgId) {
         res.status(500).json({ error: guildsT('postTicketPanelMessageFailed') });
@@ -432,9 +453,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
 
       try {
         const encoded = encodeReactionForRoute(emoji);
-        await client.rest.put(
-          `${Routes.channelMessageReaction(targetChannelId, panelMsgId, encoded)}/@me`
-        );
+        await client.rest.put(`${Routes.channelMessageReaction(targetChannelId, panelMsgId, encoded)}/@me`);
       } catch (reactErr: any) {
         console.warn(`[ticket-setup] Failed to add panel reaction for ${guildId}: ${reactErr?.message || reactErr}`);
       }
@@ -464,7 +483,8 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
     const guildId = req.params.id as string;
 
     try {
-      const settings: any = await GuildSettings.findOne({ guildId }) || await (GuildSettings as any).getOrCreate(guildId);
+      const settings: any =
+        (await GuildSettings.findOne({ guildId })) || (await (GuildSettings as any).getOrCreate(guildId));
       if (!settings.verification) settings.verification = {};
       const verification = settings.verification;
 
@@ -474,9 +494,9 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       let verifiedRoleId = req.body?.verifiedRoleId || verification.verifiedRoleId;
       if (!verifiedRoleId) {
         try {
-          const roleRes = await client.rest.post(Routes.guildRoles(guildId), {
+          const roleRes = (await client.rest.post(Routes.guildRoles(guildId), {
             body: { name: 'Verified', color: 0x2ecc71, mentionable: false },
-          }) as any;
+          })) as any;
           verifiedRoleId = roleRes?.id;
         } catch (err: any) {
           res.status(500).json({ error: guildsT('createVerifiedRoleFailed', { error: err.message }) });
@@ -488,16 +508,34 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       let categoryId = verification.categoryId;
       if (!categoryId) {
         try {
-          const catRes = await client.rest.post(Routes.guildChannels(guildId), {
+          const catRes = (await client.rest.post(Routes.guildChannels(guildId), {
             body: {
               type: 4,
               name: 'Verification',
               permission_overwrites: [
                 { id: everyoneRoleId, type: 0, allow: '0', deny: String(PermissionFlags.ViewChannel) },
-                ...(botId ? [{ id: botId, type: 1, allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ManageChannels | PermissionFlags.ManageMessages | PermissionFlags.EmbedLinks | PermissionFlags.AttachFiles | PermissionFlags.ReadMessageHistory | PermissionFlags.AddReactions), deny: '0' }] : []),
+                ...(botId
+                  ? [
+                      {
+                        id: botId,
+                        type: 1,
+                        allow: String(
+                          PermissionFlags.ViewChannel |
+                            PermissionFlags.SendMessages |
+                            PermissionFlags.ManageChannels |
+                            PermissionFlags.ManageMessages |
+                            PermissionFlags.EmbedLinks |
+                            PermissionFlags.AttachFiles |
+                            PermissionFlags.ReadMessageHistory |
+                            PermissionFlags.AddReactions,
+                        ),
+                        deny: '0',
+                      },
+                    ]
+                  : []),
               ],
             },
-          }) as any;
+          })) as any;
           categoryId = catRes?.id;
         } catch (err: any) {
           res.status(500).json({ error: guildsT('createVerificationCategoryFailed', { error: err.message }) });
@@ -508,19 +546,43 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
 
       let panelChannelId: string;
       try {
-        const chRes = await client.rest.post(Routes.guildChannels(guildId), {
+        const chRes = (await client.rest.post(Routes.guildChannels(guildId), {
           body: {
             type: 0,
             name: 'verify-here',
             parent_id: categoryId,
             topic: guildsT('verificationSetupTopic'),
             permission_overwrites: [
-              { id: everyoneRoleId, type: 0, allow: String(PermissionFlags.ViewChannel | PermissionFlags.ReadMessageHistory | PermissionFlags.AddReactions), deny: String(PermissionFlags.SendMessages) },
-              ...(botId ? [{ id: botId, type: 1, allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ManageMessages | PermissionFlags.EmbedLinks | PermissionFlags.AttachFiles | PermissionFlags.ReadMessageHistory | PermissionFlags.AddReactions), deny: '0' }] : []),
+              {
+                id: everyoneRoleId,
+                type: 0,
+                allow: String(
+                  PermissionFlags.ViewChannel | PermissionFlags.ReadMessageHistory | PermissionFlags.AddReactions,
+                ),
+                deny: String(PermissionFlags.SendMessages),
+              },
+              ...(botId
+                ? [
+                    {
+                      id: botId,
+                      type: 1,
+                      allow: String(
+                        PermissionFlags.ViewChannel |
+                          PermissionFlags.SendMessages |
+                          PermissionFlags.ManageMessages |
+                          PermissionFlags.EmbedLinks |
+                          PermissionFlags.AttachFiles |
+                          PermissionFlags.ReadMessageHistory |
+                          PermissionFlags.AddReactions,
+                      ),
+                      deny: '0',
+                    },
+                  ]
+                : []),
               { id: verifiedRoleId, type: 0, allow: '0', deny: String(PermissionFlags.ViewChannel) },
             ],
           },
-        }) as any;
+        })) as any;
         panelChannelId = chRes?.id;
       } catch (err: any) {
         res.status(500).json({ error: guildsT('createVerificationChannelFailed', { error: err.message }) });
@@ -532,20 +594,18 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       const embed = new EmbedBuilder()
         .setTitle(t(lang, 'verification.panel.title'))
         .setDescription(t(lang, 'verification.panel.description'))
-        .setColor(0x5865F2)
+        .setColor(0x5865f2)
         .setFooter({ text: t(lang, 'verification.panel.footer') })
         .setTimestamp(new Date());
 
-      const msgRes = await client.rest.post(Routes.channelMessages(panelChannelId), {
+      const msgRes = (await client.rest.post(Routes.channelMessages(panelChannelId), {
         body: { embeds: [embed.toJSON()] },
-      }) as any;
+      })) as any;
       const panelMessageId = msgRes?.id;
 
       try {
         const checkEncoded = encodeReactionForRoute('✅');
-        await client.rest.put(
-          `${Routes.channelMessageReaction(panelChannelId, panelMessageId, checkEncoded)}/@me`
-        );
+        await client.rest.put(`${Routes.channelMessageReaction(panelChannelId, panelMessageId, checkEncoded)}/@me`);
       } catch (err: any) {
         console.error(`[verification-setup] Failed to add reaction:`, err);
       }
@@ -580,25 +640,26 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
     }
     try {
       const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
+        .setColor(0x5865f2)
         .setTitle(title && String(title).trim() ? String(title).trim() : guildsT('reactionRolesDefaultTitle'))
         .setDescription(
-          (description && String(description).trim())
+          description && String(description).trim()
             ? String(description).trim()
-            : guildsT('reactionRolesDefaultDescription')
+            : guildsT('reactionRolesDefaultDescription'),
         )
         .setTimestamp(new Date());
 
-      const msgRes = await client.rest.post(Routes.channelMessages(channelId), {
+      const msgRes = (await client.rest.post(Routes.channelMessages(channelId), {
         body: { embeds: [embed.toJSON()] },
-      }) as any;
+      })) as any;
       const messageId = msgRes?.id;
       if (!messageId) {
         res.status(500).json({ error: guildsT('postReactionRolePanelFailed') });
         return;
       }
 
-      const settings: any = await GuildSettings.findOne({ guildId }) || await (GuildSettings as any).getOrCreate(guildId);
+      const settings: any =
+        (await GuildSettings.findOne({ guildId })) || (await (GuildSettings as any).getOrCreate(guildId));
       const panels = settings.reactionRoles || [];
       const exists = panels.some((p: any) => p.messageId === messageId);
       if (!exists) {
@@ -656,9 +717,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       }
 
       let emojiForReaction = emojiRaw;
-      const looksLikeCustomEmojiInput =
-        /^<a?:[\w]+:\d+>$/.test(emojiRaw) || 
-        /^(a:)?[\w]+:\d+$/.test(emojiRaw);
+      const looksLikeCustomEmojiInput = /^<a?:[\w]+:\d+>$/.test(emojiRaw) || /^(a:)?[\w]+:\d+$/.test(emojiRaw);
       if (looksLikeCustomEmojiInput) {
         try {
           const resolved = await (client as any).resolveEmoji?.(emojiRaw, guildId);
@@ -676,7 +735,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
         await targetMessage.react(emojiForReaction);
       } catch (reactErr: any) {
         res.status(400).json({
-          error: guildsT('addReactionFailed', { error: reactErr.message || guildsT('invalidEmoji') })
+          error: guildsT('addReactionFailed', { error: reactErr.message || guildsT('invalidEmoji') }),
         });
         return;
       }
@@ -712,12 +771,16 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       }
 
       const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
-        .setTitle(title !== null && title !== undefined && String(title).trim() ? String(title).trim() : guildsT('reactionRolesDefaultTitle'))
+        .setColor(0x5865f2)
+        .setTitle(
+          title !== null && title !== undefined && String(title).trim()
+            ? String(title).trim()
+            : guildsT('reactionRolesDefaultTitle'),
+        )
         .setDescription(
           description !== null && description !== undefined && String(description).trim()
             ? String(description).trim()
-            : guildsT('reactionRolesDefaultDescription')
+            : guildsT('reactionRolesDefaultDescription'),
         )
         .setTimestamp(new Date());
 
@@ -769,9 +832,11 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       try {
         const existing = fs.readdirSync(uploadsDir).filter((f: string) => f.startsWith('bg-'));
         for (const old of existing) {
-          try { fs.unlinkSync(path.join(uploadsDir, old)); } catch { }
+          try {
+            fs.unlinkSync(path.join(uploadsDir, old));
+          } catch {}
         }
-      } catch { }
+      } catch {}
 
       const filename = `bg-${Date.now()}.${ext}`;
       fs.writeFileSync(path.join(uploadsDir, filename), buffer);
@@ -787,13 +852,8 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
     try {
       const Ticket = (await import('../../models/Ticket')).default;
       const rawStatus = req.query.status;
-      const status = (typeof rawStatus === 'string' && ['open', 'closed'].includes(rawStatus))
-        ? rawStatus
-        : 'open';
-      const tickets = await Ticket.find({ guildId: req.params.id, status })
-        .sort({ createdAt: -1 })
-        .limit(50)
-        .lean();
+      const status = typeof rawStatus === 'string' && ['open', 'closed'].includes(rawStatus) ? rawStatus : 'open';
+      const tickets = await Ticket.find({ guildId: req.params.id, status }).sort({ createdAt: -1 }).limit(50).lean();
       res.json(tickets);
     } catch {
       res.status(500).json({ error: guildsT('internalServerError') });
@@ -820,14 +880,16 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
         const channel = client.channels.get((ticket as any).channelId);
         if (channel) {
           await (channel as any).send({
-            embeds: [{
-              title: guildsT('ticketClaimedTitle', { ticketNumber: (ticket as any).ticketNumber }),
-              description: guildsT('ticketClaimedDescription', { userId: req.userId! }),
-              color: 0x2ecc71,
-            }],
+            embeds: [
+              {
+                title: guildsT('ticketClaimedTitle', { ticketNumber: (ticket as any).ticketNumber }),
+                description: guildsT('ticketClaimedDescription', { userId: req.userId! }),
+                color: 0x2ecc71,
+              },
+            ],
           });
         }
-      } catch { }
+      } catch {}
 
       res.json(ticket);
     } catch {
@@ -854,21 +916,31 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
       try {
         const channel = client.channels.get((ticket as any).channelId);
         if (channel) {
-          const lang = normalizeLocale((await settingsCache.get(req.params.id as string).catch(() => null) as any)?.language);
+          const lang = normalizeLocale(
+            ((await settingsCache.get(req.params.id as string).catch(() => null)) as any)?.language,
+          );
           const embed = new EmbedBuilder()
-            .setTitle(t(lang, 'auditCatalog.api.routes.guilds.l855_setTitle', { '(ticket as any).ticketNumber': (ticket as any).ticketNumber }))
+            .setTitle(
+              t(lang, 'auditCatalog.api.routes.guilds.l855_setTitle', {
+                '(ticket as any).ticketNumber': (ticket as any).ticketNumber,
+              }),
+            )
             .setDescription(t(lang, 'auditCatalog.api.routes.guilds.l856_setDescription', { 'req.userId': req.userId }))
-            .setColor(0xED4245)
+            .setColor(0xed4245)
             .addFields({ name: t(lang, 'commands.moderation.warn.dmFieldReason'), value: reason, inline: false });
 
           if ((ticket as any).claimedBy) {
-            embed.addFields({ name: t(lang, 'commands.admin.ticket.user.closeEmbed.claimedByField'), value: `<@${(ticket as any).claimedBy}>`, inline: true });
+            embed.addFields({
+              name: t(lang, 'commands.admin.ticket.user.closeEmbed.claimedByField'),
+              value: `<@${(ticket as any).claimedBy}>`,
+              inline: true,
+            });
           }
 
           await (channel as any).send({ embeds: [embed] });
-          setTimeout(() => (channel as any).delete().catch(() => { }), 5000);
+          setTimeout(() => (channel as any).delete().catch(() => {}), 5000);
         }
-      } catch { }
+      } catch {}
 
       try {
         const guildSettings = await settingsCache.get(req.params.id as string);
@@ -878,28 +950,60 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
           const logChannel = client.channels.get(logChannelId);
           if (logChannel) {
             const transcriptMessages = ((ticket as any).transcript || []) as Array<{
-              authorId: string; authorName: string; avatarURL?: string | null;
-              content: string; attachments?: Array<{ url: string; name: string }>;
+              authorId: string;
+              authorName: string;
+              avatarURL?: string | null;
+              content: string;
+              attachments?: Array<{ url: string; name: string }>;
               timestamp: Date | string;
             }>;
 
             const logEmbed = new EmbedBuilder()
-              .setTitle(t(lang, 'auditCatalog.api.routes.guilds.l882_setTitle', { '(ticket as any).ticketNumber': (ticket as any).ticketNumber }))
-              .setColor(0xED4245)
+              .setTitle(
+                t(lang, 'auditCatalog.api.routes.guilds.l882_setTitle', {
+                  '(ticket as any).ticketNumber': (ticket as any).ticketNumber,
+                }),
+              )
+              .setColor(0xed4245)
               .addFields(
-                { name: t(lang, 'commands.admin.ticket.user.logEmbed.openedByField'), value: `<@${(ticket as any).openedBy}>`, inline: true },
-                { name: t(lang, 'commands.admin.ticket.user.logEmbed.closedByField'), value: t(lang, 'auditCatalog.api.routes.guilds.l886_addFields_value', { 'req.userId': req.userId }), inline: true },
+                {
+                  name: t(lang, 'commands.admin.ticket.user.logEmbed.openedByField'),
+                  value: `<@${(ticket as any).openedBy}>`,
+                  inline: true,
+                },
+                {
+                  name: t(lang, 'commands.admin.ticket.user.logEmbed.closedByField'),
+                  value: t(lang, 'auditCatalog.api.routes.guilds.l886_addFields_value', { 'req.userId': req.userId }),
+                  inline: true,
+                },
               );
             if ((ticket as any).claimedBy) {
-              logEmbed.addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.claimedByField'), value: `<@${(ticket as any).claimedBy}>`, inline: true });
+              logEmbed.addFields({
+                name: t(lang, 'commands.admin.ticket.user.logEmbed.claimedByField'),
+                value: `<@${(ticket as any).claimedBy}>`,
+                inline: true,
+              });
             }
-            logEmbed.addFields({ name: t(lang, 'commands.moderation.warn.dmFieldReason'), value: reason, inline: false });
+            logEmbed.addFields({
+              name: t(lang, 'commands.moderation.warn.dmFieldReason'),
+              value: reason,
+              inline: false,
+            });
 
             if ((ticket as any).subject) {
-              logEmbed.addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.subjectField'), value: (ticket as any).subject, inline: false });
+              logEmbed.addFields({
+                name: t(lang, 'commands.admin.ticket.user.logEmbed.subjectField'),
+                value: (ticket as any).subject,
+                inline: false,
+              });
             }
 
-            logEmbed.addFields({ name: t(lang, 'commands.admin.ticket.user.logEmbed.messagesField'), value: String(transcriptMessages.length), inline: true })
+            logEmbed
+              .addFields({
+                name: t(lang, 'commands.admin.ticket.user.logEmbed.messagesField'),
+                value: String(transcriptMessages.length),
+                inline: true,
+              })
               .setTimestamp(new Date());
 
             const sendOpts: any = { embeds: [logEmbed] };
@@ -918,7 +1022,9 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
                     const name = (u as any).username || id;
                     nameCache.set(id, name);
                     return name;
-                  } catch { return id; }
+                  } catch {
+                    return id;
+                  }
                 };
 
                 const openedByName = await resolveName((ticket as any).openedBy);
@@ -926,7 +1032,7 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
                 const claimedByName = (ticket as any).claimedBy ? await resolveName((ticket as any).claimedBy) : null;
 
                 const html = generateTranscriptHtml({
-                  guildName: guild?.name || req.params.id as string,
+                  guildName: guild?.name || (req.params.id as string),
                   ticketNumber: (ticket as any).ticketNumber,
                   openedBy: openedByName,
                   claimedBy: claimedByName,
@@ -936,10 +1042,12 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
                   closedAt: new Date(),
                   messages: transcriptMessages,
                 });
-                sendOpts.files = [{
-                  name: `transcript-${(ticket as any).ticketNumber}.html`,
-                  data: Buffer.from(html, 'utf-8'),
-                }];
+                sendOpts.files = [
+                  {
+                    name: `transcript-${(ticket as any).ticketNumber}.html`,
+                    data: Buffer.from(html, 'utf-8'),
+                  },
+                ];
               } catch (err: any) {
                 console.error(`[ticket] Failed to generate transcript: ${err.message}`);
               }
@@ -948,22 +1056,36 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
             await (logChannel as any).send(sendOpts);
           }
         }
-      } catch { }
+      } catch {}
 
       const openedByUserId = (ticket as any).openedBy;
       if (openedByUserId) {
         try {
           const transcriptMessages = ((ticket as any).transcript || []) as Array<{
-            authorId: string; authorName: string; avatarURL?: string | null;
-            content: string; attachments?: Array<{ url: string; name: string }>;
+            authorId: string;
+            authorName: string;
+            avatarURL?: string | null;
+            content: string;
+            attachments?: Array<{ url: string; name: string }>;
             timestamp: Date | string;
           }>;
           const guild = client.guilds.get(req.params.id as string);
-          const lang = normalizeLocale((await settingsCache.get(req.params.id as string).catch(() => null) as any)?.language);
+          const lang = normalizeLocale(
+            ((await settingsCache.get(req.params.id as string).catch(() => null)) as any)?.language,
+          );
           const userEmbed = new EmbedBuilder()
-            .setTitle(t(lang, 'auditCatalog.api.routes.guilds.l958_setTitle', { '(ticket as any).ticketNumber': (ticket as any).ticketNumber }))
-            .setDescription(t(lang, 'auditCatalog.api.routes.guilds.l959_setDescription', { 'guild?.name || req.params.id': guild?.name || String(req.params.id), 'req.userId': req.userId }))
-            .setColor(0xED4245)
+            .setTitle(
+              t(lang, 'auditCatalog.api.routes.guilds.l958_setTitle', {
+                '(ticket as any).ticketNumber': (ticket as any).ticketNumber,
+              }),
+            )
+            .setDescription(
+              t(lang, 'auditCatalog.api.routes.guilds.l959_setDescription', {
+                'guild?.name || req.params.id': guild?.name || String(req.params.id),
+                'req.userId': req.userId,
+              }),
+            )
+            .setColor(0xed4245)
             .addFields({ name: t(lang, 'commands.moderation.warn.dmFieldReason'), value: reason, inline: false })
             .setTimestamp(new Date());
           const userSendOpts: any = { embeds: [userEmbed] };
@@ -978,7 +1100,9 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
                   const name = (u as any).username || id;
                   nameCache.set(id, name);
                   return name;
-                } catch { return id; }
+                } catch {
+                  return id;
+                }
               };
               const openedByName = await resolveName(openedByUserId);
               const closedByName = await resolveName(req.userId!);
@@ -994,14 +1118,16 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
                 closedAt: new Date(),
                 messages: transcriptMessages,
               });
-              userSendOpts.files = [{ name: `transcript-${(ticket as any).ticketNumber}.html`, data: Buffer.from(html, 'utf-8') }];
+              userSendOpts.files = [
+                { name: `transcript-${(ticket as any).ticketNumber}.html`, data: Buffer.from(html, 'utf-8') },
+              ];
             } catch (err: any) {
               console.error(`[ticket] Failed to generate transcript for DM: ${err.message}`);
             }
           }
           const opener = await client.users.fetch(openedByUserId).catch(() => null);
           if (opener) await opener.send(userSendOpts);
-        } catch { }
+        } catch {}
       }
 
       res.json({
@@ -1118,19 +1244,19 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
     try {
       const StarboardMessage = (await import('../../models/StarboardMessage')).default;
       const guildId = req.params.id as string;
-      const rawBoardId = typeof req.query.boardId === 'string'
-        ? req.query.boardId
-        : (typeof req.query.channelId === 'string' ? req.query.channelId : null);
+      const rawBoardId =
+        typeof req.query.boardId === 'string'
+          ? req.query.boardId
+          : typeof req.query.channelId === 'string'
+            ? req.query.channelId
+            : null;
       const limitRaw = typeof req.query.limit === 'string' ? parseInt(req.query.limit, 10) : 10;
       const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 50) : 10;
 
       const match: any = { guildId, starCount: { $gt: 0 } };
       if (rawBoardId) match.starboardChannelId = rawBoardId;
 
-      const entries = await StarboardMessage.find(match)
-        .sort({ starCount: -1 })
-        .limit(limit)
-        .lean();
+      const entries = await StarboardMessage.find(match).sort({ starCount: -1 }).limit(limit).lean();
 
       res.json(entries);
     } catch {
@@ -1143,9 +1269,12 @@ export function createGuildsRouter(client: Client, requireGuildAccess: RequestHa
     try {
       const StarboardMessage = (await import('../../models/StarboardMessage')).default;
       const guildId = req.params.id as string;
-      const rawBoardId = typeof req.query.boardId === 'string'
-        ? req.query.boardId
-        : (typeof req.query.channelId === 'string' ? req.query.channelId : null);
+      const rawBoardId =
+        typeof req.query.boardId === 'string'
+          ? req.query.boardId
+          : typeof req.query.channelId === 'string'
+            ? req.query.channelId
+            : null;
 
       const match: any = { guildId };
       if (rawBoardId) match.starboardChannelId = rawBoardId;

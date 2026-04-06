@@ -18,20 +18,18 @@ const event: BotEvent = {
         guild,
         'Webhooks Updated',
         0x9b59b6,
-        [
-          { name: 'Channel', value: `<#${channelId}>`, inline: true },
-        ],
+        [{ name: 'Channel', value: `<#${channelId}>`, inline: true }],
         client,
         {
           description: 'A webhook was created, updated, or deleted in this channel.',
           footer: `Channel ID: ${channelId}`,
           eventType: 'webhooks_update',
-        }
+        },
       );
     } catch (error) {
       console.error('Error in webhooksUpdate event:', error);
     }
-  }
+  },
 };
 
 export default event;

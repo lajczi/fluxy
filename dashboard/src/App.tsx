@@ -8,12 +8,12 @@ import { AuthCallback } from './pages/AuthCallback';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { TermsOfService } from './pages/TermsOfService';
 
-const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
-const GuildSelector = lazy(() => import('./pages/GuildSelector').then(m => ({ default: m.GuildSelector })));
-const GuildSettings = lazy(() => import('./pages/GuildSettings').then(m => ({ default: m.GuildSettings })));
-const Stats = lazy(() => import('./pages/Stats').then(m => ({ default: m.Stats })));
-const Health = lazy(() => import('./pages/Health').then(m => ({ default: m.Health })));
-const MyData = lazy(() => import('./pages/MyData').then(m => ({ default: m.MyData })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
+const GuildSelector = lazy(() => import('./pages/GuildSelector').then((m) => ({ default: m.GuildSelector })));
+const GuildSettings = lazy(() => import('./pages/GuildSettings').then((m) => ({ default: m.GuildSettings })));
+const Stats = lazy(() => import('./pages/Stats').then((m) => ({ default: m.Stats })));
+const Health = lazy(() => import('./pages/Health').then((m) => ({ default: m.Health })));
+const MyData = lazy(() => import('./pages/MyData').then((m) => ({ default: m.MyData })));
 const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
 
 function PageSpinner() {
@@ -45,7 +45,14 @@ function HomeRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (MOCK_MODE) return <Navigate to="/guilds/mock" replace />;
-  if (user?.isOwner) return <ErrorBoundary><Suspense fallback={<PageSpinner />}><Dashboard /></Suspense></ErrorBoundary>;
+  if (user?.isOwner)
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageSpinner />}>
+          <Dashboard />
+        </Suspense>
+      </ErrorBoundary>
+    );
   return <Navigate to="/guilds" replace />;
 }
 
@@ -57,21 +64,68 @@ export default function App() {
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
 
-      <Route element={
-        <ProtectedRoute>
-          <Layout />
-        </ProtectedRoute>
-      }>
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/" element={<HomeRedirect />} />
-        <Route path="/guilds" element={<ErrorBoundary><Suspense fallback={<PageSpinner />}><GuildSelector /></Suspense></ErrorBoundary>} />
-        <Route path="/guilds/:guildId/*" element={<ErrorBoundary><Suspense fallback={<PageSpinner />}><GuildSettings /></Suspense></ErrorBoundary>} />
-        <Route path="/stats" element={
-          <ProtectedRoute ownerOnly><ErrorBoundary><Suspense fallback={<PageSpinner />}><Stats /></Suspense></ErrorBoundary></ProtectedRoute>
-        } />
-        <Route path="/health" element={
-          <ProtectedRoute ownerOnly><ErrorBoundary><Suspense fallback={<PageSpinner />}><Health /></Suspense></ErrorBoundary></ProtectedRoute>
-        } />
-        <Route path="/my-data" element={<ErrorBoundary><Suspense fallback={<PageSpinner />}><MyData /></Suspense></ErrorBoundary>} />
+        <Route
+          path="/guilds"
+          element={
+            <ErrorBoundary>
+              <Suspense fallback={<PageSpinner />}>
+                <GuildSelector />
+              </Suspense>
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/guilds/:guildId/*"
+          element={
+            <ErrorBoundary>
+              <Suspense fallback={<PageSpinner />}>
+                <GuildSettings />
+              </Suspense>
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/stats"
+          element={
+            <ProtectedRoute ownerOnly>
+              <ErrorBoundary>
+                <Suspense fallback={<PageSpinner />}>
+                  <Stats />
+                </Suspense>
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/health"
+          element={
+            <ProtectedRoute ownerOnly>
+              <ErrorBoundary>
+                <Suspense fallback={<PageSpinner />}>
+                  <Health />
+                </Suspense>
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-data"
+          element={
+            <ErrorBoundary>
+              <Suspense fallback={<PageSpinner />}>
+                <MyData />
+              </Suspense>
+            </ErrorBoundary>
+          }
+        />
       </Route>
 
       <Route path="*" element={<Navigate to="/guilds" />} />

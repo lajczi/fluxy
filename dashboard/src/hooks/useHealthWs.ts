@@ -58,8 +58,7 @@ export function useHealthWs(): UseHealthWsReturn {
           const data: HealthMetrics = await res.json();
           pushMetrics(data);
         }
-      } catch {
-      }
+      } catch {}
     };
 
     poll();
@@ -96,7 +95,7 @@ export function useHealthWs(): UseHealthWsReturn {
         try {
           const data: HealthMetrics = JSON.parse(event.data);
           pushMetrics(data);
-        } catch { }
+        } catch {}
       };
 
       ws.onclose = () => {

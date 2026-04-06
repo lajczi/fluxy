@@ -30,9 +30,7 @@ describe('validateSettingsUpdate customCommands validation', () => {
   });
 
   test('rejects more than five custom commands', () => {
-    const commands = Array.from({ length: 6 }, (_, idx) =>
-      makeCommand({ name: `cmd_${idx + 1}` }),
-    );
+    const commands = Array.from({ length: 6 }, (_, idx) => makeCommand({ name: `cmd_${idx + 1}` }));
 
     const result = validateSettingsUpdate({
       customCommands: commands,
@@ -53,10 +51,7 @@ describe('validateSettingsUpdate customCommands validation', () => {
 
   test('rejects duplicate command names after normalization', () => {
     const result = validateSettingsUpdate({
-      customCommands: [
-        makeCommand({ name: 'status' }),
-        makeCommand({ name: ' Status ' }),
-      ],
+      customCommands: [makeCommand({ name: 'status' }), makeCommand({ name: ' Status ' })],
     });
 
     expect(result.valid).toBe(false);

@@ -24,7 +24,6 @@ class CacheEntry {
   }
 }
 
-
 export class SettingsCache {
   private cache = new Map<string, CacheEntry>();
   private enabled = true;
@@ -68,7 +67,6 @@ export class SettingsCache {
       return null;
     }
   }
-
 
   set(guildId: string, settings: IGuildSettings): void {
     if (!this.enabled) return;
@@ -141,7 +139,14 @@ export class SettingsCache {
     this.cache.clear();
   }
 
-  getStats(): { enabled: boolean; totalEntries: number; validEntries: number; expiredEntries: number; maxSize: number; ttlMs: number } {
+  getStats(): {
+    enabled: boolean;
+    totalEntries: number;
+    validEntries: number;
+    expiredEntries: number;
+    maxSize: number;
+    ttlMs: number;
+  } {
     let expired = 0;
     let valid = 0;
 

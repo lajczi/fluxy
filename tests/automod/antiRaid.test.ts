@@ -10,7 +10,6 @@ import antiRaid, {
   RaidEntry,
 } from '../../src/automod/modules/antiRaid';
 
-
 describe('normalizeContent', () => {
   test('lowercases content', () => {
     expect(normalizeContent('HELLO WORLD')).toBe('hello world');
@@ -43,7 +42,6 @@ describe('normalizeContent', () => {
     expect(normalizeContent('[abc123]')).toBe('');
   });
 });
-
 
 function makeEntry(userId: string, overrides: Partial<RaidEntry> = {}): RaidEntry {
   return { userId, messageId: `msg-${userId}`, channelId: 'c1', timestamp: Date.now(), ...overrides };
@@ -103,7 +101,11 @@ describe('trackRaidMessage', () => {
     const sameUser = 'u-repeat';
     for (let i = 0; i < threshold + 2; i++) {
       const { isRaid } = trackRaidMessage(
-        guildId, normalized, makeEntry(sameUser, { messageId: `msg-${i}` }), window, threshold
+        guildId,
+        normalized,
+        makeEntry(sameUser, { messageId: `msg-${i}` }),
+        window,
+        threshold,
       );
       expect(isRaid).toBe(false);
     }
@@ -117,7 +119,6 @@ describe('trackRaidMessage', () => {
     expect(allEntries.length).toBe(threshold + 1);
   });
 });
-
 
 describe('isActiveRaid', () => {
   const guildId = 'g-active-test';
@@ -138,7 +139,6 @@ describe('isActiveRaid', () => {
     expect(isActiveRaid(guildId, normalized)).toBe(true);
   });
 });
-
 
 jest.mock('../../src/utils/isNetworkError', () => ({ __esModule: true, default: jest.fn().mockReturnValue(false) }));
 jest.mock('../../src/utils/embedQueue', () => ({ enqueue: jest.fn() }));
@@ -179,11 +179,7 @@ describe('antiRaid.check', () => {
     const client = makeClient();
     const settings = makeSettings();
     for (let i = 0; i < DEFAULT_USER_THRESHOLD - 1; i++) {
-      const result = await antiRaid.check(
-        makeMessage(`u${i}`, `@everyone free nitro [noise${i}]`),
-        client,
-        settings
-      );
+      const result = await antiRaid.check(makeMessage(`u${i}`, `@everyone free nitro [noise${i}]`), client, settings);
       expect(result).toBe(false);
     }
   });
@@ -195,11 +191,7 @@ describe('antiRaid.check', () => {
     for (let i = 0; i < DEFAULT_USER_THRESHOLD - 1; i++) {
       await antiRaid.check(makeMessage(`u${i}`, `@everyone free nitro [token${i}]`), client, settings);
     }
-    const result = await antiRaid.check(
-      makeMessage('u-trigger', '@everyone free nitro [tokenlast]'),
-      client,
-      settings
-    );
+    const result = await antiRaid.check(makeMessage('u-trigger', '@everyone free nitro [tokenlast]'), client, settings);
     expect(result).toBe(true);
     expect(client.rest.delete).toHaveBeenCalled();
   });
@@ -218,11 +210,7 @@ describe('antiRaid.check', () => {
       await antiRaid.check(makeMessage(`u${i}`, `buy followers [junk${i}]`), client, settings);
     }
 
-    const result = await antiRaid.check(
-      makeMessage('u-late', 'buy followers [different_junk]'),
-      client,
-      settings
-    );
+    const result = await antiRaid.check(makeMessage('u-late', 'buy followers [different_junk]'), client, settings);
     expect(result).toBe(true);
   });
 
@@ -233,11 +221,7 @@ describe('antiRaid.check', () => {
     for (let i = 0; i < DEFAULT_USER_THRESHOLD - 1; i++) {
       await antiRaid.check(makeMessage(`u${i}`, `message one [x${i}]`), client, settings);
     }
-    const result = await antiRaid.check(
-      makeMessage('u-other', 'totally different message here'),
-      client,
-      settings
-    );
+    const result = await antiRaid.check(makeMessage('u-other', 'totally different message here'), client, settings);
     expect(result).toBe(false);
   });
 });

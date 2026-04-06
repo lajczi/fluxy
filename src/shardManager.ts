@@ -12,10 +12,18 @@ dotenv.config();
 
 // ANSI helpers
 const c = {
-  reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[2m',
-  red: '\x1b[31m', green: '\x1b[32m', yellow: '\x1b[33m',
-  blue: '\x1b[34m', cyan: '\x1b[36m', gray: '\x1b[90m',
-  bRed: '\x1b[91m', bGreen: '\x1b[92m', bYellow: '\x1b[93m',
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  cyan: '\x1b[36m',
+  gray: '\x1b[90m',
+  bRed: '\x1b[91m',
+  bGreen: '\x1b[92m',
+  bYellow: '\x1b[93m',
   bCyan: '\x1b[96m',
 };
 
@@ -26,10 +34,18 @@ function timestamp(): string {
 
 function log(level: string, tag: string, msg: string): void {
   const colors: Record<string, string> = {
-    info: c.bCyan, ok: c.bGreen, warn: c.bYellow, error: c.bRed, fatal: `${c.bold}${c.bRed}`,
+    info: c.bCyan,
+    ok: c.bGreen,
+    warn: c.bYellow,
+    error: c.bRed,
+    fatal: `${c.bold}${c.bRed}`,
   };
   const labels: Record<string, string> = {
-    info: 'INF', ok: ' OK', warn: 'WRN', error: 'ERR', fatal: 'FTL',
+    info: 'INF',
+    ok: ' OK',
+    warn: 'WRN',
+    error: 'ERR',
+    fatal: 'FTL',
   };
   const color = colors[level] || c.bCyan;
   const label = labels[level] || 'INF';
@@ -89,12 +105,16 @@ async function getRecommendedShards(): Promise<number> {
       headers: { Authorization: `Bot ${token}` },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     const shards = data?.shards ?? 1;
     const limit = data?.session_start_limit;
     log('info', 'Manager', `Gateway recommends ${shards} shard(s)`);
     if (limit) {
-      log('info', 'Manager', `Session limit: ${limit.remaining}/${limit.total}, max_concurrency: ${limit.max_concurrency}`);
+      log(
+        'info',
+        'Manager',
+        `Session limit: ${limit.remaining}/${limit.total}, max_concurrency: ${limit.max_concurrency}`,
+      );
     }
     return shards;
   } catch (err: any) {
@@ -205,18 +225,20 @@ async function broadcastGuildCount(requestingWorkerId: number, requestId: string
 
   for (const [, worker] of workers) {
     if (!worker.process || !worker.ready) continue;
-    promises.push(new Promise<number>((resolve) => {
-      const timeout = setTimeout(() => resolve(0), 5000);
-      const handler = (msg: any) => {
-        if (msg?.type === 'guildCountResponse' && msg.requestId === requestId) {
-          clearTimeout(timeout);
-          worker.process!.off('message', handler);
-          resolve(msg.count || 0);
-        }
-      };
-      worker.process!.on('message', handler);
-      worker.process!.send({ type: 'requestGuildCount', requestId });
-    }));
+    promises.push(
+      new Promise<number>((resolve) => {
+        const timeout = setTimeout(() => resolve(0), 5000);
+        const handler = (msg: any) => {
+          if (msg?.type === 'guildCountResponse' && msg.requestId === requestId) {
+            clearTimeout(timeout);
+            worker.process!.off('message', handler);
+            resolve(msg.count || 0);
+          }
+        };
+        worker.process!.on('message', handler);
+        worker.process!.send({ type: 'requestGuildCount', requestId });
+      }),
+    );
   }
 
   const counts = await Promise.all(promises);
@@ -245,15 +267,19 @@ async function broadcastShardInfo(requestingWorkerId: number, requestId: string)
       continue;
     }
     const info = await new Promise<any>((resolve) => {
-      const timeout = setTimeout(() => resolve({
-        workerId: id,
-        shardIds: worker.shardIds,
-        status: 'timeout',
-        guilds: 0,
-        memory: 0,
-        uptime: 0,
-        ping: null,
-      }), 5000);
+      const timeout = setTimeout(
+        () =>
+          resolve({
+            workerId: id,
+            shardIds: worker.shardIds,
+            status: 'timeout',
+            guilds: 0,
+            memory: 0,
+            uptime: 0,
+            ping: null,
+          }),
+        5000,
+      );
       const handler = (msg: any) => {
         if (msg?.type === 'shardInfoResponse' && msg.requestId === requestId) {
           clearTimeout(timeout);
@@ -382,7 +408,8 @@ function handleWorkerExit(workerId: number, code: number | null, signal: string 
     return;
   }
 
-  const shardLabel = worker.shardIds.length === 1 ? `shard ${worker.shardIds[0]}` : `shards ${worker.shardIds.join(',')}`;
+  const shardLabel =
+    worker.shardIds.length === 1 ? `shard ${worker.shardIds[0]}` : `shards ${worker.shardIds.join(',')}`;
   log('warn', 'Manager', `Worker ${workerId} (${shardLabel}) exited with code ${code} signal ${signal}`);
 
   if (Date.now() - worker.lastSpawn > STABLE_THRESHOLD) {
@@ -397,7 +424,11 @@ function handleWorkerExit(workerId: number, code: number | null, signal: string 
   worker.respawnCount++;
   const delay = RESPAWN_DELAY * Math.min(worker.respawnCount, 5); // escalating delay
 
-  log('info', 'Manager', `Respawning worker ${workerId} in ${delay}ms (attempt ${worker.respawnCount}/${MAX_RESPAWNS})`);
+  log(
+    'info',
+    'Manager',
+    `Respawning worker ${workerId} in ${delay}ms (attempt ${worker.respawnCount}/${MAX_RESPAWNS})`,
+  );
   setTimeout(() => {
     if (isShuttingDown) return;
     worker.lastSpawn = Date.now();
@@ -433,7 +464,11 @@ async function main(): Promise<void> {
   totalShards = await getRecommendedShards();
 
   const workerCount = Math.ceil(totalShards / SHARDS_PER_WORKER);
-  log('info', 'Manager', `Launching ${workerCount} worker(s) for ${totalShards} shard(s) (${SHARDS_PER_WORKER} per worker)`);
+  log(
+    'info',
+    'Manager',
+    `Launching ${workerCount} worker(s) for ${totalShards} shard(s) (${SHARDS_PER_WORKER} per worker)`,
+  );
 
   for (let w = 0; w < workerCount; w++) {
     const startShard = w * SHARDS_PER_WORKER;
@@ -450,7 +485,6 @@ async function main(): Promise<void> {
     });
   }
 
-
   for (const [wId, worker] of workers) {
     worker.lastSpawn = Date.now();
     worker.process = spawnWorker(wId, worker.shardIds);
@@ -460,7 +494,7 @@ async function main(): Promise<void> {
       await waitForWorkerReady(wId);
       const READY_BUFFER = 6000;
       log('info', 'Manager', `Worker ${wId} ready, waiting ${READY_BUFFER}ms buffer...`);
-      await new Promise(r => setTimeout(r, READY_BUFFER));
+      await new Promise((r) => setTimeout(r, READY_BUFFER));
     }
   }
 
@@ -477,20 +511,22 @@ async function shutdown(signal: string): Promise<void> {
 
   for (const [id, worker] of workers) {
     if (!worker.process) continue;
-    exitPromises.push(new Promise<void>((resolve) => {
-      const timeout = setTimeout(() => {
-        log('warn', 'Manager', `Worker ${id} didn't exit in time, killing`);
-        worker.process?.kill('SIGKILL');
-        resolve();
-      }, 10000);
+    exitPromises.push(
+      new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          log('warn', 'Manager', `Worker ${id} didn't exit in time, killing`);
+          worker.process?.kill('SIGKILL');
+          resolve();
+        }, 10000);
 
-      worker.process!.on('exit', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
+        worker.process!.on('exit', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
 
-      worker.process!.kill(signal as NodeJS.Signals);
-    }));
+        worker.process!.kill(signal as NodeJS.Signals);
+      }),
+    );
   }
 
   await Promise.all(exitPromises);

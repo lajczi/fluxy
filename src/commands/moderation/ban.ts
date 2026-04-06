@@ -10,7 +10,8 @@ import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'ban',
-  description: 'Permanently ban a user from the server by @mention or user ID \u2014 can ban users not currently in the server. Reason is logged',
+  description:
+    'Permanently ban a user from the server by @mention or user ID \u2014 can ban users not currently in the server. Reason is logged',
   usage: '<@user or user ID> [reason]',
   category: 'moderation',
   permissions: ['BanMembers'],
@@ -23,19 +24,19 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.moderation.ban.serverOnly'));
+      return void (await message.reply(t('en', 'commands.moderation.ban.serverOnly')));
     }
 
     const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
     const lang = normalizeLocale(guildSettings?.language);
 
     if (!args[0]) {
-      return void await message.reply(t(lang, 'commands.moderation.ban.usage', { prefix }));
+      return void (await message.reply(t(lang, 'commands.moderation.ban.usage', { prefix })));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply(t(lang, 'commands.moderation.ban.invalidUser'));
+      return void (await message.reply(t(lang, 'commands.moderation.ban.invalidUser')));
     }
 
     const reason = args.slice(1).join(' ').trim() || t(lang, 'commands.moderation.ban.noReasonProvided');
@@ -57,7 +58,7 @@ const command: Command = {
     if (targetMember) {
       const modCheck = canModerate(moderator, targetMember);
       if (!modCheck.canModerate) {
-        return void await message.reply(`${modCheck.reason}`);
+        return void (await message.reply(`${modCheck.reason}`));
       }
 
       const botUserId = client.user?.id;
@@ -72,14 +73,14 @@ const command: Command = {
       if (botMember) {
         const botCheck = canModerate(botMember as any, targetMember);
         if (!botCheck.canModerate) {
-          return void await message.reply(t(lang, 'commands.moderation.ban.cannotBanRoleHierarchy'));
+          return void (await message.reply(t(lang, 'commands.moderation.ban.cannotBanRoleHierarchy')));
         }
       }
     }
 
     try {
       await guild.ban(userId, {
-        reason: `${(message as any).author.username}: ${reason}`
+        reason: `${(message as any).author.username}: ${reason}`,
       });
 
       let targetUser: any = targetMember?.user;
@@ -96,8 +97,8 @@ const command: Command = {
         t(lang, 'commands.moderation.ban.success', {
           username: displayName,
           userId: targetUser.id,
-          reason
-        })
+          reason,
+        }),
       );
 
       await logModAction(guild, (message as any).author, targetUser, 'ban', reason, { client });
@@ -107,9 +108,8 @@ const command: Command = {
         targetId: userId,
         userId: (message as any).author.id,
         action: 'ban',
-        reason
+        reason,
       });
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -121,7 +121,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.moderation.ban.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

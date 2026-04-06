@@ -3,7 +3,6 @@ import * as embedQueue from '../../utils/embedQueue';
 import { Routes } from '@erinjs/types';
 import { t, normalizeLocale } from '../../i18n';
 
-
 export const DEFAULT_USER_THRESHOLD = 5;
 export const DEFAULT_TIME_WINDOW = 10_000; // is ms
 const MIN_CONTENT_LENGTH = 5;
@@ -11,7 +10,6 @@ const MIN_CONTENT_LENGTH = 5;
 function antiRaidT(locale: unknown, key: string, vars?: Record<string, string | number>): string {
   return t(normalizeLocale(locale), `auditCatalog.automod.modules.antiRaid.${key}`, vars);
 }
-
 
 export interface RaidEntry {
   userId: string;
@@ -23,7 +21,6 @@ export interface RaidEntry {
 const raidTracker = new Map<string, Map<string, RaidEntry[]>>();
 
 const activeRaids = new Map<string, Map<string, number>>();
-
 
 export function normalizeContent(content: string): string {
   return content
@@ -39,7 +36,7 @@ function getEffectiveConfig(settings: any) {
   const raid = settings?.automod?.raid || {};
   return {
     userThreshold: raid.userThreshold ?? DEFAULT_USER_THRESHOLD,
-    timeWindow: (raid.timeWindow ?? (DEFAULT_TIME_WINDOW / 1000)) * 1000,
+    timeWindow: (raid.timeWindow ?? DEFAULT_TIME_WINDOW / 1000) * 1000,
   };
 }
 
@@ -48,23 +45,29 @@ export function trackRaidMessage(
   normalized: string,
   entry: RaidEntry,
   windowMs: number,
-  threshold: number
+  threshold: number,
 ): { isRaid: boolean; allEntries: RaidEntry[]; newRaid: boolean } {
   let guildMap = raidTracker.get(guildId);
-  if (!guildMap) { guildMap = new Map(); raidTracker.set(guildId, guildMap); }
+  if (!guildMap) {
+    guildMap = new Map();
+    raidTracker.set(guildId, guildMap);
+  }
 
   const now = Date.now();
-  const entries = (guildMap.get(normalized) ?? []).filter(e => now - e.timestamp < windowMs);
+  const entries = (guildMap.get(normalized) ?? []).filter((e) => now - e.timestamp < windowMs);
   entries.push(entry);
   guildMap.set(normalized, entries);
 
-  const uniqueUsers = new Set(entries.map(e => e.userId));
+  const uniqueUsers = new Set(entries.map((e) => e.userId));
   const isRaid = uniqueUsers.size >= threshold;
 
   let newRaid = false;
   if (isRaid) {
     let raidMap = activeRaids.get(guildId);
-    if (!raidMap) { raidMap = new Map(); activeRaids.set(guildId, raidMap); }
+    if (!raidMap) {
+      raidMap = new Map();
+      activeRaids.set(guildId, raidMap);
+    }
     if (!raidMap.has(normalized)) newRaid = true;
     raidMap.set(normalized, now + windowMs * 2);
   }
@@ -77,7 +80,10 @@ export function isActiveRaid(guildId: string, normalized: string): boolean {
   if (!raidMap) return false;
   const expiry = raidMap.get(normalized);
   if (!expiry) return false;
-  if (Date.now() > expiry) { raidMap.delete(normalized); return false; }
+  if (Date.now() > expiry) {
+    raidMap.delete(normalized);
+    return false;
+  }
   return true;
 }
 
@@ -102,25 +108,34 @@ async function deleteRaidMessages(client: any, guild: any, entries: RaidEntry[])
 
     if (channel?.bulkDeleteMessages && messageIds.length >= 2) {
       tasks.push(
-        channel.bulkDeleteMessages(messageIds)
-          .then(() => { deleted += messageIds.length; })
+        channel
+          .bulkDeleteMessages(messageIds)
+          .then(() => {
+            deleted += messageIds.length;
+          })
           .catch(() => {
             // Fall back to individual REST deletes
             for (const msgId of messageIds) {
               tasks.push(
-                client.rest.delete(Routes.channelMessage(channelId, msgId))
-                  .then(() => { deleted++; })
-                  .catch(() => { })
+                client.rest
+                  .delete(Routes.channelMessage(channelId, msgId))
+                  .then(() => {
+                    deleted++;
+                  })
+                  .catch(() => {}),
               );
             }
-          })
+          }),
       );
     } else {
       for (const msgId of messageIds) {
         tasks.push(
-          client.rest.delete(Routes.channelMessage(channelId, msgId))
-            .then(() => { deleted++; })
-            .catch(() => { })
+          client.rest
+            .delete(Routes.channelMessage(channelId, msgId))
+            .then(() => {
+              deleted++;
+            })
+            .catch(() => {}),
         );
       }
     }
@@ -130,7 +145,6 @@ async function deleteRaidMessages(client: any, guild: any, entries: RaidEntry[])
   return deleted;
 }
 
-
 async function logRaidDetection(
   client: any,
   guild: any,
@@ -138,17 +152,21 @@ async function logRaidDetection(
   locale: unknown,
   entries: RaidEntry[],
   normalized: string,
-  deletedCount: number
+  deletedCount: number,
 ): Promise<void> {
   try {
     let logChannel = guild?.channels?.get(logChannelId);
     if (!logChannel) {
-      try { logChannel = await client.channels.fetch(logChannelId); } catch { return; }
+      try {
+        logChannel = await client.channels.fetch(logChannelId);
+      } catch {
+        return;
+      }
     }
     if (!logChannel) return;
 
-    const uniqueUsers = [...new Set(entries.map(e => e.userId))];
-    const uniqueChannels = [...new Set(entries.map(e => e.channelId))];
+    const uniqueUsers = [...new Set(entries.map((e) => e.userId))];
+    const uniqueChannels = [...new Set(entries.map((e) => e.channelId))];
 
     const embed = {
       title: antiRaidT(locale, 'logTitle'),
@@ -157,15 +175,29 @@ async function logRaidDetection(
         {
           name: antiRaidT(locale, 'fieldNormalizedContent'),
           value: `\`\`\`${normalized.slice(0, 200) || antiRaidT(locale, 'emptyAfterNormalization')}\`\`\``,
-          inline: false
+          inline: false,
         },
         {
           name: antiRaidT(locale, 'fieldUsersInvolved', { userCount: uniqueUsers.length }),
-          value: uniqueUsers.slice(0, 20).map(id => `<@${id}>`).join(', ') + (uniqueUsers.length > 20 ? antiRaidT(locale, 'usersMoreSuffix', { moreCount: uniqueUsers.length - 20 }) : ''),
-          inline: false
+          value:
+            uniqueUsers
+              .slice(0, 20)
+              .map((id) => `<@${id}>`)
+              .join(', ') +
+            (uniqueUsers.length > 20
+              ? antiRaidT(locale, 'usersMoreSuffix', { moreCount: uniqueUsers.length - 20 })
+              : ''),
+          inline: false,
         },
         { name: antiRaidT(locale, 'fieldMessagesDeleted'), value: `${deletedCount}`, inline: true },
-        { name: antiRaidT(locale, 'fieldChannelsAffected'), value: uniqueChannels.map(id => `<#${id}>`).join(', ').slice(0, 200), inline: false },
+        {
+          name: antiRaidT(locale, 'fieldChannelsAffected'),
+          value: uniqueChannels
+            .map((id) => `<#${id}>`)
+            .join(', ')
+            .slice(0, 200),
+          inline: false,
+        },
       ],
       color: 0xff4444,
       timestamp: new Date().toISOString(),
@@ -205,7 +237,11 @@ const antiRaid = {
     };
 
     const { isRaid, allEntries, newRaid } = trackRaidMessage(
-      guildId, normalized, entry, config.timeWindow, config.userThreshold
+      guildId,
+      normalized,
+      entry,
+      config.timeWindow,
+      config.userThreshold,
     );
 
     const alreadyActive = !isRaid && isActiveRaid(guildId, normalized);
@@ -220,21 +256,26 @@ const antiRaid = {
     if (newRaid) {
       console.log(
         `[antiRaid] Raid detected in guild ${guildId}: ` +
-        `"${normalized.slice(0, 80)}" ` +
-        `from ${allEntries.length} msg(s) by ${new Set(allEntries.map(e => e.userId)).size} users`
+          `"${normalized.slice(0, 80)}" ` +
+          `from ${allEntries.length} msg(s) by ${new Set(allEntries.map((e) => e.userId)).size} users`,
       );
 
       const channelId = entry.channelId;
       const channel = guild?.channels?.get(channelId);
       if (channel) {
-        channel.send({ content: t(normalizeLocale(settings?.language), 'auditCatalog.automod.modules.antiRaid.l224_send_content') })
-          .then((m: any) => setTimeout(() => m.delete().catch(() => { }), 8_000))
-          .catch(() => { });
+        channel
+          .send({
+            content: t(normalizeLocale(settings?.language), 'auditCatalog.automod.modules.antiRaid.l224_send_content'),
+          })
+          .then((m: any) => setTimeout(() => m.delete().catch(() => {}), 8_000))
+          .catch(() => {});
       }
 
       const logChannelId = settings.moderation?.logChannelId || settings.logChannelId;
       if (logChannelId) {
-        logRaidDetection(client, guild, logChannelId, settings?.language, allEntries, normalized, deleted).catch(() => { });
+        logRaidDetection(client, guild, logChannelId, settings?.language, allEntries, normalized, deleted).catch(
+          () => {},
+        );
       }
     }
 

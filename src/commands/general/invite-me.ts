@@ -4,7 +4,8 @@ import isNetworkError from '../../utils/isNetworkError';
 import settingsCache from '../../utils/settingsCache';
 import { t, normalizeLocale } from '../../i18n';
 
-const INVITE_URL = 'https://web.fluxer.app/oauth2/authorize?client_id=1474069931333816428&scope=bot&permissions=4504699474930806';
+const INVITE_URL =
+  'https://web.fluxer.app/oauth2/authorize?client_id=1474069931333816428&scope=bot&permissions=4504699474930806';
 
 const command: Command = {
   name: 'invite-me',
@@ -30,10 +31,10 @@ const command: Command = {
         console.warn('Fluxer API unreachable during !invite-me (ECONNRESET)');
       } else {
         console.error(`Error in !invite-me: ${error.message || error}`);
-        await message.reply(t('en', 'commands.invite.fallback', { inviteUrl: INVITE_URL })).catch(() => { });
+        await message.reply(t('en', 'commands.invite.fallback', { inviteUrl: INVITE_URL })).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

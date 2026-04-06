@@ -13,6 +13,7 @@ additional permissions.
 ## Contact
 
 Open an issue in this repository or contact the maintainer directly to discuss:
+
 - use case
 - expected scale
 - support requirements

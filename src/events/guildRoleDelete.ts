@@ -16,16 +16,14 @@ const event: BotEvent = {
         guild,
         'Role Deleted',
         0xe74c3c,
-        [
-          { name: 'Role', value: `<@&${roleId}>`, inline: true },
-        ],
+        [{ name: 'Role', value: `<@&${roleId}>`, inline: true }],
         client,
-        { footer: `Role ID: ${roleId}`, eventType: 'role_delete' }
+        { footer: `Role ID: ${roleId}`, eventType: 'role_delete' },
       );
     } catch (error) {
       console.error('Error in guildRoleDelete event:', error);
     }
-  }
+  },
 };
 
 export default event;

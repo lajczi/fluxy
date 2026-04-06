@@ -4,9 +4,8 @@ import settingsCache from '../../utils/settingsCache';
 import { canManageRole } from '../../utils/permissions';
 import { t, normalizeLocale } from '../../i18n';
 
-const MAX_HONEYPOTS  = 10;
-const VALID_ACTIONS  = ['ban', 'kick', 'timeout', 'role'];
-
+const MAX_HONEYPOTS = 10;
+const VALID_ACTIONS = ['ban', 'kick', 'timeout', 'role'];
 
 async function resolveChannel(arg: string, guild: any, client: any): Promise<any> {
   const idMatch = /^<#(\d+)>$/.exec(arg) || /^(\d+)$/.exec(arg);
@@ -14,7 +13,9 @@ async function resolveChannel(arg: string, guild: any, client: any): Promise<any
     const id = idMatch[1];
     let ch = guild.channels.get(id);
     if (!ch) {
-      try { ch = await client.channels.resolve(id); } catch {}
+      try {
+        ch = await client.channels.resolve(id);
+      } catch {}
     }
     return ch || null;
   }
@@ -38,7 +39,7 @@ function saveEntry(entry: any, action: string, param: any) {
   entry.action = action;
   if (action === 'ban') {
     const days = parseInt(param, 10);
-    entry.banDeleteDays = (!isNaN(days) && days >= 0 && days <= 7) ? days : 1;
+    entry.banDeleteDays = !isNaN(days) && days >= 0 && days <= 7 ? days : 1;
   } else if (action === 'timeout') {
     entry.timeoutHours = parseInt(param, 10);
   } else if (action === 'role') {
@@ -48,13 +49,12 @@ function saveEntry(entry: any, action: string, param: any) {
 
 function formatEntry(h: any): string {
   let detail = '';
-  if (h.action === 'ban')     detail = ` - delete \`${h.banDeleteDays ?? 1}\` day(s) of messages`;
+  if (h.action === 'ban') detail = ` - delete \`${h.banDeleteDays ?? 1}\` day(s) of messages`;
   if (h.action === 'timeout') detail = ` - \`${h.timeoutHours ?? 24}\` hour(s)`;
-  if (h.action === 'role')    detail = h.roleId ? ` - <@&${h.roleId}>` : ' - (no role set)';
+  if (h.action === 'role') detail = h.roleId ? ` - <@&${h.roleId}>` : ' - (no role set)';
   const status = h.enabled === false ? ' `disabled`' : '';
   return `\`${h.action}\`${detail}${status}`;
 }
-
 
 async function showList(message: any, guild: any, prefix = '!') {
   const settings = await getSettings(guild.id);
@@ -65,13 +65,11 @@ async function showList(message: any, guild: any, prefix = '!') {
   if (!honeypots.length) {
     return message.reply(
       `**Honeypot Channels** - None configured.\n\n` +
-      `Use \`${prefix}honeypot add <#channel> <ban|kick|timeout|role>\` to create one.`
+        `Use \`${prefix}honeypot add <#channel> <ban|kick|timeout|role>\` to create one.`,
     );
   }
 
-  const lines = honeypots.map((h: any, i: number) =>
-    `**${i + 1}.** <#${h.channelId}> - ${formatEntry(h)}`
-  ).join('\n');
+  const lines = honeypots.map((h: any, i: number) => `**${i + 1}.** <#${h.channelId}> - ${formatEntry(h)}`).join('\n');
 
   const footer = alertRole
     ? `\n\nAlert role: <@&${alertRole}>`
@@ -82,8 +80,8 @@ async function showList(message: any, guild: any, prefix = '!') {
       'honeypots.length': honeypots.length,
       MAX_HONEYPOTS,
       lines,
-      footer
-    })
+      footer,
+    }),
   );
 }
 
@@ -97,7 +95,8 @@ async function showInfo(message: any, guild: any, client: any, args: string[], p
   if (!channel) return message.reply(t(lang, 'commands.admin.reactionrole.common.channelNotFound'));
 
   const entry = (settings.honeypotChannels || []).find((h: any) => h.channelId === channel.id);
-  if (!entry) return message.reply(t(lang, 'auditCatalog.commands.admin.honeypot.l92_reply', { 'channel.id': channel.id }));
+  if (!entry)
+    return message.reply(t(lang, 'auditCatalog.commands.admin.honeypot.l92_reply', { 'channel.id': channel.id }));
 
   const lines = [
     `**Honeypot Info - <#${channel.id}>**`,
@@ -111,7 +110,9 @@ async function showInfo(message: any, guild: any, client: any, args: string[], p
   } else if (entry.action === 'timeout') {
     lines.push(`**Timeout Duration:** ${entry.timeoutHours ?? 24} hour(s)`);
   } else if (entry.action === 'role') {
-    lines.push(`**Role:** ${entry.roleId ? `<@&${entry.roleId}>` : `(none set - use \`${prefix}honeypot action #channel role @role\`)`}`);
+    lines.push(
+      `**Role:** ${entry.roleId ? `<@&${entry.roleId}>` : `(none set - use \`${prefix}honeypot action #channel role @role\`)`}`,
+    );
   }
 
   const alertRole = settings.honeypotAlertRoleId;
@@ -120,7 +121,14 @@ async function showInfo(message: any, guild: any, client: any, args: string[], p
   return message.reply(lines.join('\n'));
 }
 
-async function upsertHoneypot(message: any, guild: any, client: any, args: string[], requireExisting: boolean, prefix = '!') {
+async function upsertHoneypot(
+  message: any,
+  guild: any,
+  client: any,
+  args: string[],
+  requireExisting: boolean,
+  prefix = '!',
+) {
   const settings = await getSettings(guild.id);
   const lang = normalizeLocale(settings?.language);
   const [channelArg, actionArg, paramArg] = args;
@@ -129,10 +137,10 @@ async function upsertHoneypot(message: any, guild: any, client: any, args: strin
   if (!channelArg || !actionArg) {
     return message.reply(
       `Usage:\n` +
-      `\`${prefix}honeypot ${subName} <#channel> ban [delete_days]\`\n` +
-      `\`${prefix}honeypot ${subName} <#channel> kick\`\n` +
-      `\`${prefix}honeypot ${subName} <#channel> timeout <hours>\`\n` +
-      `\`${prefix}honeypot ${subName} <#channel> role <@role>\``
+        `\`${prefix}honeypot ${subName} <#channel> ban [delete_days]\`\n` +
+        `\`${prefix}honeypot ${subName} <#channel> kick\`\n` +
+        `\`${prefix}honeypot ${subName} <#channel> timeout <hours>\`\n` +
+        `\`${prefix}honeypot ${subName} <#channel> role <@role>\``,
     );
   }
 
@@ -155,12 +163,16 @@ async function upsertHoneypot(message: any, guild: any, client: any, args: strin
     }
     let targetRole = guild.roles?.get(roleId);
     if (!targetRole) {
-      try { targetRole = await guild.fetchRole(roleId); } catch {}
+      try {
+        targetRole = await guild.fetchRole(roleId);
+      } catch {}
     }
     if (targetRole) {
       let commandMember = guild.members?.get(message.author.id);
       if (!commandMember) {
-        try { commandMember = await guild.fetchMember(message.author.id); } catch {}
+        try {
+          commandMember = await guild.fetchMember(message.author.id);
+        } catch {}
       }
       if (commandMember) {
         const check = canManageRole(commandMember, targetRole, guild);
@@ -184,7 +196,9 @@ async function upsertHoneypot(message: any, guild: any, client: any, args: strin
   const existing = settings.honeypotChannels.find((h: any) => h.channelId === channel.id);
 
   if (requireExisting && !existing) {
-    return message.reply(t(lang, 'auditCatalog.commands.admin.honeypot.l178_reply', { 'channel.id': channel.id, prefix }));
+    return message.reply(
+      t(lang, 'auditCatalog.commands.admin.honeypot.l178_reply', { 'channel.id': channel.id, prefix }),
+    );
   }
 
   if (!requireExisting && !existing && settings.honeypotChannels.length >= MAX_HONEYPOTS) {
@@ -207,10 +221,10 @@ async function upsertHoneypot(message: any, guild: any, client: any, args: strin
     t(lang, 'auditCatalog.commands.admin.honeypot.l198_reply', {
       'channel.id': channel.id,
       "existing ? 'updated' : 'created'": existing ? 'updated' : 'created',
-      "formatEntry(\n      settings.honeypotChannels.find((h: any) => h.channelId === channel.id)\n    )": formatEntry(
-        settings.honeypotChannels.find((h: any) => h.channelId === channel.id)
-      )
-    })
+      'formatEntry(\n      settings.honeypotChannels.find((h: any) => h.channelId === channel.id)\n    )': formatEntry(
+        settings.honeypotChannels.find((h: any) => h.channelId === channel.id),
+      ),
+    }),
   );
 }
 
@@ -224,9 +238,7 @@ async function removeHoneypot(message: any, guild: any, client: any, args: strin
   if (!channel) return message.reply(t(lang, 'commands.admin.reactionrole.common.channelNotFound'));
 
   const before = (settings.honeypotChannels || []).length;
-  settings.honeypotChannels = (settings.honeypotChannels || []).filter(
-    (h: any) => h.channelId !== channel.id
-  );
+  settings.honeypotChannels = (settings.honeypotChannels || []).filter((h: any) => h.channelId !== channel.id);
 
   if (settings.honeypotChannels.length === before) {
     return message.reply(t(lang, 'auditCatalog.commands.admin.honeypot.l218_reply', { 'channel.id': channel.id }));
@@ -253,7 +265,9 @@ async function toggleHoneypot(message: any, guild: any, client: any, args: strin
   const entry = (settings.honeypotChannels || []).find((h: any) => h.channelId === channel.id);
 
   if (!entry) {
-    return message.reply(t(lang, 'auditCatalog.commands.admin.honeypot.l241_reply', { 'channel.id': channel.id, prefix }));
+    return message.reply(
+      t(lang, 'auditCatalog.commands.admin.honeypot.l241_reply', { 'channel.id': channel.id, prefix }),
+    );
   }
 
   entry.enabled = enabled;
@@ -263,7 +277,7 @@ async function toggleHoneypot(message: any, guild: any, client: any, args: strin
 
   return message.reply(
     `Honeypot in <#${channel.id}> is now **${enabled ? 'enabled' : 'disabled'}**.` +
-    (!enabled ? ' It will not take action until re-enabled.' : '')
+      (!enabled ? ' It will not take action until re-enabled.' : ''),
   );
 }
 
@@ -287,7 +301,9 @@ async function setAlertRole(message: any, guild: any, args: string[], prefix = '
 
   let role = guild.roles?.get(roleId);
   if (!role) {
-    try { role = await guild.fetchRole(roleId); } catch {}
+    try {
+      role = await guild.fetchRole(roleId);
+    } catch {}
   }
   if (!role) return message.reply(t(lang, 'commands.inrole.roleNotFound'));
 
@@ -323,21 +339,21 @@ const command: Command = {
 
   async execute(message, args, client, prefix = '!') {
     const guild = (message as any).guild;
-    if (!guild) return void await message.reply(t('en', 'commands.admin.keywords.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.keywords.serverOnly')));
 
     const sub = args[0]?.toLowerCase();
 
-    if (!sub || sub === 'list')    return showList(message, guild, prefix);
-    if (sub === 'add')             return upsertHoneypot(message, guild, client, args.slice(1), false, prefix);
-    if (sub === 'action')          return upsertHoneypot(message, guild, client, args.slice(1), true, prefix);
-    if (sub === 'remove')          return removeHoneypot(message, guild, client, args.slice(1), prefix);
-    if (sub === 'enable')          return toggleHoneypot(message, guild, client, args.slice(1), true, prefix);
-    if (sub === 'disable')         return toggleHoneypot(message, guild, client, args.slice(1), false, prefix);
-    if (sub === 'info')            return showInfo(message, guild, client, args.slice(1), prefix);
-    if (sub === 'alertrole')       return setAlertRole(message, guild, args.slice(1), prefix);
+    if (!sub || sub === 'list') return showList(message, guild, prefix);
+    if (sub === 'add') return upsertHoneypot(message, guild, client, args.slice(1), false, prefix);
+    if (sub === 'action') return upsertHoneypot(message, guild, client, args.slice(1), true, prefix);
+    if (sub === 'remove') return removeHoneypot(message, guild, client, args.slice(1), prefix);
+    if (sub === 'enable') return toggleHoneypot(message, guild, client, args.slice(1), true, prefix);
+    if (sub === 'disable') return toggleHoneypot(message, guild, client, args.slice(1), false, prefix);
+    if (sub === 'info') return showInfo(message, guild, client, args.slice(1), prefix);
+    if (sub === 'alertrole') return setAlertRole(message, guild, args.slice(1), prefix);
 
-    return void await message.reply(t('en', 'auditCatalog.commands.admin.honeypot.l324_reply', { prefix }));
-  }
+    return void (await message.reply(t('en', 'auditCatalog.commands.admin.honeypot.l324_reply', { prefix })));
+  },
 };
 
 export default command;

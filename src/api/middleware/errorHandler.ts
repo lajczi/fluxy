@@ -9,8 +9,6 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
   console.error('[API Error]', err.message || err);
 
   const status = err.status || err.statusCode || 500;
-  const message = status >= 500
-    ? errorT('internalServerError')
-    : (err.message || errorT('genericError'));
+  const message = status >= 500 ? errorT('internalServerError') : err.message || errorT('genericError');
   res.status(status).json({ error: message });
 }

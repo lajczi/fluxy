@@ -32,7 +32,7 @@ export function getStarboards(settings: any): IStarboardBoard[] {
 }
 
 export function getActiveStarboards(settings: any): IStarboardBoard[] {
-  return getStarboards(settings).filter(b => b.enabled && b.channelId);
+  return getStarboards(settings).filter((b) => b.enabled && b.channelId);
 }
 
 export function getStarEmoji(count: number): string {

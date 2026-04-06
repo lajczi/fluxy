@@ -30,7 +30,7 @@ const command: Command = {
   async execute(message, args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.report.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.report.serverOnly')));
 
     const settingsForLang = await settingsCache.get(guild.id).catch(() => null);
     const lang = normalizeLocale(settingsForLang?.language);
@@ -38,11 +38,11 @@ const command: Command = {
     const reportContent = args.join(' ').trim();
 
     if (!reportContent) {
-      return void await tempReply(message, t(lang, 'commands.report.missingMessage', { prefix }));
+      return void (await tempReply(message, t(lang, 'commands.report.missingMessage', { prefix })));
     }
 
     if (reportContent.length > 1000) {
-      return void await tempReply(message, t(lang, 'commands.report.tooLong'));
+      return void (await tempReply(message, t(lang, 'commands.report.tooLong')));
     }
 
     (message as any).delete().catch(() => {});
@@ -68,28 +68,38 @@ const command: Command = {
     const author = (message as any).author;
     const embed = new EmbedBuilder()
       .setTitle(t(lang, 'commands.report.embedTitle'))
-      .setColor(0xED4245)
+      .setColor(0xed4245)
       .setDescription(reportContent)
       .addFields(
-        { name: t(lang, 'commands.report.fieldReporter'), value: t(lang, 'auditCatalog.commands.general.report.l74_addFields_value', { 'author.username': author.username, 'author.id': author.id }), inline: true },
-        { name: t(lang, 'commands.report.fieldChannel'), value: `<#${(message as any).channelId || (message as any).channel?.id}>`, inline: true }
+        {
+          name: t(lang, 'commands.report.fieldReporter'),
+          value: t(lang, 'auditCatalog.commands.general.report.l74_addFields_value', {
+            'author.username': author.username,
+            'author.id': author.id,
+          }),
+          inline: true,
+        },
+        {
+          name: t(lang, 'commands.report.fieldChannel'),
+          value: `<#${(message as any).channelId || (message as any).channel?.id}>`,
+          inline: true,
+        },
       )
       .setThumbnail(author.displayAvatarURL?.() ?? author.avatarURL ?? null);
 
     let staffChannel: any;
     try {
       const channelsMap = guild.channels?.cache || guild.channels;
-      staffChannel = channelsMap?.get(settings.staffChannelId)
-        ?? await guild.channels.fetch(settings.staffChannelId).catch(() => null);
+      staffChannel =
+        channelsMap?.get(settings.staffChannelId) ??
+        (await guild.channels.fetch(settings.staffChannelId).catch(() => null));
     } catch {
       staffChannel = null;
     }
 
     if (!staffChannel) {
       console.warn(`[${guild.name}] Staff channel ${settings.staffChannelId} not found during !report`);
-      author.send(
-        t(lang, 'commands.report.channelUnavailableDm', { guildName: guild.name })
-      ).catch(() => {});
+      author.send(t(lang, 'commands.report.channelUnavailableDm', { guildName: guild.name })).catch(() => {});
       return;
     }
 
@@ -97,20 +107,15 @@ const command: Command = {
       const rolePing = settings.staffRoleId ? `<@&${settings.staffRoleId}>` : null;
       await staffChannel.send({
         content: rolePing ?? undefined,
-        embeds:  [embed]
+        embeds: [embed],
       });
 
-      author.send(
-        t(lang, 'commands.report.deliveredDm', { guildName: guild.name })
-      ).catch(() => {});
-
+      author.send(t(lang, 'commands.report.deliveredDm', { guildName: guild.name })).catch(() => {});
     } catch (err: any) {
       console.error(`[${guild.name}] Failed to send report to staff channel: ${err.message || err}`);
-      author.send(
-        t(lang, 'commands.report.permissionsErrorDm', { guildName: guild.name })
-      ).catch(() => {});
+      author.send(t(lang, 'commands.report.permissionsErrorDm', { guildName: guild.name })).catch(() => {});
     }
-  }
+  },
 };
 
 export default command;

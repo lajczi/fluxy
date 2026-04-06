@@ -43,11 +43,11 @@ export const CUSTOM_COMMAND_ACTION_OPTIONS: Array<{
 ];
 
 const CUSTOM_COMMAND_PERMISSION_SET = new Set<CustomCommandPermission>(
-  CUSTOM_COMMAND_PERMISSION_OPTIONS.map(option => option.value),
+  CUSTOM_COMMAND_PERMISSION_OPTIONS.map((option) => option.value),
 );
 
 const CUSTOM_COMMAND_ACTION_SET = new Set<CustomCommandActionType>(
-  CUSTOM_COMMAND_ACTION_OPTIONS.map(option => option.value),
+  CUSTOM_COMMAND_ACTION_OPTIONS.map((option) => option.value),
 );
 
 function unique<T>(items: T[]): T[] {
@@ -58,8 +58,8 @@ function normalizeSnowflakeArray(values: unknown, maxItems: number): string[] {
   if (!Array.isArray(values)) return [];
   const cleaned = values
     .filter((value): value is string => typeof value === 'string')
-    .map(value => value.trim())
-    .filter(value => SNOWFLAKE_RE.test(value));
+    .map((value) => value.trim())
+    .filter((value) => SNOWFLAKE_RE.test(value));
 
   return unique(cleaned).slice(0, maxItems);
 }
@@ -114,9 +114,9 @@ export function createCustomCommandDraft(): CustomCommand {
   };
 }
 
-export function buildCustomCommandsSavePayload(commands: CustomCommand[]):
-  | { ok: true; payload: CustomCommand[] }
-  | { ok: false; error: string } {
+export function buildCustomCommandsSavePayload(
+  commands: CustomCommand[],
+): { ok: true; payload: CustomCommand[] } | { ok: false; error: string } {
   if (!Array.isArray(commands)) {
     return { ok: false, error: 'Custom commands payload is invalid.' };
   }
@@ -130,11 +130,12 @@ export function buildCustomCommandsSavePayload(commands: CustomCommand[]):
     const embed = !!command.embed;
     const title = typeof command.title === 'string' ? command.title.trim() : '';
     const normalizedResponse = command.response.trim();
-    const response = normalizedResponse.length > 0
-      ? normalizedResponse
-      : actionType === 'toggleRole'
-        ? '{target}: role {role} was {action}.'
-        : '';
+    const response =
+      normalizedResponse.length > 0
+        ? normalizedResponse
+        : actionType === 'toggleRole'
+          ? '{target}: role {role} was {action}.'
+          : '';
 
     return {
       name: command.name.trim().toLowerCase(),

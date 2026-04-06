@@ -4,23 +4,13 @@ import path from 'path';
 const ROOT = path.join(process.cwd());
 const OUT = path.join(ROOT, 'src', 'locales');
 
-const SKIP = new Set([
-  'node_modules',
-  'src',
-  'dashboard',
-  'tests',
-  'build',
-  'coverage',
-  'logs',
-  '.git',
-  'en',
-]);
+const SKIP = new Set(['node_modules', 'src', 'dashboard', 'tests', 'build', 'coverage', 'logs', '.git', 'en']);
 
 function pickSourceFile(folder: string, files: string[]): string | null {
   const base = `${folder}.json`;
   if (files.includes(base)) return base;
   const sorted = [...files].sort((a, b) => a.localeCompare(b));
-  const short = sorted.find(f => /^[a-z]{2}\.json$/i.test(f));
+  const short = sorted.find((f) => /^[a-z]{2}\.json$/i.test(f));
   if (short) return short;
   return sorted[0] ?? null;
 }
@@ -35,7 +25,7 @@ function main() {
     const locPath = path.join(ROOT, folder, 'src', 'locales');
     if (!fs.existsSync(locPath)) continue;
 
-    const files = fs.readdirSync(locPath).filter(f => f.endsWith('.json'));
+    const files = fs.readdirSync(locPath).filter((f) => f.endsWith('.json'));
     if (files.length === 0) continue;
 
     const pick = pickSourceFile(folder, files);

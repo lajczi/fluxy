@@ -43,10 +43,12 @@ const validation = {
   mustBeValidMessageId: (field: string) => validatorT('mustBeValidMessageId', { field }),
   mustBeValidId: (field: string) => validatorT('mustBeValidId', { field }),
   maxAllowed: (label: string, max: number) => validatorT('maxAllowed', { label, max }),
-  eachStringLengthRange: (label: string, min: number, max: number) => validatorT('eachStringLengthRange', { label, min, max }),
+  eachStringLengthRange: (label: string, min: number, max: number) =>
+    validatorT('eachStringLengthRange', { label, min, max }),
   mustBeRange: (field: string, min: number, max: number) => validatorT('mustBeRange', { field, min, max }),
   mustBeUnderCharacters: (field: string, max: number) => validatorT('mustBeUnderCharacters', { field, max }),
-  mustBeArrayOfUpTo: (field: string, max: number, itemType: string) => validatorT('mustBeArrayOfUpTo', { field, max, itemType }),
+  mustBeArrayOfUpTo: (field: string, max: number, itemType: string) =>
+    validatorT('mustBeArrayOfUpTo', { field, max, itemType }),
   mustBeOneOf: (field: string, options: string) => validatorT('mustBeOneOf', { field, options }),
   mustBeHttpUrl: (field: string) => validatorT('mustBeHttpUrl', { field }),
   mustStartWithSlash: (field: string, context: string) => validatorT('mustStartWithSlash', { field, context }),
@@ -58,7 +60,8 @@ const validation = {
   mustBeUnique: (field: string) => validatorT('mustBeUnique', { field }),
   isInvalid: (field: string) => validatorT('isInvalid', { field }),
   isRequiredForAction: (field: string, action: string) => validatorT('isRequiredForAction', { field, action }),
-  canContainAtMost: (field: string, max: number, itemType: string) => validatorT('canContainAtMost', { field, max, itemType }),
+  canContainAtMost: (field: string, max: number, itemType: string) =>
+    validatorT('canContainAtMost', { field, max, itemType }),
   keyTooLong: (field: string) => validatorT('keyTooLong', { field }),
   customCommandNameInvalid: () => validatorT('customCommandNameInvalid'),
 };
@@ -79,7 +82,9 @@ function deepSanitize(value: unknown, depth = 0): unknown {
     if (value.length > MAX_ARRAY_LENGTH) {
       value = value.slice(0, MAX_ARRAY_LENGTH);
     }
-    return (value as unknown[]).map((item: unknown) => deepSanitize(item, depth + 1)).filter((v: unknown) => v !== undefined);
+    return (value as unknown[])
+      .map((item: unknown) => deepSanitize(item, depth + 1))
+      .filter((v: unknown) => v !== undefined);
   }
 
   if (typeof value === 'object') {
@@ -135,13 +140,20 @@ function validateStarboardEntry(value: unknown): true | string {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return validation.mustBeObject('starboard');
   const sb = value as Record<string, unknown>;
   if (sb.enabled !== undefined && typeof sb.enabled !== 'boolean') return validation.mustBeBoolean('starboard.enabled');
-  if (sb.channelId !== undefined && !isSnowflakeOrNull(sb.channelId)) return validation.mustBeValidChannelId('starboard.channelId');
-  if (sb.threshold !== undefined && !isBoundedInt(sb.threshold, 1, 100)) return validation.mustBeRange('starboard.threshold', 1, 100);
-  if (sb.emoji !== undefined && !isBoundedString(sb.emoji, 64)) return validation.mustBeUnderCharacters('starboard.emoji', 64);
-  if (sb.selfStarEnabled !== undefined && typeof sb.selfStarEnabled !== 'boolean') return validation.mustBeBoolean('starboard.selfStarEnabled');
-  if (sb.ignoreBots !== undefined && typeof sb.ignoreBots !== 'boolean') return validation.mustBeBoolean('starboard.ignoreBots');
-  if (sb.ignoredChannels !== undefined && !isSnowflakeArray(sb.ignoredChannels, 50)) return validation.mustBeArrayOfUpTo('starboard.ignoredChannels', 50, 'channel IDs');
-  if (sb.ignoredRoles !== undefined && !isSnowflakeArray(sb.ignoredRoles, 50)) return validation.mustBeArrayOfUpTo('starboard.ignoredRoles', 50, 'role IDs');
+  if (sb.channelId !== undefined && !isSnowflakeOrNull(sb.channelId))
+    return validation.mustBeValidChannelId('starboard.channelId');
+  if (sb.threshold !== undefined && !isBoundedInt(sb.threshold, 1, 100))
+    return validation.mustBeRange('starboard.threshold', 1, 100);
+  if (sb.emoji !== undefined && !isBoundedString(sb.emoji, 64))
+    return validation.mustBeUnderCharacters('starboard.emoji', 64);
+  if (sb.selfStarEnabled !== undefined && typeof sb.selfStarEnabled !== 'boolean')
+    return validation.mustBeBoolean('starboard.selfStarEnabled');
+  if (sb.ignoreBots !== undefined && typeof sb.ignoreBots !== 'boolean')
+    return validation.mustBeBoolean('starboard.ignoreBots');
+  if (sb.ignoredChannels !== undefined && !isSnowflakeArray(sb.ignoredChannels, 50))
+    return validation.mustBeArrayOfUpTo('starboard.ignoredChannels', 50, 'channel IDs');
+  if (sb.ignoredRoles !== undefined && !isSnowflakeArray(sb.ignoredRoles, 50))
+    return validation.mustBeArrayOfUpTo('starboard.ignoredRoles', 50, 'role IDs');
   return true;
 }
 
@@ -228,14 +240,15 @@ const fieldValidators: Record<string, (value: unknown) => true | string> = {
   language(v) {
     if (typeof v !== 'string') return validation.mustBeString('language');
     const code = v.trim();
-    if (!/^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(code) || code.length > 20) return validation.mustBeValidLocaleCode('language');
+    if (!/^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(code) || code.length > 20)
+      return validation.mustBeValidLocaleCode('language');
     return true;
   },
 
   prefixes(v) {
     if (!Array.isArray(v)) return validation.mustBeArray('prefixes');
     if (v.length > 10) return validation.maxAllowed('prefixes', 10);
-    if (!v.every(p => typeof p === 'string' && p.length > 0 && p.length <= 10)) {
+    if (!v.every((p) => typeof p === 'string' && p.length > 0 && p.length <= 10)) {
       return validation.eachStringLengthRange('prefix', 1, 10);
     }
     return true;
@@ -370,7 +383,7 @@ const fieldValidators: Record<string, (value: unknown) => true | string> = {
   disabledCommands(v) {
     if (!Array.isArray(v)) return validation.mustBeArray('disabledCommands');
     if (v.length > 100) return validation.maxAllowed('disabled commands', 100);
-    if (!v.every(c => typeof c === 'string' && c.length <= 50)) {
+    if (!v.every((c) => typeof c === 'string' && c.length <= 50)) {
       return validation.eachItemUnderCharacters('command name', 50);
     }
     return true;
@@ -428,28 +441,36 @@ const fieldValidators: Record<string, (value: unknown) => true | string> = {
   welcomeMessage(v) {
     if (typeof v !== 'object' || v === null || Array.isArray(v)) return validation.mustBeObject('welcomeMessage');
     const wm = v as Record<string, unknown>;
-    if (wm.enabled !== undefined && typeof wm.enabled !== 'boolean') return validation.mustBeBoolean('welcomeMessage.enabled');
-    if (wm.channelId !== undefined && !isSnowflakeOrNull(wm.channelId)) return validation.mustBeValidChannelId('welcomeMessage.channelId');
-    if (wm.message !== undefined && !isBoundedString(wm.message, 2000)) return validation.mustBeUnderCharacters('welcomeMessage.message', 2000);
+    if (wm.enabled !== undefined && typeof wm.enabled !== 'boolean')
+      return validation.mustBeBoolean('welcomeMessage.enabled');
+    if (wm.channelId !== undefined && !isSnowflakeOrNull(wm.channelId))
+      return validation.mustBeValidChannelId('welcomeMessage.channelId');
+    if (wm.message !== undefined && !isBoundedString(wm.message, 2000))
+      return validation.mustBeUnderCharacters('welcomeMessage.message', 2000);
     if (wm.embed !== undefined && typeof wm.embed !== 'object') return validation.mustBeObject('welcomeMessage.embed');
-    if (wm.dmEnabled !== undefined && typeof wm.dmEnabled !== 'boolean') return validation.mustBeBoolean('welcomeMessage.dmEnabled');
-    if (wm.dmMessage !== undefined && !isBoundedString(wm.dmMessage, 2000)) return validation.mustBeUnderCharacters('welcomeMessage.dmMessage', 2000);
+    if (wm.dmEnabled !== undefined && typeof wm.dmEnabled !== 'boolean')
+      return validation.mustBeBoolean('welcomeMessage.dmEnabled');
+    if (wm.dmMessage !== undefined && !isBoundedString(wm.dmMessage, 2000))
+      return validation.mustBeUnderCharacters('welcomeMessage.dmMessage', 2000);
     return true;
   },
 
   goodbyeMessage(v) {
     if (typeof v !== 'object' || v === null || Array.isArray(v)) return validation.mustBeObject('goodbyeMessage');
     const gm = v as Record<string, unknown>;
-    if (gm.enabled !== undefined && typeof gm.enabled !== 'boolean') return validation.mustBeBoolean('goodbyeMessage.enabled');
-    if (gm.channelId !== undefined && !isSnowflakeOrNull(gm.channelId)) return validation.mustBeValidChannelId('goodbyeMessage.channelId');
-    if (gm.message !== undefined && !isBoundedString(gm.message, 2000)) return validation.mustBeUnderCharacters('goodbyeMessage.message', 2000);
+    if (gm.enabled !== undefined && typeof gm.enabled !== 'boolean')
+      return validation.mustBeBoolean('goodbyeMessage.enabled');
+    if (gm.channelId !== undefined && !isSnowflakeOrNull(gm.channelId))
+      return validation.mustBeValidChannelId('goodbyeMessage.channelId');
+    if (gm.message !== undefined && !isBoundedString(gm.message, 2000))
+      return validation.mustBeUnderCharacters('goodbyeMessage.message', 2000);
     if (gm.embed !== undefined && typeof gm.embed !== 'object') return validation.mustBeObject('goodbyeMessage.embed');
     return true;
   },
 
   moderation(v) {
     if (typeof v !== 'object' || v === null || Array.isArray(v)) return validation.mustBeObject('moderation');
-    return true;  // deep-sanitized, Mongoose schema validates shape
+    return true; // deep-sanitized, Mongoose schema validates shape
   },
 
   automod(v) {
@@ -614,12 +635,7 @@ const fieldValidators: Record<string, (value: unknown) => true | string> = {
       return validation.mustBeBoolean('keywordWarnings.enabled');
     }
 
-    if (
-      kw.action !== undefined &&
-      kw.action !== 'delete' &&
-      kw.action !== 'warn' &&
-      kw.action !== 'delete+warn'
-    ) {
+    if (kw.action !== undefined && kw.action !== 'delete' && kw.action !== 'warn' && kw.action !== 'delete+warn') {
       return validation.mustBeOneOf('keywordWarnings.action', 'delete, warn, or delete+warn');
     }
 
@@ -668,7 +684,8 @@ const fieldValidators: Record<string, (value: unknown) => true | string> = {
   disabledLogEvents(v) {
     if (!Array.isArray(v)) return validation.mustBeArray('disabledLogEvents');
     if (v.length > 50) return validation.maxAllowed('disabled log events', 50);
-    if (!v.every(e => typeof e === 'string' && e.length <= 50)) return validation.eachItemUnderCharacters('event name', 50);
+    if (!v.every((e) => typeof e === 'string' && e.length <= 50))
+      return validation.eachItemUnderCharacters('event name', 50);
     return true;
   },
 };

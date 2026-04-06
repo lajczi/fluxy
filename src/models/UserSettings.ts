@@ -12,12 +12,15 @@ export interface UserSettingsModel extends Model<UserSettingsDocument> {
   setPrefix(userId: string, prefix: string | null): Promise<UserSettingsDocument>;
 }
 
-const userSettingsSchema = new Schema<UserSettingsDocument, UserSettingsModel>({
-  userId: { type: String, required: true, unique: true, index: true },
-  prefix: { type: String, default: null },
-}, {
-  timestamps: true,
-});
+const userSettingsSchema = new Schema<UserSettingsDocument, UserSettingsModel>(
+  {
+    userId: { type: String, required: true, unique: true, index: true },
+    prefix: { type: String, default: null },
+  },
+  {
+    timestamps: true,
+  },
+);
 
 // In-memory cache to avoid hitting DB on every message
 const prefixCache = new Map<string, { value: string | null; expiresAt: number }>();
@@ -49,11 +52,7 @@ userSettingsSchema.statics.getPrefix = async function (userId: string): Promise<
 
 userSettingsSchema.statics.setPrefix = async function (userId: string, prefix: string | null) {
   prefixCache.delete(userId);
-  return this.findOneAndUpdate(
-    { userId },
-    { prefix },
-    { returnDocument: 'after', upsert: true },
-  );
+  return this.findOneAndUpdate({ userId }, { prefix }, { returnDocument: 'after', upsert: true });
 };
 
 export default model<UserSettingsDocument, UserSettingsModel>('UserSettings', userSettingsSchema);

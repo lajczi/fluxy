@@ -20,7 +20,7 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.serverinfo.serverOnly'));
+      return void (await message.reply(t('en', 'commands.serverinfo.serverOnly')));
     }
 
     try {
@@ -74,12 +74,14 @@ const command: Command = {
 
       const roleCount = guild.roles?.cache?.size || guild.roles?.size || 0;
 
-      const createdAt = guild.createdAt ? new Date(guild.createdAt) : new Date(parseInt(guild.id) / 4194304 + 1420070400000);
+      const createdAt = guild.createdAt
+        ? new Date(guild.createdAt)
+        : new Date(parseInt(guild.id) / 4194304 + 1420070400000);
       const localeForDate = lang === 'en' ? 'en-US' : lang;
       const createdString = createdAt.toLocaleDateString(localeForDate, {
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
       });
 
       const features = guild.features?.length ? guild.features.join(', ') : t(lang, 'commands.serverinfo.none');
@@ -97,11 +99,14 @@ const command: Command = {
           { name: t(lang, 'commands.serverinfo.fieldCategories'), value: `${categories}`, inline: true },
           { name: t(lang, 'commands.serverinfo.fieldRoles'), value: `${roleCount}`, inline: true },
           { name: t(lang, 'commands.serverinfo.fieldCreated'), value: createdString, inline: true },
-          { name: t(lang, 'commands.serverinfo.fieldFeatures'), value: (features.substring(0, 1024) || t(lang, 'commands.serverinfo.none')), inline: false }
+          {
+            name: t(lang, 'commands.serverinfo.fieldFeatures'),
+            value: features.substring(0, 1024) || t(lang, 'commands.serverinfo.none'),
+            inline: false,
+          },
         );
 
       await message.reply({ embeds: [embed] });
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -111,7 +116,7 @@ const command: Command = {
         message.reply(t('en', 'commands.serverinfo.genericError')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

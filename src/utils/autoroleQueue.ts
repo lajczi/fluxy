@@ -1,13 +1,13 @@
-// i love fluxer api cant you tell, now im going to fucking kill myself 
+// i love fluxer api cant you tell, now im going to fucking kill myself
 
 import fs from 'fs';
 import path from 'path';
 import type { Client } from '@erinjs/core';
 import isNetworkError from './isNetworkError';
 
-const QUEUE_FILE      = path.join(__dirname, '../../data/autorole-queue.json');
-const RETRY_INTERVAL  = 60_000;
-const MAX_AGE         = 24 * 60 * 60 * 1000;
+const QUEUE_FILE = path.join(__dirname, '../../data/autorole-queue.json');
+const RETRY_INTERVAL = 60_000;
+const MAX_AGE = 24 * 60 * 60 * 1000;
 
 interface AutoroleQueueEntry {
   guildId: string;
@@ -40,9 +40,7 @@ function saveQueue(): void {
 }
 
 export function enqueue(guildId: string, userId: string, roleId: string): void {
-  const exists = queue.some(
-    e => e.guildId === guildId && e.userId === userId && e.roleId === roleId,
-  );
+  const exists = queue.some((e) => e.guildId === guildId && e.userId === userId && e.roleId === roleId);
   if (exists) return;
 
   queue.push({ guildId, userId, roleId, addedAt: Date.now() });
@@ -81,13 +79,14 @@ async function processQueue(): Promise<void> {
 
       await member.addRole(entry.roleId);
       console.log(`[autorole-queue] Assigned role ${entry.roleId} to ${entry.userId} in ${guild.name}`);
-
     } catch (err) {
       if (isNetworkError(err)) {
         // the API IS STILL DOWN FUCK OFFFFFFFFFFFFFFFFFFFFf I FUCKING HAT E THIS HGIT
         remaining.push(entry);
       } else {
-        console.warn(`[autorole-queue] Permanent error for user ${entry.userId} in guild ${entry.guildId}, dropping: ${(err as Error).message}`);
+        console.warn(
+          `[autorole-queue] Permanent error for user ${entry.userId} in guild ${entry.guildId}, dropping: ${(err as Error).message}`,
+        );
       }
     }
   }

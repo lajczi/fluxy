@@ -35,10 +35,13 @@ export function createBotRouter(client: Client, commandHandler: CommandHandler, 
   });
   router.get('/commands', (_req, res) => {
     const categories = commandHandler.getCommandsByCategory();
-    const result: Record<string, Array<{ name: string; description: string | string[]; usage?: string; permissions?: string[] }>> = {};
+    const result: Record<
+      string,
+      Array<{ name: string; description: string | string[]; usage?: string; permissions?: string[] }>
+    > = {};
 
     for (const [category, commands] of Object.entries(categories)) {
-      result[category] = commands.map(cmd => ({
+      result[category] = commands.map((cmd) => ({
         name: cmd.name,
         description: cmd.description,
         usage: cmd.usage,

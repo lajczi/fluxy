@@ -5,9 +5,6 @@
     "types": ["node", "jest"],
     "noEmit": true
   },
-  "include": [
-    "../src/**/*.ts",
-    "./**/*.ts"
-  ],
+  "include": ["../src/**/*.ts", "./**/*.ts"],
   "exclude": ["../node_modules", "../build", "../dashboard"]
 }

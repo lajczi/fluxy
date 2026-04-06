@@ -61,10 +61,7 @@ describe('buildCustomCommandsSavePayload', () => {
   });
 
   test('rejects duplicate command names after normalization', () => {
-    const result = buildCustomCommandsSavePayload([
-      makeCommand({ name: 'status' }),
-      makeCommand({ name: ' Status ' }),
-    ]);
+    const result = buildCustomCommandsSavePayload([makeCommand({ name: 'status' }), makeCommand({ name: ' Status ' })]);
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -72,9 +69,7 @@ describe('buildCustomCommandsSavePayload', () => {
   });
 
   test('rejects invalid command names', () => {
-    const result = buildCustomCommandsSavePayload([
-      makeCommand({ name: 'status check' }),
-    ]);
+    const result = buildCustomCommandsSavePayload([makeCommand({ name: 'status check' })]);
 
     expect(result.ok).toBe(false);
     if (result.ok) return;

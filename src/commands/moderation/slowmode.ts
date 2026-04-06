@@ -27,7 +27,9 @@ const command: Command = {
     }
     let member = (message as any).guild?.members?.get((message as any).author.id);
     if (!member && (message as any).guild) {
-      try { member = await (message as any).guild.fetchMember((message as any).author.id); } catch {}
+      try {
+        member = await (message as any).guild.fetchMember((message as any).author.id);
+      } catch {}
     }
 
     if (member) {
@@ -50,7 +52,7 @@ const command: Command = {
         }
 
         if (!allowed) {
-          return void await message.reply(t(lang, 'commands.moderation.slowmode.permissionRequired'));
+          return void (await message.reply(t(lang, 'commands.moderation.slowmode.permissionRequired')));
         }
       }
     }
@@ -59,11 +61,11 @@ const command: Command = {
 
     if (!args[0]) {
       if (currentSlowmode === 0) {
-        return void await message.reply(t(lang, 'commands.moderation.slowmode.disabledInChannel'));
+        return void (await message.reply(t(lang, 'commands.moderation.slowmode.disabledInChannel')));
       }
-      return void await message.reply(
-        t(lang, 'commands.moderation.slowmode.currentSlowmode', { duration: formatDuration(currentSlowmode * 1000) })
-      );
+      return void (await message.reply(
+        t(lang, 'commands.moderation.slowmode.currentSlowmode', { duration: formatDuration(currentSlowmode * 1000) }),
+      ));
     }
 
     if (args[0].toLowerCase() === 'off' || args[0] === '0') {
@@ -73,7 +75,7 @@ const command: Command = {
       } catch (error: any) {
         if (!isNetworkError(error)) {
           console.error('Error disabling slowmode:', error);
-          return void await message.reply(t(lang, 'commands.moderation.slowmode.failedDisable'));
+          return void (await message.reply(t(lang, 'commands.moderation.slowmode.failedDisable')));
         }
       }
       return;
@@ -81,31 +83,29 @@ const command: Command = {
 
     const durationMs = parseDuration(args[0]);
     if (!durationMs || durationMs <= 0) {
-      return void await message.reply(t(lang, 'commands.moderation.slowmode.invalidDurationFormat'));
+      return void (await message.reply(t(lang, 'commands.moderation.slowmode.invalidDurationFormat')));
     }
 
     const durationSeconds = Math.floor(durationMs / 1000);
 
     if (durationSeconds < 1) {
-      return void await message.reply(t(lang, 'commands.moderation.slowmode.tooShort'));
+      return void (await message.reply(t(lang, 'commands.moderation.slowmode.tooShort')));
     }
 
     if (durationSeconds > MAX_SLOWMODE) {
-      return void await message.reply(t(lang, 'commands.moderation.slowmode.tooLong'));
+      return void (await message.reply(t(lang, 'commands.moderation.slowmode.tooLong')));
     }
 
     try {
       await (message as any).channel.edit({ rate_limit_per_user: durationSeconds });
-      await message.reply(
-        t(lang, 'commands.moderation.slowmode.setSuccess', { duration: formatDuration(durationMs) })
-      );
+      await message.reply(t(lang, 'commands.moderation.slowmode.setSuccess', { duration: formatDuration(durationMs) }));
     } catch (error: any) {
       if (!isNetworkError(error)) {
         console.error('Error setting slowmode:', error);
-        return void await message.reply(t(lang, 'commands.moderation.slowmode.failedSet'));
+        return void (await message.reply(t(lang, 'commands.moderation.slowmode.failedSet')));
       }
     }
-  }
+  },
 };
 
 export default command;

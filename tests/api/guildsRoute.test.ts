@@ -40,12 +40,8 @@ describe('guilds route hydration', () => {
       name: 'Guild One',
       icon: null,
       ownerId: 'owner-1',
-      channels: new Map([
-        ['c-rules', { id: 'c-rules', name: 'rules', type: 0, parent_id: 'cat-main', position: 0 }],
-      ]),
-      roles: new Map([
-        ['r-everyone', { id: 'r-everyone', name: '@everyone', color: 0, position: 0 }],
-      ]),
+      channels: new Map([['c-rules', { id: 'c-rules', name: 'rules', type: 0, parent_id: 'cat-main', position: 0 }]]),
+      roles: new Map([['r-everyone', { id: 'r-everyone', name: '@everyone', color: 0, position: 0 }]]),
       emojis: new Map(),
     };
 
@@ -116,9 +112,7 @@ describe('guilds route hydration', () => {
       icon: null,
       ownerId: 'owner-1',
       channels: new Map(),
-      roles: new Map([
-        ['r-everyone', { id: 'r-everyone', name: '@everyone', color: 0, position: 0 }],
-      ]),
+      roles: new Map([['r-everyone', { id: 'r-everyone', name: '@everyone', color: 0, position: 0 }]]),
       emojis: new Map(),
     };
 

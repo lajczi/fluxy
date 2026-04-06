@@ -34,12 +34,12 @@ const event: BotEvent = {
           description: 'Server emojis were created, updated, or deleted.',
           footer: `Guild ID: ${guildId}`,
           eventType: 'guild_emojis_update',
-        }
+        },
       );
     } catch (error) {
       console.error('Error in guildEmojisUpdate event:', error);
     }
-  }
+  },
 };
 
 export default event;

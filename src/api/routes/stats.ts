@@ -43,7 +43,7 @@ export function createStatsRouter(client: Client): Router {
         { $sort: { _id: 1 } },
       ]);
 
-      res.json(daily.map(d => ({ date: d._id, count: d.count })));
+      res.json(daily.map((d) => ({ date: d._id, count: d.count })));
     } catch {
       res.status(500).json({ error: statsT('internalServerError') });
     }
@@ -60,7 +60,7 @@ export function createStatsRouter(client: Client): Router {
         { $limit: limit },
       ]);
 
-      res.json(top.map(t => ({ command: t._id, count: t.count })));
+      res.json(top.map((t) => ({ command: t._id, count: t.count })));
     } catch {
       res.status(500).json({ error: statsT('internalServerError') });
     }
@@ -77,14 +77,16 @@ export function createStatsRouter(client: Client): Router {
         { $limit: limit },
       ]);
 
-      res.json(top.map(t => {
-        const guild = client.guilds.get(t._id);
-        return {
-          guildId: t._id,
-          name: guild?.name ?? statsT('unknownGuild', { guildId: t._id }),
-          count: t.count,
-        };
-      }));
+      res.json(
+        top.map((t) => {
+          const guild = client.guilds.get(t._id);
+          return {
+            guildId: t._id,
+            name: guild?.name ?? statsT('unknownGuild', { guildId: t._id }),
+            count: t.count,
+          };
+        }),
+      );
     } catch {
       res.status(500).json({ error: statsT('internalServerError') });
     }

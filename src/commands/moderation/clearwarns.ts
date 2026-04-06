@@ -21,19 +21,19 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.moderation.clearwarns.serverOnly'));
+      return void (await message.reply(t('en', 'commands.moderation.clearwarns.serverOnly')));
     }
 
     const guildSettings: any = await settingsCache.get(guild.id).catch(() => null);
     const lang = normalizeLocale(guildSettings?.language);
 
     if (!args[0]) {
-      return void await message.reply(t(lang, 'commands.moderation.clearwarns.usage', { prefix }));
+      return void (await message.reply(t(lang, 'commands.moderation.clearwarns.usage', { prefix })));
     }
 
     const userId = parseUserId(args[0]);
     if (!userId) {
-      return void await message.reply(t(lang, 'commands.moderation.clearwarns.invalidUser'));
+      return void (await message.reply(t(lang, 'commands.moderation.clearwarns.invalidUser')));
     }
 
     try {
@@ -41,7 +41,7 @@ const command: Command = {
       const currentCount = warningRecord.warnings?.length || 0;
 
       if (currentCount === 0) {
-        return void await message.reply(t(lang, 'commands.moderation.clearwarns.noWarningsToClear'));
+        return void (await message.reply(t(lang, 'commands.moderation.clearwarns.noWarningsToClear')));
       }
 
       await Warning.clearWarnings(guild.id, userId);
@@ -58,12 +58,13 @@ const command: Command = {
         t(lang, 'commands.moderation.clearwarns.success', {
           currentCount,
           username: displayName,
-          userId: targetUser.id
-        })
+          userId: targetUser.id,
+        }),
       );
 
-      await logModAction(guild, (message as any).author, targetUser, 'clearwarns', `Cleared ${currentCount} warnings`, { client });
-
+      await logModAction(guild, (message as any).author, targetUser, 'clearwarns', `Cleared ${currentCount} warnings`, {
+        client,
+      });
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -73,7 +74,7 @@ const command: Command = {
         message.reply(t(lang, 'commands.moderation.clearwarns.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

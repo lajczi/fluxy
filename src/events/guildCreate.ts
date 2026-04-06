@@ -89,7 +89,7 @@ const event: BotEvent & { markReady: typeof markReady } = {
     }
     log.ok('Guild', `Joined new guild: ${guild.name} (${guild.id})`);
     scheduleGuildInit(guild, client);
-  }
+  },
 };
 
 export default event;

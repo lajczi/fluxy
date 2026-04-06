@@ -7,7 +7,8 @@ import { t, normalizeLocale } from '../../i18n';
 
 const command: Command = {
   name: 'userinfo',
-  description: 'Show profile info for a user \u2014 account age, server join date, roles, and timeout status. Leave blank for your own info',
+  description:
+    'Show profile info for a user \u2014 account age, server join date, roles, and timeout status. Leave blank for your own info',
   usage: '[@user or user ID]',
   category: 'info',
   cooldown: 5,
@@ -19,7 +20,7 @@ const command: Command = {
     }
 
     if (!guild) {
-      return void await message.reply(t('en', 'commands.userinfo.serverOnly'));
+      return void (await message.reply(t('en', 'commands.userinfo.serverOnly')));
     }
 
     try {
@@ -30,7 +31,7 @@ const command: Command = {
       if (args[0]) {
         const parsedId = parseUserId(args[0]);
         if (!parsedId) {
-          return void await message.reply(t(lang, 'commands.userinfo.invalidUser'));
+          return void (await message.reply(t(lang, 'commands.userinfo.invalidUser')));
         }
         userId = parsedId;
       }
@@ -39,7 +40,7 @@ const command: Command = {
       try {
         user = await client.users.fetch(userId);
       } catch {
-        return void await message.reply(t(lang, 'commands.userinfo.userNotFound'));
+        return void (await message.reply(t(lang, 'commands.userinfo.userNotFound')));
       }
 
       let member: any = guild.members?.get(userId);
@@ -56,7 +57,7 @@ const command: Command = {
       const createdString = createdAt.toLocaleDateString(localeForDate, {
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
       });
 
       const embed = new EmbedBuilder()
@@ -65,8 +66,12 @@ const command: Command = {
         .setThumbnail(user.avatarURL?.() || null)
         .addFields(
           { name: t(lang, 'commands.userinfo.fieldId'), value: user.id, inline: true },
-          { name: t(lang, 'commands.userinfo.fieldBot'), value: user.bot ? t(lang, 'commands.userinfo.yes') : t(lang, 'commands.userinfo.no'), inline: true },
-          { name: t(lang, 'commands.userinfo.fieldAccountCreated'), value: createdString, inline: true }
+          {
+            name: t(lang, 'commands.userinfo.fieldBot'),
+            value: user.bot ? t(lang, 'commands.userinfo.yes') : t(lang, 'commands.userinfo.no'),
+            inline: true,
+          },
+          { name: t(lang, 'commands.userinfo.fieldAccountCreated'), value: createdString, inline: true },
         );
 
       if (member) {
@@ -75,13 +80,11 @@ const command: Command = {
           ? joinedAt.toLocaleDateString(localeForDate, {
               year: 'numeric',
               month: 'long',
-              day: 'numeric'
+              day: 'numeric',
             })
           : t(lang, 'commands.userinfo.unknown');
 
-        embed.addFields(
-          { name: t(lang, 'commands.userinfo.fieldJoinedServer'), value: joinedString, inline: true }
-        );
+        embed.addFields({ name: t(lang, 'commands.userinfo.fieldJoinedServer'), value: joinedString, inline: true });
 
         if (member.roles && member.roles.cache) {
           const roles = member.roles.cache
@@ -92,32 +95,29 @@ const command: Command = {
 
           if (roles) {
             const totalRoles = member.roles.cache.size - 1;
-            embed.addFields(
-              {
-                name: t(lang, 'commands.userinfo.fieldRoles', { totalRoles }),
-                value: roles + (totalRoles > 10 ? t(lang, 'commands.userinfo.rolesOverflowSuffix') : ''),
-                inline: false
-              }
-            );
+            embed.addFields({
+              name: t(lang, 'commands.userinfo.fieldRoles', { totalRoles }),
+              value: roles + (totalRoles > 10 ? t(lang, 'commands.userinfo.rolesOverflowSuffix') : ''),
+              inline: false,
+            });
           }
         }
 
         if (member.communicationDisabledUntil && member.communicationDisabledUntil > new Date()) {
           const timeoutEnd = new Date(member.communicationDisabledUntil);
-          embed.addFields(
-            { name: t(lang, 'commands.userinfo.fieldTimeout'), value: t(lang, 'commands.userinfo.timeoutUntil', { timeoutEnd: timeoutEnd.toLocaleString(localeForDate) }), inline: true }
-          );
+          embed.addFields({
+            name: t(lang, 'commands.userinfo.fieldTimeout'),
+            value: t(lang, 'commands.userinfo.timeoutUntil', { timeoutEnd: timeoutEnd.toLocaleString(localeForDate) }),
+            inline: true,
+          });
         }
 
         if (member.nickname) {
-          embed.addFields(
-            { name: t(lang, 'commands.userinfo.fieldNickname'), value: member.nickname, inline: true }
-          );
+          embed.addFields({ name: t(lang, 'commands.userinfo.fieldNickname'), value: member.nickname, inline: true });
         }
       }
 
       await message.reply({ embeds: [embed] });
-
     } catch (error: any) {
       const guildName = guild?.name || 'Unknown Server';
       if (isNetworkError(error)) {
@@ -127,7 +127,7 @@ const command: Command = {
         message.reply(t('en', 'commands.userinfo.genericError')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

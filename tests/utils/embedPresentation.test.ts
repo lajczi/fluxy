@@ -16,14 +16,18 @@ describe('embedPresentation', () => {
   });
 
   test('joins footer parts without empty segments', () => {
-    expect(joinCompactFooterParts(['!help <command> for details', null, '2/4 ◄►'])).toBe('!help <command> for details • 2/4 ◄►');
+    expect(joinCompactFooterParts(['!help <command> for details', null, '2/4 ◄►'])).toBe(
+      '!help <command> for details • 2/4 ◄►',
+    );
   });
 
   test('keeps only the first sentence of a long description', () => {
-    expect(compactEmbedDescription([
-      'Privately alert the staff team about an issue. Your message is deleted immediately.',
-      '',
-      'Extra detail',
-    ])).toBe('Privately alert the staff team about an issue.');
+    expect(
+      compactEmbedDescription([
+        'Privately alert the staff team about an issue. Your message is deleted immediately.',
+        '',
+        'Extra detail',
+      ]),
+    ).toBe('Privately alert the staff team about an issue.');
   });
 });

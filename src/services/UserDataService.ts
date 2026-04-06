@@ -42,7 +42,9 @@ export async function collectUserData(userId: string): Promise<UserDataExport> {
     ModerationLog.find({ targetId: userId }).sort({ timestamp: -1 }).lean(),
     ModerationLog.find({ userId }).sort({ timestamp: -1 }).lean(),
     Ticket.find({ openedBy: userId }).lean(),
-    Ticket.find({ participants: userId, openedBy: { $ne: userId } }).select('-transcript').lean(),
+    Ticket.find({ participants: userId, openedBy: { $ne: userId } })
+      .select('-transcript')
+      .lean(),
     GlobalBan.findOne({ userId }).lean(),
     Stat.countDocuments({ 'additionalData.userId': userId }),
     GuildSettings.find({ lockdownAllowedUsers: userId }).select('guildId').lean(),
@@ -50,7 +52,9 @@ export async function collectUserData(userId: string): Promise<UserDataExport> {
 
   const allTicketsWithMessages = await Ticket.find({
     'transcript.authorId': userId,
-  }).select('transcript').lean();
+  })
+    .select('transcript')
+    .lean();
 
   let messagesAuthored = 0;
   for (const t of allTicketsWithMessages) {
@@ -65,7 +69,9 @@ export async function collectUserData(userId: string): Promise<UserDataExport> {
   return {
     userId,
     exportedAt: new Date().toISOString(),
-    userSettings: userSettings ? { prefix: (userSettings as any).prefix, createdAt: (userSettings as any).createdAt } : null,
+    userSettings: userSettings
+      ? { prefix: (userSettings as any).prefix, createdAt: (userSettings as any).createdAt }
+      : null,
     warnings: warnings.map((w: any) => ({
       guildId: w.guildId,
       warnings: w.warnings,
@@ -92,11 +98,13 @@ export async function collectUserData(userId: string): Promise<UserDataExport> {
       participated: ticketsParticipated as any[],
       messagesAuthored,
     },
-    globalBan: globalBan ? {
-      reason: (globalBan as any).reason,
-      evidence: (globalBan as any).evidence,
-      addedAt: (globalBan as any).addedAt,
-    } : null,
+    globalBan: globalBan
+      ? {
+          reason: (globalBan as any).reason,
+          evidence: (globalBan as any).evidence,
+          addedAt: (globalBan as any).addedAt,
+        }
+      : null,
     commandUsage: commandUsageCount,
     guildSettingsReferences: guildSettingsRefs.map((g: any) => ({
       guildId: g.guildId,
@@ -130,29 +138,26 @@ export async function deleteUserData(userId: string): Promise<DeleteResult> {
   const warningsResult = await Warning.deleteMany({ userId });
   result.warnings = warningsResult.deletedCount;
 
-  const logsAsTarget = await ModerationLog.updateMany(
-    { targetId: userId },
-    { $set: { targetId: '[deleted]' } },
-  );
-  const logsAsMod = await ModerationLog.updateMany(
-    { userId },
-    { $set: { userId: '[deleted]' } },
-  );
+  const logsAsTarget = await ModerationLog.updateMany({ targetId: userId }, { $set: { targetId: '[deleted]' } });
+  const logsAsMod = await ModerationLog.updateMany({ userId }, { $set: { userId: '[deleted]' } });
   result.moderationLogsAnonymized = (logsAsTarget.modifiedCount || 0) + (logsAsMod.modifiedCount || 0);
 
   await Ticket.updateMany(
     { 'transcript.authorId': userId },
-    { $set: { 'transcript.$[msg].authorId': '[deleted]', 'transcript.$[msg].authorName': 'Deleted User', 'transcript.$[msg].avatarURL': null } },
+    {
+      $set: {
+        'transcript.$[msg].authorId': '[deleted]',
+        'transcript.$[msg].authorName': 'Deleted User',
+        'transcript.$[msg].avatarURL': null,
+      },
+    },
     { arrayFilters: [{ 'msg.authorId': userId }] },
   );
 
   await Ticket.updateMany({ openedBy: userId }, { $set: { openedBy: '[deleted]' } });
   await Ticket.updateMany({ closedBy: userId }, { $set: { closedBy: '[deleted]' } });
   await Ticket.updateMany({ claimedBy: userId }, { $set: { claimedBy: '[deleted]' } });
-  await Ticket.updateMany(
-    { participants: userId },
-    { $pull: { participants: userId } },
-  );
+  await Ticket.updateMany({ participants: userId }, { $pull: { participants: userId } });
   result.ticketMessagesAnonymized = 1;
 
   const statsResult = await Stat.deleteMany({ 'additionalData.userId': userId });

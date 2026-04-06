@@ -15,7 +15,7 @@ const command: Command = {
   async execute(message, _args, client, prefix = '!') {
     let guild = (message as any).guild;
     if (!guild && (message as any).guildId) guild = await client.guilds.fetch((message as any).guildId);
-    if (!guild) return void await message.reply(t('en', 'commands.admin.toggleAntireactionspam.serverOnly'));
+    if (!guild) return void (await message.reply(t('en', 'commands.admin.toggleAntireactionspam.serverOnly')));
 
     try {
       const settings: any = await GuildSettings.getOrCreate(guild.id);
@@ -42,15 +42,19 @@ const command: Command = {
       await message.reply(reply);
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn(`[${guild?.name || 'Unknown Server'}] Fluxer API unreachable during !toggle-antireactionspam (ECONNRESET)`);
+        console.warn(
+          `[${guild?.name || 'Unknown Server'}] Fluxer API unreachable during !toggle-antireactionspam (ECONNRESET)`,
+        );
       } else {
-        console.error(`[${guild?.name || 'Unknown Server'}] Error in !toggle-antireactionspam: ${error.message || error}`);
+        console.error(
+          `[${guild?.name || 'Unknown Server'}] Error in !toggle-antireactionspam: ${error.message || error}`,
+        );
         const cached: any = await settingsCache.get(guild.id).catch(() => null);
         const lang = normalizeLocale(cached?.language);
         message.reply(t(lang, 'commands.admin.toggleAntireactionspam.errors.generic')).catch(() => {});
       }
     }
-  }
+  },
 };
 
 export default command;

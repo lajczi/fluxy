@@ -23,15 +23,15 @@ function isCheckmarkEmoji(emoji: any): boolean {
 }
 
 function reactionEmojiParam(reaction: any): string {
-  return reaction?.emoji?.id
-    ? `${reaction.emoji.name}:${reaction.emoji.id}`
-    : String(reaction?.emoji?.name ?? '');
+  return reaction?.emoji?.id ? `${reaction.emoji.name}:${reaction.emoji.id}` : String(reaction?.emoji?.name ?? '');
 }
 
 function normalizeStarEmoji(emoji: any): string {
   if (!emoji) return '';
   if (emoji.id) return `${emoji.name}:${emoji.id}`;
-  return String(emoji.name ?? '').replace(/[\uFE00-\uFE0F\u200D]/g, '').trim();
+  return String(emoji.name ?? '')
+    .replace(/[\uFE00-\uFE0F\u200D]/g, '')
+    .trim();
 }
 
 function isStarEmojiMatch(reactionEmoji: any, boardEmoji: string): boolean {
@@ -54,10 +54,11 @@ const event: BotEvent = {
       let guildId = reaction.guildId;
       if (!guildId && reaction.channelId) {
         try {
-          const channel = client.channels?.get(reaction.channelId) || await client.channels?.fetch(reaction.channelId).catch(() => null);
+          const channel =
+            client.channels?.get(reaction.channelId) ||
+            (await client.channels?.fetch(reaction.channelId).catch(() => null));
           if (channel) guildId = (channel as any).guildId || (channel as any).guild_id || (channel as any).guild?.id;
-        } catch {
-        }
+        } catch {}
       }
       if (!guildId || user.bot) return;
 
@@ -71,16 +72,20 @@ const event: BotEvent = {
       const settings: any = await settingsCache.get(guild.id);
       if (!settings) return;
 
-      const emojiName = reaction.emoji.id ? reaction.emoji.name : reaction.emoji.name ?? '';
+      const emojiName = reaction.emoji.id ? reaction.emoji.name : (reaction.emoji.name ?? '');
       if (emojiName === EMOJI_APPLY || emojiName === EMOJI_DECLINE) {
         const prompt = await GlobalBanPrompt.findOne({ messageId: reaction.messageId, status: 'pending' }).lean();
         if (prompt && prompt.guildId === guild.id) {
-          const member = guild.members?.get(user.id) || await guild.fetchMember(user.id).catch(() => null);
-          if (member && (member.permissions?.has?.(PermissionFlags.ManageGuild) || member.permissions?.has?.(PermissionFlags.Administrator))) {
+          const member = guild.members?.get(user.id) || (await guild.fetchMember(user.id).catch(() => null));
+          if (
+            member &&
+            (member.permissions?.has?.(PermissionFlags.ManageGuild) ||
+              member.permissions?.has?.(PermissionFlags.Administrator))
+          ) {
             const apply = emojiName === EMOJI_APPLY;
             await GlobalBanPrompt.updateOne(
               { messageId: reaction.messageId },
-              { $set: { status: apply ? 'applied' : 'declined', decidedBy: user.id, decidedAt: new Date() } }
+              { $set: { status: apply ? 'applied' : 'declined', decidedBy: user.id, decidedAt: new Date() } },
             );
 
             if (apply) {
@@ -88,16 +93,14 @@ const event: BotEvent = {
                 await client.rest.put(Routes.guildBan(guild.id, (prompt as any).bannedUserId), {
                   body: { reason: (prompt as any).banReason },
                 });
-              } catch {
-              }
+              } catch {}
             }
 
             let decidedByName = (user as any).username ?? (user as any).global_name ?? user.id;
             try {
               const fetched = await client.users.fetch(user.id).catch(() => null);
               if (fetched) decidedByName = (fetched as any).username ?? (fetched as any).global_name ?? decidedByName;
-            } catch {
-            }
+            } catch {}
 
             try {
               const newEmbed = new EmbedBuilder()
@@ -105,27 +108,38 @@ const event: BotEvent = {
                 .setDescription(
                   apply
                     ? t('en', 'auditCatalog.events.messageReactionAdd.l106_setDescriptionApplied', { decidedByName })
-                    : t('en', 'auditCatalog.events.messageReactionAdd.l107_setDescriptionSkipped', { decidedByName })
+                    : t('en', 'auditCatalog.events.messageReactionAdd.l107_setDescriptionSkipped', { decidedByName }),
                 )
                 .addFields(
-                  { name: t('en', 'auditCatalog.events.messageReactionAdd.l111_addFields_name'), value: `<@${(prompt as any).bannedUserId}>`, inline: true },
+                  {
+                    name: t('en', 'auditCatalog.events.messageReactionAdd.l111_addFields_name'),
+                    value: `<@${(prompt as any).bannedUserId}>`,
+                    inline: true,
+                  },
                   {
                     name: t('en', 'auditCatalog.events.messageReactionAdd.l112_addFields_name'),
                     value: apply
-                      ? t('en', 'auditCatalog.events.messageReactionAdd.l112_addFields_valueApplied', { emoji: EMOJI_APPLY })
-                      : t('en', 'auditCatalog.events.messageReactionAdd.l112_addFields_valueSkipped', { emoji: EMOJI_DECLINE }),
-                    inline: true
+                      ? t('en', 'auditCatalog.events.messageReactionAdd.l112_addFields_valueApplied', {
+                          emoji: EMOJI_APPLY,
+                        })
+                      : t('en', 'auditCatalog.events.messageReactionAdd.l112_addFields_valueSkipped', {
+                          emoji: EMOJI_DECLINE,
+                        }),
+                    inline: true,
                   },
                 )
                 .setColor(apply ? 0xe74c3c : 0x95a5a6)
                 .setTimestamp(new Date());
 
-              await client.rest.patch(Routes.channelMessage(reaction.channelId, reaction.messageId), {
-                body: { embeds: [newEmbed.toJSON()] },
-              }).catch(() => {});
-              await client.rest.delete(Routes.channelMessageReactions(reaction.channelId, reaction.messageId)).catch(() => {});
-            } catch {
-            }
+              await client.rest
+                .patch(Routes.channelMessage(reaction.channelId, reaction.messageId), {
+                  body: { embeds: [newEmbed.toJSON()] },
+                })
+                .catch(() => {});
+              await client.rest
+                .delete(Routes.channelMessageReactions(reaction.channelId, reaction.messageId))
+                .catch(() => {});
+            } catch {}
           }
           return;
         }
@@ -133,9 +147,7 @@ const event: BotEvent = {
 
       const targetMessageIsBotAuthored = await isReactionOnBotMessage(client, reaction);
       if (!targetMessageIsBotAuthored) {
-        const emojiDisplay = reaction.emoji.id
-          ? `<:${reaction.emoji.name}:${reaction.emoji.id}>`
-          : reaction.emoji.name;
+        const emojiDisplay = reaction.emoji.id ? `<:${reaction.emoji.name}:${reaction.emoji.id}>` : reaction.emoji.name;
 
         await logServerEvent(
           guild,
@@ -151,7 +163,7 @@ const event: BotEvent = {
             description: `[Jump to message](https://fluxer.app/channels/${reaction.guildId}/${reaction.channelId}/${reaction.messageId})`,
             footer: `Message ID: ${reaction.messageId}`,
             eventType: 'reaction_add',
-          }
+          },
         ).catch(() => {});
       }
 
@@ -160,8 +172,10 @@ const event: BotEvent = {
           let isExempt = false;
           if (settings.automod.exemptRoles?.length > 0) {
             let member = guild.members?.get(user.id);
-            if (!member) try { member = await guild.fetchMember(user.id); } catch {
-            }
+            if (!member)
+              try {
+                member = await guild.fetchMember(user.id);
+              } catch {}
             if (member) {
               const memberRoleIds = member.roles?.roleIds ?? [];
               isExempt = memberRoleIds.some((id: string) => settings.automod.exemptRoles.includes(id));
@@ -185,14 +199,17 @@ const event: BotEvent = {
       ) {
         try {
           const emojiParam = reactionEmojiParam(reaction);
-          await client.rest.delete(`${Routes.channelMessageReaction(reaction.channelId, reaction.messageId, emojiParam)}/${user.id}`);
-        } catch {
-        }
+          await client.rest.delete(
+            `${Routes.channelMessageReaction(reaction.channelId, reaction.messageId, emojiParam)}/${user.id}`,
+          );
+        } catch {}
 
         if (verification.verifiedRoleId) {
           let member = guild.members?.get(user.id);
-          if (!member) try { member = await guild.fetchMember(user.id); } catch {
-          }
+          if (!member)
+            try {
+              member = await guild.fetchMember(user.id);
+            } catch {}
           if (member) {
             const memberRoleIds = member.roles?.roleIds ?? [];
             if (memberRoleIds.includes(verification.verifiedRoleId)) return;
@@ -211,16 +228,39 @@ const event: BotEvent = {
           try {
             const fetched = await client.users.fetch(user.id);
             username = (fetched as any).username || 'user';
-          } catch {
-          }
-          const safeName = username.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 16) || 'user';
+          } catch {}
+          const safeName =
+            username
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, '')
+              .slice(0, 16) || 'user';
 
           const overwrites: any[] = [
             { id: everyoneRoleId, type: 0, allow: '0', deny: String(PermissionFlags.ViewChannel) },
-            { id: user.id, type: 1, allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ReadMessageHistory), deny: '0' },
+            {
+              id: user.id,
+              type: 1,
+              allow: String(
+                PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ReadMessageHistory,
+              ),
+              deny: '0',
+            },
           ];
           if (botId) {
-            overwrites.push({ id: botId, type: 1, allow: String(PermissionFlags.ViewChannel | PermissionFlags.SendMessages | PermissionFlags.ManageChannels | PermissionFlags.ManageMessages | PermissionFlags.EmbedLinks | PermissionFlags.AttachFiles | PermissionFlags.ReadMessageHistory), deny: '0' });
+            overwrites.push({
+              id: botId,
+              type: 1,
+              allow: String(
+                PermissionFlags.ViewChannel |
+                  PermissionFlags.SendMessages |
+                  PermissionFlags.ManageChannels |
+                  PermissionFlags.ManageMessages |
+                  PermissionFlags.EmbedLinks |
+                  PermissionFlags.AttachFiles |
+                  PermissionFlags.ReadMessageHistory,
+              ),
+              deny: '0',
+            });
           }
 
           const channel = await guild.createChannel({
@@ -236,7 +276,7 @@ const event: BotEvent = {
           const captchaEmbed = new EmbedBuilder()
             .setTitle(t(lang, 'verification.captcha.title'))
             .setDescription(t(lang, 'verification.captcha.description', { userId: user.id, maxAttempts }))
-            .setColor(0x5865F2)
+            .setColor(0x5865f2)
             .setTimestamp(new Date());
 
           await channel.send({
@@ -246,13 +286,15 @@ const event: BotEvent = {
 
           const timeout = setTimeout(async () => {
             verificationSessions.delete(channel.id);
-            try { await channel.delete(); } catch {
-            }
+            try {
+              await channel.delete();
+            } catch {}
             try {
               const emojiParam = reactionEmojiParam(reaction);
-              await client.rest.delete(`${Routes.channelMessageReaction(reaction.channelId, reaction.messageId, emojiParam)}/${user.id}`);
-            } catch {
-            }
+              await client.rest.delete(
+                `${Routes.channelMessageReaction(reaction.channelId, reaction.messageId, emojiParam)}/${user.id}`,
+              );
+            } catch {}
           }, 60_000);
 
           verificationSessions.set(channel.id, {
@@ -267,7 +309,9 @@ const event: BotEvent = {
 
           if (verification.logChannelId) {
             try {
-              const logChannel = guild.channels?.get(verification.logChannelId) || await client.channels.fetch(verification.logChannelId).catch(() => null);
+              const logChannel =
+                guild.channels?.get(verification.logChannelId) ||
+                (await client.channels.fetch(verification.logChannelId).catch(() => null));
               if (logChannel) {
                 const logEmbed = new EmbedBuilder()
                   .setTitle(t(lang, 'verification.log.startedTitle'))
@@ -277,8 +321,7 @@ const event: BotEvent = {
                 const logMsg = await logChannel.send({ embeds: [logEmbed] });
                 setTimeout(() => logMsg.delete().catch(() => {}), 2000);
               }
-            } catch {
-            }
+            } catch {}
           }
         } catch (err: any) {
           console.error(`[verification] Failed to create verification channel: ${err.message}`);
@@ -295,12 +338,11 @@ const event: BotEvent = {
         reaction.channelId === settings.ticketSetupChannelId
       ) {
         try {
-          const emojiParam = reaction.emoji.id
-            ? `${reaction.emoji.name}:${reaction.emoji.id}`
-            : reaction.emoji.name;
-          await client.rest.delete(`${Routes.channelMessageReaction(reaction.channelId, reaction.messageId, emojiParam)}/${user.id}`);
-        } catch {
-        }
+          const emojiParam = reaction.emoji.id ? `${reaction.emoji.name}:${reaction.emoji.id}` : reaction.emoji.name;
+          await client.rest.delete(
+            `${Routes.channelMessageReaction(reaction.channelId, reaction.messageId, emojiParam)}/${user.id}`,
+          );
+        } catch {}
 
         const lang = normalizeLocale(settings.language);
         const result = await createTicketForUser(guild, user.id, settings, client, undefined);
@@ -313,12 +355,11 @@ const event: BotEvent = {
             }
             if (setupChannel) {
               const notice = await setupChannel.send({
-                content: `<@${user.id}> ${t(lang, 'commands.admin.ticket.user.createdNotice', { channelId: result.channelId, ticketNumber: result.ticketNumber })}`
+                content: `<@${user.id}> ${t(lang, 'commands.admin.ticket.user.createdNotice', { channelId: result.channelId, ticketNumber: result.ticketNumber })}`,
               });
               setTimeout(() => notice.delete().catch(() => {}), 5000);
             }
-          } catch {
-          }
+          } catch {}
         } else {
           try {
             let setupChannel = guild.channels?.get(settings.ticketSetupChannelId);
@@ -327,12 +368,11 @@ const event: BotEvent = {
             }
             if (setupChannel) {
               const notice = await setupChannel.send({
-                content: `<@${user.id}> ${result.reason}`
+                content: `<@${user.id}> ${result.reason}`,
               });
               setTimeout(() => notice.delete().catch(() => {}), 5000);
             }
-          } catch {
-          }
+          } catch {}
         }
 
         return;
@@ -340,7 +380,9 @@ const event: BotEvent = {
 
       const starboards = getActiveStarboards(settings);
       if (starboards.length > 0) {
-        const origMsg: any = await client.rest.get(Routes.channelMessage(reaction.channelId, reaction.messageId)).catch(() => null);
+        const origMsg: any = await client.rest
+          .get(Routes.channelMessage(reaction.channelId, reaction.messageId))
+          .catch(() => null);
         if (origMsg) {
           for (const board of starboards) {
             if (!board.enabled || !board.channelId) continue;
@@ -355,8 +397,10 @@ const event: BotEvent = {
               let hasIgnoredRole = false;
               if (board.ignoredRoles?.length > 0) {
                 let reactorMember = guild.members?.get(user.id);
-                if (!reactorMember) try { reactorMember = await guild.fetchMember(user.id); } catch {
-                }
+                if (!reactorMember)
+                  try {
+                    reactorMember = await guild.fetchMember(user.id);
+                  } catch {}
                 if (reactorMember) {
                   const roleIds = reactorMember.roles?.roleIds ?? [];
                   hasIgnoredRole = roleIds.some((id: string) => board.ignoredRoles.includes(id));
@@ -374,7 +418,7 @@ const event: BotEvent = {
                   },
                   $addToSet: { reactors: user.id },
                 },
-                { upsert: true, returnDocument: 'after' }
+                { upsert: true, returnDocument: 'after' },
               );
 
               if (!entry) continue;
@@ -385,9 +429,8 @@ const event: BotEvent = {
               const threshold = board.threshold ?? 3;
               if (entry.starCount < threshold) continue;
 
-              const content = origMsg.content?.length > 1024
-                ? origMsg.content.substring(0, 1021) + '...'
-                : (origMsg.content || '');
+              const content =
+                origMsg.content?.length > 1024 ? origMsg.content.substring(0, 1021) + '...' : origMsg.content || '';
               const starEmoji = getStarEmoji(entry.starCount);
               const starColor = getStarColor(entry.starCount);
 
@@ -411,12 +454,16 @@ const event: BotEvent = {
                     channelId: reaction.channelId,
                     messageId: reaction.messageId,
                   }),
-                  inline: true
+                  inline: true,
                 },
                 { name: t('en', 'commands.report.fieldChannel'), value: `<#${reaction.channelId}>`, inline: true },
               );
 
-              starEmbed.setFooter({ text: t('en', 'auditCatalog.events.messageReactionAdd.l405_setFooter', { 'reaction.messageId': reaction.messageId }) });
+              starEmbed.setFooter({
+                text: t('en', 'auditCatalog.events.messageReactionAdd.l405_setFooter', {
+                  'reaction.messageId': reaction.messageId,
+                }),
+              });
 
               if (origMsg.attachments?.length > 0) {
                 const img = origMsg.attachments.find((a: any) => a.content_type?.startsWith('image/'));
@@ -432,9 +479,9 @@ const event: BotEvent = {
                   });
                 } catch (editErr: any) {
                   if (editErr?.statusCode === 404) {
-                    const newMsg = await client.rest.post(Routes.channelMessages(board.channelId), {
+                    const newMsg = (await client.rest.post(Routes.channelMessages(board.channelId), {
                       body: { content: msgContent, embeds: [starEmbed.toJSON()] },
-                    }) as any;
+                    })) as any;
                     if (newMsg?.id) {
                       entry.starboardMessageId = newMsg.id;
                       entry.starboardChannelId = board.channelId;
@@ -443,9 +490,9 @@ const event: BotEvent = {
                   }
                 }
               } else {
-                const newMsg = await client.rest.post(Routes.channelMessages(board.channelId), {
+                const newMsg = (await client.rest.post(Routes.channelMessages(board.channelId), {
                   body: { content: msgContent, embeds: [starEmbed.toJSON()] },
-                }) as any;
+                })) as any;
                 if (newMsg?.id) {
                   entry.starboardMessageId = newMsg.id;
                   entry.starboardChannelId = board.channelId;
@@ -463,7 +510,7 @@ const event: BotEvent = {
       if (!reactionRoles || reactionRoles.length === 0) return;
 
       const reactionConfig = reactionRoles.find(
-        (rr: any) => rr.messageId === reaction.messageId && rr.channelId === reaction.channelId
+        (rr: any) => rr.messageId === reaction.messageId && rr.channelId === reaction.channelId,
       );
       if (!reactionConfig) return;
 
@@ -487,12 +534,15 @@ const event: BotEvent = {
 
       let role = guild.roles?.get(roleMapping.roleId);
       if (!role) {
-        try { await guild.fetchRoles(); role = guild.roles?.get(roleMapping.roleId); } catch {
-        }
+        try {
+          await guild.fetchRoles();
+          role = guild.roles?.get(roleMapping.roleId);
+        } catch {}
       }
       if (!role) {
-        try { role = await guild.fetchRole(roleMapping.roleId); } catch {
-        }
+        try {
+          role = await guild.fetchRole(roleMapping.roleId);
+        } catch {}
       }
       if (!role) return;
 
@@ -502,12 +552,11 @@ const event: BotEvent = {
         if (botMember && targetRole) {
           let freshRoles: Map<string, number> | null = null;
           try {
-            const rolesData = await client.rest.get(Routes.guildRoles(guild.id)) as any[];
+            const rolesData = (await client.rest.get(Routes.guildRoles(guild.id))) as any[];
             if (Array.isArray(rolesData)) {
               freshRoles = new Map(rolesData.map((r: any) => [r.id, r.position ?? 0]));
             }
-          } catch {
-          }
+          } catch {}
           const getPos = (id: string) => freshRoles?.get(id) ?? guild.roles?.get(id)?.position ?? 0;
           const botHighest = Math.max(0, ...(botMember.roles?.roleIds ?? []).map((id: string) => getPos(id)));
           if (getPos(roleMapping.roleId) >= botHighest) {
@@ -561,7 +610,7 @@ const event: BotEvent = {
     } catch (error) {
       console.error('Error in messageReactionAdd event:', error);
     }
-  }
+  },
 };
 
 export default event;

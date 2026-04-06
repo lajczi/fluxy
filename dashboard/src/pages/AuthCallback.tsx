@@ -44,7 +44,9 @@ export function AuthCallback() {
         <div className="text-center space-y-4">
           <p className="text-red-400 text-lg">Authentication failed</p>
           <p className="text-gray-400">{error}</p>
-          <a href="/login" className="text-blue-400 hover:underline">Try again</a>
+          <a href="/login" className="text-blue-400 hover:underline">
+            Try again
+          </a>
         </div>
       </div>
     );
