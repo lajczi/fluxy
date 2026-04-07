@@ -112,9 +112,6 @@ export async function startApiServer(client: Client, commandHandler: CommandHand
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
 
-  // CSRF protection
-  app.use(csurf({ cookie: true }));
-
   app.use('/api/', apiLimiter);
   app.use('/api/auth', authLimiter);
 
@@ -122,12 +119,21 @@ export async function startApiServer(client: Client, commandHandler: CommandHand
 
   app.use('/api/public', createPublicRouter(client));
   app.use('/api/auth', createAuthRouter());
-  app.use('/api/bot', authenticate, createBotRouter(client, commandHandler, requireOwner));
-  app.use('/api/guilds', authenticate, writeLimiter, createGuildsRouter(client, requireGuildAccess('id')));
-  app.use('/api/stats', authenticate, requireOwner, createStatsRouter(client));
-  app.use('/api/health', authenticate, requireOwner, createHealthRouter(client));
-  app.use('/api/moderation', authenticate, createModerationRouter(requireGuildAccess('guildId')));
-  app.use('/api/data', authenticate, createDataRouter());
+
+  // CSRF protection for authenticated routes
+  const csrfProtection = csurf({ cookie: true });
+  app.use('/api/bot', csrfProtection, authenticate, createBotRouter(client, commandHandler, requireOwner));
+  app.use(
+    '/api/guilds',
+    csrfProtection,
+    authenticate,
+    writeLimiter,
+    createGuildsRouter(client, requireGuildAccess('id')),
+  );
+  app.use('/api/stats', csrfProtection, authenticate, requireOwner, createStatsRouter(client));
+  app.use('/api/health', csrfProtection, authenticate, requireOwner, createHealthRouter(client));
+  app.use('/api/moderation', csrfProtection, authenticate, createModerationRouter(requireGuildAccess('guildId')));
+  app.use('/api/data', csrfProtection, authenticate, createDataRouter());
 
   const dashboardPath = path.join(__dirname, '..', '..', 'dashboard', 'dist');
   app.use(
