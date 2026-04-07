@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import dns from 'dns/promises';
 import net from 'net';
 import { XMLParser } from 'fast-xml-parser';
+import { convert } from 'html-to-text';
 
 export type FeedSourceType = 'rss' | 'rsshub';
 
@@ -135,11 +136,13 @@ function readDate(value: unknown): Date | null {
 
 function stripHtml(raw: string | null): string | null {
   if (!raw) return null;
-  const text = raw
-    .replace(/<style[\s\S]*?<\/style\s*>/gi, ' ')
-    .replace(/<script[\s\S]*?<\/script\s*>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .trim();
+  // Use a well-tested HTML stripping library instead of fragile regexes.
+  const text = convert(raw, {
+    selectors: [
+      { selector: 'script', format: 'skip' },
+      { selector: 'style', format: 'skip' },
+    ],
+  }).trim();
 
   const normalized = normalizeFeedText(text);
   return normalized.length > 0 ? normalized : null;

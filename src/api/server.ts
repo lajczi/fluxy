@@ -117,11 +117,11 @@ export async function startApiServer(client: Client, commandHandler: CommandHand
 
   const { authenticate, requireOwner, requireGuildAccess } = createAuthMiddleware(client);
 
-  app.use('/api/public', createPublicRouter(client));
-  app.use('/api/auth', createAuthRouter());
-
   // CSRF protection for authenticated routes
   const csrfProtection = csurf({ cookie: true });
+
+  app.use('/api/public', createPublicRouter(client));
+  app.use('/api/auth', csrfProtection, createAuthRouter());
   app.use('/api/bot', csrfProtection, authenticate, createBotRouter(client, commandHandler, requireOwner));
   app.use(
     '/api/guilds',
