@@ -4,6 +4,7 @@ import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import csurf from '@dr.pogodin/csurf';
 import path from 'path';
 import type { Client } from '@erinjs/core';
 import type CommandHandler from '../handlers/CommandHandler';
@@ -111,6 +112,9 @@ export async function startApiServer(client: Client, commandHandler: CommandHand
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
 
+  // CSRF protection
+  app.use(csurf({ cookie: true }));
+
   app.use('/api/', apiLimiter);
   app.use('/api/auth', authLimiter);
 
@@ -140,7 +144,7 @@ export async function startApiServer(client: Client, commandHandler: CommandHand
     }),
   );
 
-  app.get('/{*path}', (_req, res) => {
+  app.get('/{*path}', apiLimiter, (_req, res) => {
     const indexPath = path.join(dashboardPath, 'index.html');
     res.sendFile(indexPath, (err) => {
       if (err) {

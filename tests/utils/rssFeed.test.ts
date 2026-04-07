@@ -84,7 +84,7 @@ describe('fetchFeed SSRF safety + domain handling', () => {
           maxBodyBytes: 1024 * 1024,
         },
       ),
-    ).rejects.toThrow('Feed host resolves to a private or loopback address');
+    ).rejects.toThrow('Feed URL hostname cannot be an IP address');
 
     expect(global.fetch).not.toHaveBeenCalled();
   });

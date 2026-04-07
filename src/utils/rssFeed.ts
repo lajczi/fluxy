@@ -136,8 +136,8 @@ function readDate(value: unknown): Date | null {
 function stripHtml(raw: string | null): string | null {
   if (!raw) return null;
   const text = raw
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style\s*>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script\s*>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .trim();
 
@@ -199,6 +199,12 @@ function resolveFeedUrl(target: FeedTarget, options: FetchFeedOptions): string {
   if (target.sourceType === 'rsshub') {
     const route = normalizeRoute(target.route ?? '');
     const base = new URL(options.rsshubBaseUrl || 'https://rsshub.app');
+
+    // Prevent SSRF by disallowing IP addresses in RSSHub base URL
+    if (net.isIP(base.hostname) !== 0) {
+      throw new Error('RSSHub base URL hostname cannot be an IP address');
+    }
+
     const routeUrl = new URL(route, 'https://rsshub.local');
 
     const pathPrefix = base.pathname.replace(/\/$/, '');
@@ -229,6 +235,11 @@ function resolveFeedUrl(target: FeedTarget, options: FetchFeedOptions): string {
 
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error('Feed URL must use http or https');
+  }
+
+  // Prevent SSRF by disallowing IP addresses in feed URL
+  if (net.isIP(parsed.hostname) !== 0) {
+    throw new Error('Feed URL hostname cannot be an IP address');
   }
 
   return parsed.toString();
@@ -513,6 +524,7 @@ export async function fetchFeed(target: FeedTarget, options: FetchFeedOptions): 
   if (options.etag) headers['If-None-Match'] = options.etag;
   if (options.lastModified) headers['If-Modified-Since'] = options.lastModified;
 
+  // feedUrl has been validated in resolveFeedUrl and assertSafeTarget to prevent SSRF
   try {
     const response = await fetch(feedUrl, {
       method: 'GET',

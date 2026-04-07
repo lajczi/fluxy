@@ -1,5 +1,6 @@
 import express from 'express';
 import request from 'supertest';
+import rateLimit from 'express-rate-limit';
 
 jest.mock('../../src/config', () => ({
   __esModule: true,
@@ -21,13 +22,20 @@ function createApp() {
   const app = express();
   app.use(express.json());
 
-  app.get('/public', (_req, res) => res.json({ ok: true }));
+  // Rate limiter for tests
+  const testLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.',
+  });
 
-  app.get('/protected', authenticate, (req: any, res) => {
+  app.get('/public', testLimiter, (_req, res) => res.json({ ok: true }));
+
+  app.get('/protected', testLimiter, authenticate, (req: any, res) => {
     res.json({ userId: req.userId, isOwner: req.isOwner });
   });
 
-  app.get('/owner-only', authenticate, requireOwner, (_req, res) => {
+  app.get('/owner-only', testLimiter, authenticate, requireOwner, (_req, res) => {
     res.json({ access: 'granted' });
   });
 

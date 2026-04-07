@@ -68,6 +68,7 @@
   "author": "",
   "license": "Elastic-2.0",
   "dependencies": {
+    "@dr.pogodin/csurf": "^1.16.9",
     "@erinjs/core": "^1.2.4",
     "@erinjs/types": "^1.2.4",
     "@erinjs/ws": "^1.2.4",

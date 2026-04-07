@@ -63,7 +63,7 @@ export class SettingsCache {
       const settings = await GuildSettings.findOne({ guildId }).lean();
       return settings as IGuildSettings | null;
     } catch (error) {
-      console.error(`Error fetching settings for guild ${guildId}:`, error);
+      console.error('Error fetching settings for guild:', guildId, error);
       return null;
     }
   }
