@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { api, normalizeSettings, type GuildDetail, type GuildSettings } from '../lib/api';
+import { api, ApiError, normalizeSettings, type GuildDetail, type GuildSettings } from '../lib/api';
 import { createMockGuild, createMockSettings } from '../lib/mockDashboardData';
 
 const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
@@ -112,7 +112,11 @@ export function useGuildData(guildId: string | undefined) {
         const updated = await api.patch<GuildSettings>(`/guilds/${guildId}/settings`, patch);
         setSettings(normalizeSettings(updated));
       } catch (err: any) {
-        setSaveError(err.message);
+        let errorMessage = err.message;
+        if (err instanceof ApiError && err.details?.length) {
+          errorMessage = `${errorMessage}: ${err.details.join(', ')}`;
+        }
+        setSaveError(errorMessage);
         throw err;
       } finally {
         setSaving(false);

@@ -32,6 +32,18 @@ export function invalidateCache(pathPrefix?: string): void {
   }
 }
 
+export class ApiError extends Error {
+  status: number;
+  details?: string[];
+
+  constructor(message: string, status: number, details?: string[]) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.details = details;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -47,9 +59,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     const body = (await res.json().catch(() => ({ error: res.statusText }))) as {
       error?: string;
+      details?: string[];
       [key: string]: unknown;
     };
-    const error = new Error(body.error || `HTTP ${res.status}`);
+    const details = Array.isArray(body.details) ? body.details : undefined;
+    const error = new ApiError(body.error || `HTTP ${res.status}`, res.status, details);
 
     if (res.status !== 401 && res.status !== 403) {
       GlitchTip.captureException(error, {
