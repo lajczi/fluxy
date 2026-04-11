@@ -374,97 +374,25 @@ client.on(Events.Error, (error: any) => {
   }
 });
 
-let consecutiveInvalidSessions = 0;
-const MAX_CONSECUTIVE_INVALID_SESSIONS = 8;
-const invalidSessionTimestamps: number[] = [];
-let invalidSessionCircuitReported = false;
-
-let consecutive4004 = 0;
-const MAX_4004_RETRIES = 3;
-
-let consecutiveClosed4013 = 0;
-const MAX_CONSECUTIVE_CLOSED_4013 = 6;
-let closed4013CircuitReported = false;
-
 client.on(Events.Debug, (message: string) => {
   if (process.env.DEBUG) {
     log.debug('Gateway', message);
   }
 
   if (message.includes('Invalid session')) {
-    const now = Date.now();
-    consecutiveInvalidSessions++;
-    invalidSessionTimestamps.push(now);
-
-    while (invalidSessionTimestamps.length && invalidSessionTimestamps[0] < now - 5 * 60 * 1000) {
-      invalidSessionTimestamps.shift();
-    }
-
-    log.warn(
-      'Recovery',
-      `Invalid session (${consecutiveInvalidSessions}/${MAX_CONSECUTIVE_INVALID_SESSIONS}) - patched SDK will close WS and reconnect`,
-    );
-
-    if (consecutiveInvalidSessions >= MAX_CONSECUTIVE_INVALID_SESSIONS && !invalidSessionCircuitReported) {
-      invalidSessionCircuitReported = true;
-      log.error(
-        'Recovery',
-        `${consecutiveInvalidSessions} consecutive invalid sessions - keeping the process alive and waiting for gateway recovery.`,
-      );
-      GlitchTip.captureMessage(`Invalid session circuit opened: ${consecutiveInvalidSessions} consecutive`, {
-        level: 'error',
-        tags: { source: 'gateway_invalid_session', action: 'continue' },
-      });
-    }
-    return;
-  }
-
-  if (message.includes('Closed: 4004')) {
-    consecutive4004++;
-    log.error(
-      'Recovery',
-      `Gateway 4004 (${consecutive4004}/${MAX_4004_RETRIES}) - auth failed during reconnect`,
-    );
-    GlitchTip.captureMessage('Gateway closed 4004 (authentication failed)', {
-      level: 'error',
-      tags: { source: 'gateway_4004' },
-    });
-
-    if (consecutive4004 <= MAX_4004_RETRIES) {
-      const delay = Math.min(5000 * Math.pow(2, consecutive4004 - 1), 60000);
-      log.warn('Recovery', `Retrying fresh identify in ${delay / 1000}s…`);
-      const shard: any = (client as any).ws?.shards?.values()?.next()?.value;
-      if (shard && !shard.destroying) {
-        shard.sessionId = null;
-        shard.seq = null;
-        setTimeout(() => {
-          if (!isShuttingDown && !shard.destroying) shard.connect();
-        }, delay);
-      }
-    } else {
-      log.error('Recovery', 'Exhausted 4004 retries - token may be invalid/rate limited. Staying alive for manual intervention.');
-    }
-    return;
+    log.warn('Recovery', 'Invalid session — SDK will reconnect');
   }
 
   if (message.includes('Closed: 4013')) {
-    consecutiveClosed4013++;
-    log.warn(
-      'Recovery',
-      `Gateway 4013 (${consecutiveClosed4013}/${MAX_CONSECUTIVE_CLOSED_4013}) - shard will auto-reconnect`,
-    );
+    log.warn('Recovery', 'Gateway 4013 — SDK will auto-reconnect');
+  }
 
-    if (consecutiveClosed4013 > MAX_CONSECUTIVE_CLOSED_4013 && !closed4013CircuitReported) {
-      closed4013CircuitReported = true;
-      log.error(
-        'Recovery',
-        `${consecutiveClosed4013} consecutive 4013 closes - keeping the process alive and waiting for gateway recovery.`,
-      );
-      GlitchTip.captureMessage(`Gateway 4013 circuit opened: ${consecutiveClosed4013} consecutive`, {
-        level: 'error',
-        tags: { source: 'gateway_4013', action: 'continue' },
-      });
-    }
+  if (message.includes('Closed: 4004')) {
+    log.error('Recovery', 'Gateway 4004 — auth failed, cannot reconnect in-process');
+    GlitchTip.captureMessage('Gateway 4004 (auth failed on reconnect)', {
+      level: 'error',
+      tags: { source: 'gateway_4004' },
+    });
   }
 });
 
@@ -474,21 +402,6 @@ client.on(Events.Ready, () => {
   wsErrorTimestamps.length = 0;
   glitchtipReportedAtCount = 0;
   sustainedOutageReported = false;
-
-  if (consecutiveInvalidSessions > 0) {
-    log.ok('Recovery', `Gateway accepted session after ${consecutiveInvalidSessions} invalid session(s)`);
-    consecutiveInvalidSessions = 0;
-    invalidSessionCircuitReported = false;
-  }
-  if (consecutive4004 > 0) {
-    log.ok('Recovery', `Gateway accepted session after ${consecutive4004} auth failure(s)`);
-    consecutive4004 = 0;
-  }
-  if (consecutiveClosed4013 > 0) {
-    log.ok('Recovery', `Gateway accepted session after ${consecutiveClosed4013} close 4013(s)`);
-    consecutiveClosed4013 = 0;
-    closed4013CircuitReported = false;
-  }
 
   setTimeout(() => {
     void refreshPresence(true);
@@ -674,3 +587,22 @@ async function fetchAllStats(): Promise<{ guilds: number; members: number; memor
 export { client, commandHandler, eventHandler };
 
 init();
+
+let gatewayWasReady = false;
+client.on(Events.Ready, () => {
+  gatewayWasReady = true;
+});
+setInterval(() => {
+  if (isShuttingDown || !gatewayWasReady) return;
+
+  const shard: any = (client as any).ws?.shards?.values()?.next()?.value;
+  if (!shard) return;
+
+  const connected = shard.ws?.readyState === 1;
+  const reconnecting = shard.reconnectTimeout !== null;
+
+  if (!connected && !reconnecting && !shard.destroying) {
+    log.error('Watchdog', 'Gateway dead, no reconnect pending — restarting');
+    GlitchTip.close(2000).finally(() => process.exit(1));
+  }
+}, 15_000);
