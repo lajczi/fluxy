@@ -2,7 +2,7 @@ import './instrument';
 
 import * as GlitchTip from '@sentry/node';
 import { Client, GatewayOpcodes, Events } from '@erinjs/core';
-import { WebSocketShard, WebSocketManager } from '@erinjs/ws';
+import { WebSocketShard } from '@erinjs/ws';
 import { createHash } from 'crypto';
 import mongoose from 'mongoose';
 import config from './config';
@@ -29,6 +29,13 @@ if (Guild && Role) {
   };
 }
 
+const IGNORED_GATEWAY_EVENTS = [
+  'PRESENCE_UPDATE',
+  'TYPING_START',
+  'USER_UPDATE',
+  'GUILD_INTEGRATIONS_UPDATE',
+];
+
 const wsProto = WebSocketShard.prototype as any;
 if (!wsProto.__fluxyIdentifyPatched) {
   wsProto.__fluxyIdentifyPatched = true;
@@ -37,33 +44,18 @@ if (!wsProto.__fluxyIdentifyPatched) {
     const origSend = this.send.bind(this);
     this.send = (payload: any) => {
       if (payload?.op === GatewayOpcodes.Identify && payload.d) {
-        payload.d.large_threshold = 50;
-        if (this.options?.shardId != null && this.options?.numShards != null) {
-          payload.d.shard = [this.options.shardId, this.options.numShards];
-        }
+        payload.d.ignored_events = IGNORED_GATEWAY_EVENTS;
         delete payload.d.intents;
         delete payload.d.presence;
         if (!payload.d.token.startsWith('Bot ')) {
           payload.d.token = `Bot ${payload.d.token}`;
         }
-        log.debug('Gateway', `Identify → large_threshold=50 shard=[${payload.d.shard}]`);
+        log.info('Gateway', `Identify → ignored_events=${IGNORED_GATEWAY_EVENTS.join(',')}`);
       }
       origSend(payload);
     };
     origHello.call(this, data);
     this.send = origSend;
-  };
-}
-
-const FORCED_SHARD_COUNT = 4;
-const wsMgrProto = WebSocketManager.prototype as any;
-if (!wsMgrProto.__fluxyShardPatched) {
-  wsMgrProto.__fluxyShardPatched = true;
-  const origConnect = wsMgrProto.connect;
-  wsMgrProto.connect = async function (this: any) {
-    this.options.shardCount = FORCED_SHARD_COUNT;
-    log.info('Gateway', `Forcing ${FORCED_SHARD_COUNT} shards (680+ guilds)`);
-    return origConnect.call(this);
   };
 }
 
@@ -634,17 +626,14 @@ client.on(Events.Ready, () => {
 setInterval(() => {
   if (isShuttingDown || !gatewayWasReady) return;
 
-  const shards: Map<number, any> | undefined = (client as any)._ws?.shards;
-  if (!shards || shards.size === 0) return;
+  const shard: any = (client as any)._ws?.shards?.values()?.next()?.value;
+  if (!shard) return;
 
-  for (const [id, shard] of shards) {
-    const connected = shard.ws?.readyState === 1;
-    const reconnecting = shard.reconnectTimeout !== null;
+  const connected = shard.ws?.readyState === 1;
+  const reconnecting = shard.reconnectTimeout !== null;
 
-    if (!connected && !reconnecting && !shard.destroying) {
-      log.error('Watchdog', `Shard ${id} dead, no reconnect pending — restarting`);
-      GlitchTip.close(2000).finally(() => process.exit(1));
-      return;
-    }
+  if (!connected && !reconnecting && !shard.destroying) {
+    log.error('Watchdog', 'Gateway dead, no reconnect pending — restarting');
+    GlitchTip.close(2000).finally(() => process.exit(1));
   }
 }, 15_000);
