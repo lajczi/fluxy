@@ -64,47 +64,6 @@ if (!wsShardPrototype.__fluxyIdentifyPresencePatched) {
   };
 }
 
-if (!wsShardPrototype.__fluxyBurstHeartbeatPatched) {
-  wsShardPrototype.__fluxyBurstHeartbeatPatched = true;
-
-  const originalShardConnect = wsShardPrototype.connect;
-  wsShardPrototype.connect = function (this: any) {
-    originalShardConnect.call(this);
-
-    const ws = this.ws;
-    if (!ws) return;
-
-    let burstEventCount = 0;
-    let burstActive = true;
-    const BURST_HEARTBEAT_EVERY = 100;
-    const BURST_DURATION_MS = 30_000;
-
-    setTimeout(() => {
-      burstActive = false;
-    }, BURST_DURATION_MS);
-
-    const onBurstMessage = () => {
-      if (!burstActive) return;
-
-      burstEventCount++;
-      if (burstEventCount % BURST_HEARTBEAT_EVERY !== 0) return;
-
-      const seq = this.seq;
-      if (seq === null || ws.readyState !== 1) return;
-
-      try {
-        ws.send(JSON.stringify({ op: GatewayOpcodes.Heartbeat, d: seq }));
-      } catch {}
-    };
-
-    if (typeof ws.addEventListener === 'function') {
-      ws.addEventListener('message', onBurstMessage);
-    } else if (typeof ws.on === 'function') {
-      ws.on('message', onBurstMessage);
-    }
-  };
-}
-
 try {
   config.validate();
 } catch (error: any) {
@@ -494,7 +453,10 @@ client.on(Events.Debug, (message: string) => {
   }
 
   if (message.includes('Closed: 4004')) {
-    log.error('Recovery', 'Gateway closed with 4004 during reconnect. Check TOKEN/env and Erin gateway recovery state.');
+    log.error(
+      'Recovery',
+      'Gateway closed with 4004 during reconnect. Check TOKEN/env and Erin gateway recovery state.',
+    );
     GlitchTip.captureMessage('Gateway closed 4004 (authentication failed)', {
       level: 'error',
       tags: { source: 'gateway_4004' },
@@ -544,9 +506,12 @@ client.on(Events.Ready, () => {
   setTimeout(() => {
     void refreshPresence(true);
     if (!(client as any)._presenceInterval) {
-      (client as any)._presenceInterval = setInterval(() => {
-        void refreshPresence();
-      }, 10 * 60 * 1000);
+      (client as any)._presenceInterval = setInterval(
+        () => {
+          void refreshPresence();
+        },
+        10 * 60 * 1000,
+      );
     }
   }, 15000);
 
