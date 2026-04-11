@@ -44,7 +44,8 @@ if (!wsShardPrototype.__fluxyGatewayPatched) {
       if (payload?.op === GatewayOpcodes.Identify && payload.d) {
         delete payload.d.presence;
         delete payload.d.shard;
-        log.debug('Gateway', `Identify → token=${'Bot …' + payload.d.token.slice(-6)} intents=${payload.d.intents}`);
+        delete payload.d.intents;
+        log.debug('Gateway', `Identify → token=${'Bot …' + payload.d.token.slice(-6)}`);
       }
 
       if (payload?.op === GatewayOpcodes.Resume && payload.d) {
