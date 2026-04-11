@@ -16,21 +16,5 @@ module.exports = {
       out_file: 'logs/bot-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
     },
-    {
-      name: 'fluxer-sharded',
-      script: 'build/shardManager.js',
-      autorestart: true,
-      exp_backoff_restart_delay: 100,
-      max_restarts: 20,
-      min_uptime: '60s',
-      watch: false,
-      max_memory_restart: '2048M',
-      env: {
-        NODE_ENV: 'production',
-      },
-      error_file: 'logs/sharded-error.log',
-      out_file: 'logs/sharded-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss',
-    },
   ],
 };

@@ -2,7 +2,6 @@ import './instrument';
 
 import * as GlitchTip from '@sentry/node';
 import { Client, GatewayOpcodes, Events } from '@erinjs/core';
-import { WebSocketShard, WebSocketManager } from '@erinjs/ws';
 import mongoose from 'mongoose';
 import config from './config';
 import CommandHandler from './handlers/CommandHandler';
@@ -11,94 +10,6 @@ import isNetworkError from './utils/isNetworkError';
 import log from './utils/consoleLogger';
 import GuildSettings from './models/GuildSettings';
 import { getWorkerStats } from './utils/workerStats';
-
-const origHandleHello = (WebSocketShard.prototype as any).handleHello;
-(WebSocketShard.prototype as any).handleHello = function (this: any, data: any) {
-  const origSend = this.send.bind(this);
-  this.send = (payload: any) => {
-    if (payload?.op === 2 && payload.d) {
-      // GatewayOpcodes.Identify
-      payload.d.shard = [this.options.shardId, this.options.numShards];
-    }
-    origSend(payload);
-  };
-  origHandleHello.call(this, data);
-  this.send = origSend;
-};
-
-// Patch connect() for burst heartbeats
-const origConnect = WebSocketShard.prototype.connect;
-WebSocketShard.prototype.connect = function (this: any) {
-  origConnect.call(this);
-  const ws = this.ws;
-  if (!ws) return;
-
-  let burstEventCount = 0;
-  let burstActive = true;
-  const BURST_HB_EVERY = 100;
-  const BURST_DURATION = 30_000;
-  setTimeout(() => {
-    burstActive = false;
-  }, BURST_DURATION);
-
-  const onBurstMessage = () => {
-    if (!burstActive) return;
-    burstEventCount++;
-    if (burstEventCount % BURST_HB_EVERY === 0) {
-      const seq = this.seq;
-      if (seq !== null && ws.readyState === 1) {
-        try {
-          ws.send(JSON.stringify({ op: 1, d: seq }));
-        } catch {}
-      }
-    }
-  };
-
-  if (typeof ws.addEventListener === 'function') {
-    ws.addEventListener('message', onBurstMessage);
-  } else if (typeof ws.on === 'function') {
-    ws.on('message', onBurstMessage);
-  }
-};
-
-const assignedShardIds = process.env.SHARD_IDS ? process.env.SHARD_IDS.split(',').map(Number) : undefined;
-const assignedTotalShards = process.env.TOTAL_SHARDS ? parseInt(process.env.TOTAL_SHARDS, 10) : undefined;
-const isManagedWorker = assignedShardIds !== undefined && assignedTotalShards !== undefined;
-
-if (isManagedWorker) {
-  const origWsConnect = WebSocketManager.prototype.connect;
-  WebSocketManager.prototype.connect = async function (this: any) {
-    this.options.shardCount = assignedTotalShards;
-    this.options.shardIds = assignedShardIds;
-    return origWsConnect.call(this);
-  };
-}
-
-const shardIdSet = isManagedWorker ? new Set(assignedShardIds) : null;
-
-function guildShard(guildId: string): number {
-  return Number(BigInt(guildId) % BigInt(assignedTotalShards!));
-}
-
-function ownsGuild(guildId: string): boolean {
-  if (!shardIdSet || !assignedTotalShards) return true;
-  try {
-    return shardIdSet.has(guildShard(guildId));
-  } catch {
-    return true;
-  }
-}
-
-const GUILD_ID_IN_ROOT = new Set(['GUILD_CREATE', 'GUILD_UPDATE', 'GUILD_DELETE']);
-
-function extractGuildId(d: any, t: string | undefined): string | undefined {
-  if (d?.guild_id) return String(d.guild_id);
-  if (d?.guild?.id) return String(d.guild.id);
-  if (t && GUILD_ID_IN_ROOT.has(t)) {
-    return String(d?.id ?? d?.properties?.id ?? '');
-  }
-  return undefined;
-}
 
 const { Guild, Role } = require('@erinjs/core');
 if (Guild && Role) {
@@ -113,22 +24,6 @@ if (Guild && Role) {
       roles.push(role);
     }
     return roles;
-  };
-}
-
-if (isManagedWorker) {
-  const { prototype: wsmProto } = WebSocketManager;
-  const origEmit = wsmProto.emit;
-  wsmProto.emit = function (this: any, event: string, ...args: any[]): boolean {
-    if (event === 'dispatch') {
-      const payload = args[0]?.payload;
-      const d = payload?.d;
-      const t: string | undefined = payload?.t;
-      const guildId = extractGuildId(d, t);
-      if (guildId && guildId !== '' && guildId !== 'undefined' && !ownsGuild(guildId)) return false;
-      if (!guildId && assignedShardIds && !assignedShardIds.includes(0)) return false;
-    }
-    return origEmit.call(this, event, ...args);
   };
 }
 
@@ -366,6 +261,21 @@ const MAX_OUTAGE_DURATION = 60 * 60 * 1000;
 let glitchtipReportedAtCount = 0;
 let outageStartedAt: number | null = null;
 let lastSuccessfulConnection = Date.now();
+let sustainedOutageReported = false;
+
+async function refreshPresence(logGuildCount = false): Promise<void> {
+  try {
+    const count = await fetchTotalGuildCount();
+    if (count <= 0) return;
+
+    BOT_PRESENCE.custom_status.text = `Watching ${count} servers`;
+    if (logGuildCount) {
+      log.info('Presence', `Guild count: ${count} servers`);
+    }
+  } catch (error: any) {
+    log.warn('Presence', `Failed to refresh guild count: ${error?.message || error}`);
+  }
+}
 
 client.on(Events.Error, (error: any) => {
   if (isTransientError(error)) {
@@ -379,11 +289,25 @@ client.on(Events.Error, (error: any) => {
     if (!outageStartedAt) outageStartedAt = now;
 
     if (wsErrorTimestamps.length >= WS_WATCHDOG_THRESHOLD && now - outageStartedAt > MAX_OUTAGE_DURATION) {
-      log.fatal(
-        'Watchdog',
-        `${WS_WATCHDOG_THRESHOLD}+ errors over ${Math.round((now - outageStartedAt) / 60000)}min sustained outage. Restarting for PM2.`,
-      );
-      process.exit(1);
+      if (!sustainedOutageReported) {
+        sustainedOutageReported = true;
+        log.error(
+          'Watchdog',
+          `${WS_WATCHDOG_THRESHOLD}+ errors over ${Math.round((now - outageStartedAt) / 60000)}min sustained outage. Keeping the process alive and letting the gateway retry.`,
+        );
+        GlitchTip.captureMessage(
+          `Gateway outage persisted past watchdog threshold: ${wsErrorTimestamps.length} errors over ${Math.round((now - outageStartedAt) / 1000)}s`,
+          {
+            level: 'error',
+            tags: { source: 'ws_watchdog', action: 'continue' },
+            extra: {
+              errorCount: wsErrorTimestamps.length,
+              outageDurationSeconds: Math.round((now - outageStartedAt) / 1000),
+              lastError: error.message || String(error),
+            },
+          },
+        );
+      }
     }
 
     if (wsErrorTimestamps.length % 5 === 1 || wsErrorTimestamps.length <= 3) {
@@ -426,9 +350,11 @@ client.on(Events.Error, (error: any) => {
 let consecutiveInvalidSessions = 0;
 const MAX_CONSECUTIVE_INVALID_SESSIONS = 8;
 const invalidSessionTimestamps: number[] = [];
+let invalidSessionCircuitReported = false;
 
 let consecutiveClosed4013 = 0;
 const MAX_CONSECUTIVE_CLOSED_4013 = 6;
+let closed4013CircuitReported = false;
 
 client.on(Events.Debug, (message: string) => {
   if (process.env.DEBUG) {
@@ -449,13 +375,16 @@ client.on(Events.Debug, (message: string) => {
       `Invalid session (${consecutiveInvalidSessions}/${MAX_CONSECUTIVE_INVALID_SESSIONS}) - patched SDK will close WS and reconnect`,
     );
 
-    if (consecutiveInvalidSessions >= MAX_CONSECUTIVE_INVALID_SESSIONS) {
-      log.fatal(
+    if (consecutiveInvalidSessions >= MAX_CONSECUTIVE_INVALID_SESSIONS && !invalidSessionCircuitReported) {
+      invalidSessionCircuitReported = true;
+      log.error(
         'Recovery',
-        `${consecutiveInvalidSessions} consecutive invalid sessions - token may be invalid. Exiting for PM2.`,
+        `${consecutiveInvalidSessions} consecutive invalid sessions - keeping the process alive and waiting for gateway recovery.`,
       );
-      GlitchTip.captureMessage(`Invalid session circuit breaker: ${consecutiveInvalidSessions} consecutive`, 'fatal');
-      GlitchTip.flush(2000).then(() => process.exit(1));
+      GlitchTip.captureMessage(`Invalid session circuit opened: ${consecutiveInvalidSessions} consecutive`, {
+        level: 'error',
+        tags: { source: 'gateway_invalid_session', action: 'continue' },
+      });
     }
     return;
   }
@@ -467,10 +396,16 @@ client.on(Events.Debug, (message: string) => {
       `Gateway 4013 (${consecutiveClosed4013}/${MAX_CONSECUTIVE_CLOSED_4013}) - shard will auto-reconnect`,
     );
 
-    if (consecutiveClosed4013 > MAX_CONSECUTIVE_CLOSED_4013) {
-      log.fatal('Recovery', `${consecutiveClosed4013} consecutive 4013 closes. Exiting for PM2.`);
-      GlitchTip.captureMessage(`Gateway 4013 circuit breaker: ${consecutiveClosed4013} consecutive`, 'fatal');
-      GlitchTip.flush(2000).then(() => process.exit(1));
+    if (consecutiveClosed4013 > MAX_CONSECUTIVE_CLOSED_4013 && !closed4013CircuitReported) {
+      closed4013CircuitReported = true;
+      log.error(
+        'Recovery',
+        `${consecutiveClosed4013} consecutive 4013 closes - keeping the process alive and waiting for gateway recovery.`,
+      );
+      GlitchTip.captureMessage(`Gateway 4013 circuit opened: ${consecutiveClosed4013} consecutive`, {
+        level: 'error',
+        tags: { source: 'gateway_4013', action: 'continue' },
+      });
     }
   }
 });
@@ -480,37 +415,25 @@ client.on(Events.Ready, () => {
   outageStartedAt = null;
   wsErrorTimestamps.length = 0;
   glitchtipReportedAtCount = 0;
+  sustainedOutageReported = false;
 
   if (consecutiveInvalidSessions > 0) {
     log.ok('Recovery', `Gateway accepted session after ${consecutiveInvalidSessions} invalid session(s)`);
     consecutiveInvalidSessions = 0;
+    invalidSessionCircuitReported = false;
   }
   if (consecutiveClosed4013 > 0) {
     log.ok('Recovery', `Gateway accepted session after ${consecutiveClosed4013} close 4013(s)`);
     consecutiveClosed4013 = 0;
+    closed4013CircuitReported = false;
   }
 
-  if (isManagedWorker && process.send) {
-    for (const sid of assignedShardIds ?? []) {
-      process.send({ type: 'shardReady', shardId: sid });
-    }
-  }
-
-  setTimeout(async () => {
-    const count = isManagedWorker ? await fetchTotalGuildCount() : client.guilds?.size || 0;
-    if (count > 0) {
-      BOT_PRESENCE.custom_status.text = `Watching ${count} servers`;
-      log.info('Presence', `Guild count: ${count} servers`);
-    }
-
+  setTimeout(() => {
+    void refreshPresence(true);
     if (!(client as any)._presenceInterval) {
-      (client as any)._presenceInterval = setInterval(
-        async () => {
-          const c = isManagedWorker ? await fetchTotalGuildCount() : client.guilds?.size || 0;
-          if (c > 0) BOT_PRESENCE.custom_status.text = `Watching ${c} servers`;
-        },
-        10 * 60 * 1000,
-      );
+      (client as any)._presenceInterval = setInterval(() => {
+        void refreshPresence();
+      }, 10 * 60 * 1000);
     }
   }, 15000);
 
@@ -548,6 +471,7 @@ client.on(Events.Resumed, () => {
   outageStartedAt = null;
   wsErrorTimestamps.length = 0;
   glitchtipReportedAtCount = 0;
+  sustainedOutageReported = false;
 
   if (client.options.presence) {
     try {
@@ -616,7 +540,6 @@ process.on('unhandledRejection', (reason: any) => {
   }
   GlitchTip.captureException(reason);
   log.error('Rejection', reason?.message || reason);
-  process.exit(1);
 });
 
 process.on('uncaughtException', (error) => {
@@ -657,196 +580,38 @@ async function gracefulShutdown(signal: string): Promise<void> {
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
-const ipcPendingRequests = new Map<string, { resolve: (v: any) => void; timer: ReturnType<typeof setTimeout> }>();
-
 async function fetchTotalGuildCount(): Promise<number> {
-  if (!isManagedWorker || !process.send) return client.guilds?.size || 0;
-
-  const requestId = `gc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  return new Promise<number>((resolve) => {
-    const timer = setTimeout(() => {
-      ipcPendingRequests.delete(requestId);
-      resolve(client.guilds?.size || 0);
-    }, 5000);
-    ipcPendingRequests.set(requestId, { resolve, timer });
-    process.send!({ type: 'requestGuildCount', requestId });
-  });
+  return client.guilds?.size || 0;
 }
 
 async function fetchAllShardInfo(): Promise<any[]> {
-  if (!isManagedWorker || !process.send) {
-    return [
-      {
-        workerId: 0,
-        shardIds: [0],
-        status: 'online',
-        guilds: client.guilds?.size || 0,
-        memory: Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 10) / 10,
-        uptime: Math.floor(process.uptime()),
-        ping: null,
-      },
-    ];
-  }
-
-  const requestId = `si-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  return new Promise<any[]>((resolve) => {
-    const timer = setTimeout(() => {
-      ipcPendingRequests.delete(requestId);
-      resolve([]);
-    }, 8000);
-    ipcPendingRequests.set(requestId, { resolve, timer });
-    process.send!({ type: 'requestShardInfo', requestId });
-  });
+  return [
+    {
+      workerId: 0,
+      shardIds: [0],
+      status: 'online',
+      guilds: client.guilds?.size || 0,
+      memory: Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 10) / 10,
+      uptime: Math.floor(process.uptime()),
+      ping: (client as any)._ws?.shards?.values()?.next()?.value?.heartbeatAt
+        ? Date.now() - (client as any)._ws.shards.values().next().value.heartbeatAt
+        : null,
+    },
+  ];
 }
 
 async function fetchAllGuildIds(): Promise<Set<string>> {
-  if (!isManagedWorker || !process.send) {
-    return new Set(client.guilds?.keys() || []);
-  }
-
-  const requestId = `gi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  return new Promise<Set<string>>((resolve) => {
-    const timer = setTimeout(() => {
-      ipcPendingRequests.delete(requestId);
-      resolve(new Set(client.guilds?.keys() || []));
-    }, 8000);
-    ipcPendingRequests.set(requestId, { resolve: (ids: string[]) => resolve(new Set(ids)), timer });
-    process.send!({ type: 'requestGuildIds', requestId });
-  });
+  return new Set(client.guilds?.keys() || []);
 }
 
 async function fetchAllStats(): Promise<{ guilds: number; members: number; memory: number; uptime: number }> {
-  if (!isManagedWorker || !process.send) {
-    const s = await getWorkerStats(client);
-    return s;
-  }
-
-  const requestId = `st-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      ipcPendingRequests.delete(requestId);
-      getWorkerStats(client).then(resolve);
-    }, 35000);
-    ipcPendingRequests.set(requestId, { resolve, timer });
-    process.send!({ type: 'requestStats', requestId });
-  });
+  return getWorkerStats(client);
 }
 
 (client as any).fetchTotalGuildCount = fetchTotalGuildCount;
 (client as any).fetchAllStats = fetchAllStats;
 (client as any).fetchAllShardInfo = fetchAllShardInfo;
 (client as any).fetchAllGuildIds = fetchAllGuildIds;
-
-if (isManagedWorker) {
-  process.on('message', (msg: any) => {
-    if (!msg || typeof msg !== 'object') return;
-
-    switch (msg.type) {
-      case 'requestGuildCount':
-        process.send?.({
-          type: 'guildCountResponse',
-          requestId: msg.requestId,
-          count: client.guilds?.size || 0,
-        });
-        break;
-
-      case 'totalGuildCount': {
-        const pending = ipcPendingRequests.get(msg.requestId);
-        if (pending) {
-          clearTimeout(pending.timer);
-          ipcPendingRequests.delete(msg.requestId);
-          pending.resolve(msg.count || 0);
-        }
-        break;
-      }
-
-      case 'requestShardInfo':
-        process.send?.({
-          type: 'shardInfoResponse',
-          requestId: msg.requestId,
-          info: {
-            shardIds: assignedShardIds,
-            status: 'online',
-            guilds: client.guilds?.size || 0,
-            memory: Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 10) / 10,
-            uptime: Math.floor(process.uptime()),
-            ping: (client as any)._ws?.shards?.values()?.next()?.value?.heartbeatAt
-              ? Date.now() - (client as any)._ws.shards.values().next().value.heartbeatAt
-              : null,
-          },
-        });
-        break;
-
-      case 'allShardInfo': {
-        const pending = ipcPendingRequests.get(msg.requestId);
-        if (pending) {
-          clearTimeout(pending.timer);
-          ipcPendingRequests.delete(msg.requestId);
-          pending.resolve(msg.shards);
-        }
-        break;
-      }
-
-      case 'requestGuildIds':
-        process.send?.({
-          type: 'guildIdsResponse',
-          requestId: msg.requestId,
-          guildIds: Array.from(client.guilds?.keys() || []),
-        });
-        break;
-
-      case 'allGuildIds': {
-        const pending = ipcPendingRequests.get(msg.requestId);
-        if (pending) {
-          clearTimeout(pending.timer);
-          ipcPendingRequests.delete(msg.requestId);
-          pending.resolve(msg.guildIds);
-        }
-        break;
-      }
-
-      case 'requestStats': {
-        getWorkerStats(client).then((stats) => {
-          process.send?.({
-            type: 'statsResponse',
-            requestId: msg.requestId,
-            guilds: stats.guilds,
-            members: stats.members,
-            memory: stats.memory,
-            uptime: stats.uptime,
-          });
-        });
-        break;
-      }
-
-      case 'allStats': {
-        const pending = ipcPendingRequests.get(msg.requestId);
-        if (pending) {
-          clearTimeout(pending.timer);
-          ipcPendingRequests.delete(msg.requestId);
-          pending.resolve({
-            guilds: msg.guilds ?? 0,
-            members: msg.members ?? 0,
-            memory: msg.memory ?? 0,
-            uptime: msg.uptime ?? 0,
-          });
-        }
-        break;
-      }
-
-      case 'requestEval': {
-        let result: any;
-        try {
-          result = eval(msg.script);
-        } catch (err: any) {
-          result = { error: err.message };
-        }
-        process.send?.({ type: 'evalResponse', requestId: msg.requestId, result });
-        break;
-      }
-    }
-  });
-}
 
 export { client, commandHandler, eventHandler };
 

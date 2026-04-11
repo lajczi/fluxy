@@ -72,10 +72,8 @@ Full list is in `.env.example`. The ones you'll actually touch:
 | Command                 | What it does                                                  |
 | ----------------------- | ------------------------------------------------------------- |
 | `npm run dev`           | Watch mode                                                    |
-| `npm run dev:sharded`   | Sharded manager in watch mode                                 |
 | `npm run build`         | Compile TS → `build/`                                         |
 | `npm start`             | Run compiled bot                                              |
-| `npm run start:sharded` | Run compiled shard manager                                    |
 | `npm test`              | Run tests                                                     |
 | `npm run test:watch`    | Watch tests                                                   |
 | `npm run test:coverage` | Coverage report                                               |

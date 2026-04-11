@@ -19,14 +19,8 @@ npm run build
 cd ..
 
 echo "restarting"
-npm run pm2:stop 2>/dev/null || true
-
-if [ "${SHARDED:-false}" = "true" ]; then
-  echo "starting in sharded mode"
-  npm run pm2:start:sharded
-else
-  npm run pm2:start
-fi
+pm2 delete fluxer-mod-bot 2>/dev/null || true
+npm run pm2:start
 
 echo "deploy complete"
 echo ""
