@@ -2,7 +2,7 @@ import './instrument';
 
 import * as GlitchTip from '@sentry/node';
 import { Client, GatewayOpcodes, Events } from '@erinjs/core';
-import { WebSocketShard } from '@erinjs/ws';
+import { WebSocketShard, WebSocketManager } from '@erinjs/ws';
 import { createHash } from 'crypto';
 import mongoose from 'mongoose';
 import config from './config';
@@ -52,6 +52,18 @@ if (!wsProto.__fluxyIdentifyPatched) {
     };
     origHello.call(this, data);
     this.send = origSend;
+  };
+}
+
+const FORCED_SHARD_COUNT = 4;
+const wsMgrProto = WebSocketManager.prototype as any;
+if (!wsMgrProto.__fluxyShardPatched) {
+  wsMgrProto.__fluxyShardPatched = true;
+  const origConnect = wsMgrProto.connect;
+  wsMgrProto.connect = async function (this: any) {
+    this.options.shardCount = FORCED_SHARD_COUNT;
+    log.info('Gateway', `Forcing ${FORCED_SHARD_COUNT} shards (680+ guilds)`);
+    return origConnect.call(this);
   };
 }
 
@@ -622,14 +634,17 @@ client.on(Events.Ready, () => {
 setInterval(() => {
   if (isShuttingDown || !gatewayWasReady) return;
 
-  const shard: any = (client as any).ws?.shards?.values()?.next()?.value;
-  if (!shard) return;
+  const shards: Map<number, any> | undefined = (client as any)._ws?.shards;
+  if (!shards || shards.size === 0) return;
 
-  const connected = shard.ws?.readyState === 1;
-  const reconnecting = shard.reconnectTimeout !== null;
+  for (const [id, shard] of shards) {
+    const connected = shard.ws?.readyState === 1;
+    const reconnecting = shard.reconnectTimeout !== null;
 
-  if (!connected && !reconnecting && !shard.destroying) {
-    log.error('Watchdog', 'Gateway dead, no reconnect pending — restarting');
-    GlitchTip.close(2000).finally(() => process.exit(1));
+    if (!connected && !reconnecting && !shard.destroying) {
+      log.error('Watchdog', `Shard ${id} dead, no reconnect pending — restarting`);
+      GlitchTip.close(2000).finally(() => process.exit(1));
+      return;
+    }
   }
 }, 15_000);
