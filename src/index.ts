@@ -30,32 +30,20 @@ if (Guild && Role) {
 }
 
 const wsShardPrototype = WebSocketShard.prototype as any;
-if (!wsShardPrototype.__fluxyIdentifyShardPatched) {
-  wsShardPrototype.__fluxyIdentifyShardPatched = true;
+if (!wsShardPrototype.__fluxyIdentifyPatched) {
+  wsShardPrototype.__fluxyIdentifyPatched = true;
 
   const originalHandleHello = wsShardPrototype.handleHello;
   wsShardPrototype.handleHello = function (this: any, data: any) {
     const originalSend = this.send.bind(this);
     this.send = (payload: any) => {
-      if (payload?.op === GatewayOpcodes.Identify && payload.d && !payload.d.shard) {
-        payload.d.shard = [this.options.shardId ?? 0, this.options.numShards ?? 1];
-      }
-      originalSend(payload);
-    };
-    originalHandleHello.call(this, data);
-    this.send = originalSend;
-  };
-}
-
-if (!wsShardPrototype.__fluxyIdentifyPresencePatched) {
-  wsShardPrototype.__fluxyIdentifyPresencePatched = true;
-
-  const originalHandleHello = wsShardPrototype.handleHello;
-  wsShardPrototype.handleHello = function (this: any, data: any) {
-    const originalSend = this.send.bind(this);
-    this.send = (payload: any) => {
-      if (payload?.op === GatewayOpcodes.Identify && payload.d?.presence) {
+      if (payload?.op === GatewayOpcodes.Identify && payload.d) {
+        if (!payload.d.token.startsWith('Bot ')) {
+          payload.d.token = `Bot ${payload.d.token}`;
+        }
         delete payload.d.presence;
+        delete payload.d.shard;
+        delete payload.d.intents;
       }
       originalSend(payload);
     };
