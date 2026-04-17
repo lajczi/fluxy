@@ -222,7 +222,7 @@
       "commandHandlerMissing": "Kommandohanteraren är inte tillgänglig.",
       "commandNotFound": "Kommandot `{commandName}` hittades inte.",
       "success": "Laddade om kommandot `{commandName}`.",
-      "error": "Fel vid omladdning av kommandot `{commandName}`."
+      "error": "Fel vid omladdning av kommandot: `{error}`"
     },
     "moderation": {
       "warn": {
@@ -230,7 +230,7 @@
         "usage": "Använding: `{prefix}warn <user> <reason>`",
         "missingReason": "Vänligen ange en anledning till varningen.",
         "invalidUser": "Vänligen ange en giltig användare eller användar-ID.",
-        "success": "Lyckades varna **{username}** (<@{userId}>).",
+        "success": "Lyckades varna **{username}** (<@{userId}>).\n**Anledning:** {reason}\n**Totalt antal varningar:** {warningCount}",
         "autoMuteApplied": "⚠️ Auto-tystnad tillämpad på <@{targetUserId}> efter att ha nått **{warningCount}** varningar (tröskel: **{threshold}**).",
         "autoMuteReason": "Auto-tystnad tröskel uppnådd ({warningCount}/{threshold})",
         "dmTitle": "Varning i {guildName}",
